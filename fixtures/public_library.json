@@ -19,7 +19,11 @@
       "name": "Albany Blue Slip",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp"
+        "url": "https://media.potterdoc.com/images/public/2641928b-4e6d-4720-a350-38958bcf603d.webp",
+        "image_id": "2641928b-4e6d-4720-a350-38958bcf603d",
+        "r2_key": "images/public/2641928b-4e6d-4720-a350-38958bcf603d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -34,7 +38,11 @@
       "name": "Albany Green Slip",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp"
+        "url": "https://media.potterdoc.com/images/public/33064e46-8af3-49e5-9c01-2053e891a13d.webp",
+        "image_id": "33064e46-8af3-49e5-9c01-2053e891a13d",
+        "r2_key": "images/public/33064e46-8af3-49e5-9c01-2053e891a13d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -49,7 +57,11 @@
       "name": "Albany Manganese Slip",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp"
+        "url": "https://media.potterdoc.com/images/public/29fb2aea-644a-474f-9f50-35bfae9630bd.webp",
+        "image_id": "29fb2aea-644a-474f-9f50-35bfae9630bd",
+        "r2_key": "images/public/29fb2aea-644a-474f-9f50-35bfae9630bd.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -64,7 +76,11 @@
       "name": "Amber",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/f_jpg/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic"
+        "url": "https://media.potterdoc.com/images/public/54080ba0-22ff-4e48-bc57-831da26fee77.jpg",
+        "image_id": "54080ba0-22ff-4e48-bc57-831da26fee77",
+        "r2_key": "images/public/54080ba0-22ff-4e48-bc57-831da26fee77.jpg",
+        "width": null,
+        "height": null
       },
       "is_food_safe": true,
       "runs": false,
@@ -79,7 +95,11 @@
       "name": "American Blue",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1778344113/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-03-18-171815-9a0f1468.webp"
+        "url": "https://media.potterdoc.com/images/public/e0054044-3dfd-4ef0-9e3a-9387d17b6d18.webp",
+        "image_id": "e0054044-3dfd-4ef0-9e3a-9387d17b6d18",
+        "r2_key": "images/public/e0054044-3dfd-4ef0-9e3a-9387d17b6d18.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -94,7 +114,11 @@
       "name": "Breakthrough Blue",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp"
+        "url": "https://media.potterdoc.com/images/public/d2d86ddc-ba9f-409f-b924-3907dba2f6cb.webp",
+        "image_id": "d2d86ddc-ba9f-409f-b924-3907dba2f6cb",
+        "r2_key": "images/public/d2d86ddc-ba9f-409f-b924-3907dba2f6cb.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -109,7 +133,11 @@
       "name": "Breakthrough White",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp"
+        "url": "https://media.potterdoc.com/images/public/00af4039-6e4f-4d15-a05b-01069408a851.webp",
+        "image_id": "00af4039-6e4f-4d15-a05b-01069408a851",
+        "r2_key": "images/public/00af4039-6e4f-4d15-a05b-01069408a851.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -124,7 +152,11 @@
       "name": "Celadon",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp"
+        "url": "https://media.potterdoc.com/images/public/d51a29f6-7217-4781-b259-7833b7676c7c.webp",
+        "image_id": "d51a29f6-7217-4781-b259-7833b7676c7c",
+        "r2_key": "images/public/d51a29f6-7217-4781-b259-7833b7676c7c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": null,
       "runs": null,
@@ -139,7 +171,11 @@
       "name": "Choy",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp"
+        "url": "https://media.potterdoc.com/images/public/003232c8-24f3-4da4-abe4-203e45e3e816.webp",
+        "image_id": "003232c8-24f3-4da4-abe4-203e45e3e816",
+        "r2_key": "images/public/003232c8-24f3-4da4-abe4-203e45e3e816.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -154,7 +190,11 @@
       "name": "Clear Crackle",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp"
+        "url": "https://media.potterdoc.com/images/public/78d2b767-4515-4f2b-a9de-5e68ad11b8c5.webp",
+        "image_id": "78d2b767-4515-4f2b-a9de-5e68ad11b8c5",
+        "r2_key": "images/public/78d2b767-4515-4f2b-a9de-5e68ad11b8c5.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -169,7 +209,11 @@
       "name": "Cobalt Blue Green",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp"
+        "url": "https://media.potterdoc.com/images/public/f9309f4f-910b-4e48-aca3-450637320222.webp",
+        "image_id": "f9309f4f-910b-4e48-aca3-450637320222",
+        "r2_key": "images/public/f9309f4f-910b-4e48-aca3-450637320222.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -184,7 +228,11 @@
       "name": "Cornwall",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp"
+        "url": "https://media.potterdoc.com/images/public/55bcd83c-91ad-4632-ad6d-af5134588dfe.webp",
+        "image_id": "55bcd83c-91ad-4632-ad6d-af5134588dfe",
+        "r2_key": "images/public/55bcd83c-91ad-4632-ad6d-af5134588dfe.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -199,7 +247,11 @@
       "name": "Creamy Red",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic"
+        "url": "https://media.potterdoc.com/images/public/a5fd15fc-ae51-4900-a618-1986e8848637.jpg",
+        "image_id": "a5fd15fc-ae51-4900-a618-1986e8848637",
+        "r2_key": "images/public/a5fd15fc-ae51-4900-a618-1986e8848637.jpg",
+        "width": 1994,
+        "height": 2482
       },
       "is_food_safe": true,
       "runs": false,
@@ -214,7 +266,11 @@
       "name": "Dragon Green",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp"
+        "url": "https://media.potterdoc.com/images/public/0fffdfb9-6a6a-4ac7-b863-21f4aedbb00b.webp",
+        "image_id": "0fffdfb9-6a6a-4ac7-b863-21f4aedbb00b",
+        "r2_key": "images/public/0fffdfb9-6a6a-4ac7-b863-21f4aedbb00b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": false,
@@ -229,7 +285,11 @@
       "name": "French Blue",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp"
+        "url": "https://media.potterdoc.com/images/public/080e10d1-1397-4bb4-880b-98d6b2a14f5e.webp",
+        "image_id": "080e10d1-1397-4bb4-880b-98d6b2a14f5e",
+        "r2_key": "images/public/080e10d1-1397-4bb4-880b-98d6b2a14f5e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -244,7 +304,11 @@
       "name": "French Green",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp"
+        "url": "https://media.potterdoc.com/images/public/a4f2c77a-494e-4c16-9d41-ea2bdde9a397.webp",
+        "image_id": "a4f2c77a-494e-4c16-9d41-ea2bdde9a397",
+        "r2_key": "images/public/a4f2c77a-494e-4c16-9d41-ea2bdde9a397.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -259,7 +323,11 @@
       "name": "Gloss White",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp"
+        "url": "https://media.potterdoc.com/images/public/1ff060ce-7b05-4599-972e-950bd959c736.webp",
+        "image_id": "1ff060ce-7b05-4599-972e-950bd959c736",
+        "r2_key": "images/public/1ff060ce-7b05-4599-972e-950bd959c736.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -274,7 +342,11 @@
       "name": "Ismael's Clear",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp"
+        "url": "https://media.potterdoc.com/images/public/d9694fd3-1113-4ce5-b27d-d09206e12c44.webp",
+        "image_id": "d9694fd3-1113-4ce5-b27d-d09206e12c44",
+        "r2_key": "images/public/d9694fd3-1113-4ce5-b27d-d09206e12c44.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -289,7 +361,11 @@
       "name": "Oribe",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp"
+        "url": "https://media.potterdoc.com/images/public/179fa8e5-04d1-45c6-8fd5-0bdc8e589d91.webp",
+        "image_id": "179fa8e5-04d1-45c6-8fd5-0bdc8e589d91",
+        "r2_key": "images/public/179fa8e5-04d1-45c6-8fd5-0bdc8e589d91.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -304,7 +380,11 @@
       "name": "Pharsalia",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp"
+        "url": "https://media.potterdoc.com/images/public/174eb1f0-2c3b-45dc-b9a3-367a6643e65c.webp",
+        "image_id": "174eb1f0-2c3b-45dc-b9a3-367a6643e65c",
+        "r2_key": "images/public/174eb1f0-2c3b-45dc-b9a3-367a6643e65c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -319,7 +399,11 @@
       "name": "Pussywillow",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp"
+        "url": "https://media.potterdoc.com/images/public/5a8067a3-cb9d-40dc-ae0c-00b40e0fc9c1.webp",
+        "image_id": "5a8067a3-cb9d-40dc-ae0c-00b40e0fc9c1",
+        "r2_key": "images/public/5a8067a3-cb9d-40dc-ae0c-00b40e0fc9c1.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -334,7 +418,11 @@
       "name": "Ragnar's Blue",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp"
+        "url": "https://media.potterdoc.com/images/public/671c227b-79d6-45e1-a451-2ea09991f53c.webp",
+        "image_id": "671c227b-79d6-45e1-a451-2ea09991f53c",
+        "r2_key": "images/public/671c227b-79d6-45e1-a451-2ea09991f53c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": true,
@@ -349,7 +437,11 @@
       "name": "Red Brown",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp"
+        "url": "https://media.potterdoc.com/images/public/c157dac9-8889-42fd-a3d2-1087b4910968.webp",
+        "image_id": "c157dac9-8889-42fd-a3d2-1087b4910968",
+        "r2_key": "images/public/c157dac9-8889-42fd-a3d2-1087b4910968.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -364,7 +456,11 @@
       "name": "Silky Black",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp"
+        "url": "https://media.potterdoc.com/images/public/b94aaae0-48e7-43eb-97c9-8fe153c5d33d.webp",
+        "image_id": "b94aaae0-48e7-43eb-97c9-8fe153c5d33d",
+        "r2_key": "images/public/b94aaae0-48e7-43eb-97c9-8fe153c5d33d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": false,
@@ -392,7 +488,11 @@
       "name": "Turquoise",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp"
+        "url": "https://media.potterdoc.com/images/public/a139653c-b236-4756-9d76-a46808980e54.webp",
+        "image_id": "a139653c-b236-4756-9d76-a46808980e54",
+        "r2_key": "images/public/a139653c-b236-4756-9d76-a46808980e54.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -407,7 +507,11 @@
       "name": "Volcanic Ash",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic"
+        "url": "https://media.potterdoc.com/images/public/5ffbc482-8fdf-4df8-ba1e-8294ee22254c.jpg",
+        "image_id": "5ffbc482-8fdf-4df8-ba1e-8294ee22254c",
+        "r2_key": "images/public/5ffbc482-8fdf-4df8-ba1e-8294ee22254c.jpg",
+        "width": 3024,
+        "height": 4032
       },
       "is_food_safe": true,
       "runs": false,
@@ -422,7 +526,11 @@
       "name": "Wild Hare Fur",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic"
+        "url": "https://media.potterdoc.com/images/public/c90543a0-c887-489f-946c-628856b80712.jpg",
+        "image_id": "c90543a0-c887-489f-946c-628856b80712",
+        "r2_key": "images/public/c90543a0-c887-489f-946c-628856b80712.jpg",
+        "width": 3024,
+        "height": 4032
       },
       "is_food_safe": true,
       "runs": false,
@@ -437,7 +545,11 @@
       "name": "Xavier Green",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp"
+        "url": "https://media.potterdoc.com/images/public/51d97400-6fff-45d9-9915-9873a54977ea.webp",
+        "image_id": "51d97400-6fff-45d9-9915-9873a54977ea",
+        "r2_key": "images/public/51d97400-6fff-45d9-9915-9873a54977ea.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -452,7 +564,11 @@
       "name": "Yellow Orange",
       "short_description": "",
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp"
+        "url": "https://media.potterdoc.com/images/public/a0a37f4e-8d54-4ea7-8be1-48faa7c26038.webp",
+        "image_id": "a0a37f4e-8d54-4ea7-8be1-48faa7c26038",
+        "r2_key": "images/public/a0a37f4e-8d54-4ea7-8be1-48faa7c26038.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -467,7 +583,11 @@
       "name": "Albany Blue Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988117/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143807-1c56cf6a.webp"
+        "url": "https://media.potterdoc.com/images/public/2641928b-4e6d-4720-a350-38958bcf603d.webp",
+        "image_id": "2641928b-4e6d-4720-a350-38958bcf603d",
+        "r2_key": "images/public/2641928b-4e6d-4720-a350-38958bcf603d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -482,7 +602,11 @@
       "name": "Albany Blue Slip!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143829-86d206b5.webp"
+        "url": "https://media.potterdoc.com/images/public/bcfeccd3-217a-4ac5-9555-5849c0645be2.webp",
+        "image_id": "bcfeccd3-217a-4ac5-9555-5849c0645be2",
+        "r2_key": "images/public/bcfeccd3-217a-4ac5-9555-5849c0645be2.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -497,7 +621,11 @@
       "name": "Albany Blue Slip!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143837-92445703.webp"
+        "url": "https://media.potterdoc.com/images/public/0398d9dc-a9d8-4586-8439-0398ffb12fcb.webp",
+        "image_id": "0398d9dc-a9d8-4586-8439-0398ffb12fcb",
+        "r2_key": "images/public/0398d9dc-a9d8-4586-8439-0398ffb12fcb.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -512,7 +640,11 @@
       "name": "Albany Blue Slip!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143845-32ec039e.webp"
+        "url": "https://media.potterdoc.com/images/public/3d5d96b9-629d-4941-a6cb-70509f057bad.webp",
+        "image_id": "3d5d96b9-629d-4941-a6cb-70509f057bad",
+        "r2_key": "images/public/3d5d96b9-629d-4941-a6cb-70509f057bad.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -527,7 +659,11 @@
       "name": "Albany Blue Slip!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777329433/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143616-c93add06.webp"
+        "url": "https://media.potterdoc.com/images/public/e3e2e313-5e88-4816-8c29-c521fd20576d.webp",
+        "image_id": "e3e2e313-5e88-4816-8c29-c521fd20576d",
+        "r2_key": "images/public/e3e2e313-5e88-4816-8c29-c521fd20576d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": null,
       "runs": null,
@@ -542,7 +678,11 @@
       "name": "Albany Blue Slip!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334468/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143635-9800dbcc.webp"
+        "url": "https://media.potterdoc.com/images/public/68fee48e-feb9-4a5c-87f0-2f850a177491.webp",
+        "image_id": "68fee48e-feb9-4a5c-87f0-2f850a177491",
+        "r2_key": "images/public/68fee48e-feb9-4a5c-87f0-2f850a177491.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -557,7 +697,11 @@
       "name": "Albany Green Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988116/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143811-53ad4dc0.webp"
+        "url": "https://media.potterdoc.com/images/public/33064e46-8af3-49e5-9c01-2053e891a13d.webp",
+        "image_id": "33064e46-8af3-49e5-9c01-2053e891a13d",
+        "r2_key": "images/public/33064e46-8af3-49e5-9c01-2053e891a13d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -572,7 +716,11 @@
       "name": "Albany Green Slip!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334466/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143832-5a9d2a40.webp"
+        "url": "https://media.potterdoc.com/images/public/d1276d63-947f-43e7-8ff0-2c953807aa53.webp",
+        "image_id": "d1276d63-947f-43e7-8ff0-2c953807aa53",
+        "r2_key": "images/public/d1276d63-947f-43e7-8ff0-2c953807aa53.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -587,7 +735,11 @@
       "name": "Albany Green Slip!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334463/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143841-7c59b827.webp"
+        "url": "https://media.potterdoc.com/images/public/dc1b251c-2e1d-4091-85d2-4aba5ebeea35.webp",
+        "image_id": "dc1b251c-2e1d-4091-85d2-4aba5ebeea35",
+        "r2_key": "images/public/dc1b251c-2e1d-4091-85d2-4aba5ebeea35.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -602,7 +754,11 @@
       "name": "Albany Green Slip!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334462/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143848-2271612c.webp"
+        "url": "https://media.potterdoc.com/images/public/4f315e0b-2f91-4fdd-8418-73a8b58fea88.webp",
+        "image_id": "4f315e0b-2f91-4fdd-8418-73a8b58fea88",
+        "r2_key": "images/public/4f315e0b-2f91-4fdd-8418-73a8b58fea88.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -617,7 +773,11 @@
       "name": "Albany Green Slip!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334465/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143722-2-9189734a.webp"
+        "url": "https://media.potterdoc.com/images/public/bd0c4f41-0e3d-4770-9065-4ce4c498e755.webp",
+        "image_id": "bd0c4f41-0e3d-4770-9065-4ce4c498e755",
+        "r2_key": "images/public/bd0c4f41-0e3d-4770-9065-4ce4c498e755.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -632,7 +792,11 @@
       "name": "Albany Green Slip!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334467/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143640-00fc2556.webp"
+        "url": "https://media.potterdoc.com/images/public/b4ca741b-95f8-4016-8927-9a4744a53365.webp",
+        "image_id": "b4ca741b-95f8-4016-8927-9a4744a53365",
+        "r2_key": "images/public/b4ca741b-95f8-4016-8927-9a4744a53365.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -647,7 +811,11 @@
       "name": "Albany Green Slip!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777334464/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143637-f6d7a94f.webp"
+        "url": "https://media.potterdoc.com/images/public/8bda62f7-a398-489f-a61f-d441551b8d0c.webp",
+        "image_id": "8bda62f7-a398-489f-a61f-d441551b8d0c",
+        "r2_key": "images/public/8bda62f7-a398-489f-a61f-d441551b8d0c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -662,7 +830,11 @@
       "name": "Albany Manganese Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143814-8097c73f.webp"
+        "url": "https://media.potterdoc.com/images/public/29fb2aea-644a-474f-9f50-35bfae9630bd.webp",
+        "image_id": "29fb2aea-644a-474f-9f50-35bfae9630bd",
+        "r2_key": "images/public/29fb2aea-644a-474f-9f50-35bfae9630bd.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -677,7 +849,11 @@
       "name": "Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/f_jpg/v1776803024/glaze_public/naxk2tch9yg5lbfde5ff.heic"
+        "url": "https://media.potterdoc.com/images/public/54080ba0-22ff-4e48-bc57-831da26fee77.jpg",
+        "image_id": "54080ba0-22ff-4e48-bc57-831da26fee77",
+        "r2_key": "images/public/54080ba0-22ff-4e48-bc57-831da26fee77.jpg",
+        "width": null,
+        "height": null
       },
       "is_food_safe": true,
       "runs": false,
@@ -692,7 +868,11 @@
       "name": "Amber!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143922-77c875ba.webp"
+        "url": "https://media.potterdoc.com/images/public/950d74c7-0a71-4174-a163-96e2857d55f6.webp",
+        "image_id": "950d74c7-0a71-4174-a163-96e2857d55f6",
+        "r2_key": "images/public/950d74c7-0a71-4174-a163-96e2857d55f6.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -707,7 +887,11 @@
       "name": "Amber!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336846/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143927-27923e92.webp"
+        "url": "https://media.potterdoc.com/images/public/f14cbc06-182f-475e-9bf7-a8a01f637c02.webp",
+        "image_id": "f14cbc06-182f-475e-9bf7-a8a01f637c02",
+        "r2_key": "images/public/f14cbc06-182f-475e-9bf7-a8a01f637c02.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -722,7 +906,11 @@
       "name": "Amber!Dragon Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336845/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143931-ea84d64d.webp"
+        "url": "https://media.potterdoc.com/images/public/7a1e5bba-dc21-44c4-94dd-e5ba6a4c3eb7.webp",
+        "image_id": "7a1e5bba-dc21-44c4-94dd-e5ba6a4c3eb7",
+        "r2_key": "images/public/7a1e5bba-dc21-44c4-94dd-e5ba6a4c3eb7.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -737,7 +925,11 @@
       "name": "Amber!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336844/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143941-68464664.webp"
+        "url": "https://media.potterdoc.com/images/public/39ab4912-c61a-4834-8bbb-4f698f9f0e5b.webp",
+        "image_id": "39ab4912-c61a-4834-8bbb-4f698f9f0e5b",
+        "r2_key": "images/public/39ab4912-c61a-4834-8bbb-4f698f9f0e5b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -752,7 +944,11 @@
       "name": "Amber!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336843/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143934-23acc3a3.webp"
+        "url": "https://media.potterdoc.com/images/public/abaf561e-a064-4049-be55-b4244e99d4a0.webp",
+        "image_id": "abaf561e-a064-4049-be55-b4244e99d4a0",
+        "r2_key": "images/public/abaf561e-a064-4049-be55-b4244e99d4a0.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -767,7 +963,11 @@
       "name": "Amber!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336841/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143945-7934ecc5.webp"
+        "url": "https://media.potterdoc.com/images/public/e6722479-9048-498f-bd85-e24414018458.webp",
+        "image_id": "e6722479-9048-498f-bd85-e24414018458",
+        "r2_key": "images/public/e6722479-9048-498f-bd85-e24414018458.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -782,7 +982,11 @@
       "name": "Amber!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336842/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143953-994eefe3.webp"
+        "url": "https://media.potterdoc.com/images/public/a74aedde-e89d-4602-a0b3-598f2cce78c3.webp",
+        "image_id": "a74aedde-e89d-4602-a0b3-598f2cce78c3",
+        "r2_key": "images/public/a74aedde-e89d-4602-a0b3-598f2cce78c3.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -797,7 +1001,11 @@
       "name": "Amber!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143956-e7b3dca4.webp"
+        "url": "https://media.potterdoc.com/images/public/121af478-9d1e-4239-bafb-5de96614b834.webp",
+        "image_id": "121af478-9d1e-4239-bafb-5de96614b834",
+        "r2_key": "images/public/121af478-9d1e-4239-bafb-5de96614b834.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -812,7 +1020,11 @@
       "name": "Amber!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336840/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-143959-5567b16c.webp"
+        "url": "https://media.potterdoc.com/images/public/798b5da1-7fe5-43a5-9036-60a216fe8bbd.webp",
+        "image_id": "798b5da1-7fe5-43a5-9036-60a216fe8bbd",
+        "r2_key": "images/public/798b5da1-7fe5-43a5-9036-60a216fe8bbd.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -827,7 +1039,11 @@
       "name": "Amber!Wild Hare Fur",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144003-25b0011f.webp"
+        "url": "https://media.potterdoc.com/images/public/85db1992-2cad-4eba-9d54-866483716b05.webp",
+        "image_id": "85db1992-2cad-4eba-9d54-866483716b05",
+        "r2_key": "images/public/85db1992-2cad-4eba-9d54-866483716b05.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -842,7 +1058,11 @@
       "name": "Amber!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336836/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144005-dbe4f8e0.webp"
+        "url": "https://media.potterdoc.com/images/public/c8ca9bfd-1515-4069-b71a-9bcad4fe553e.webp",
+        "image_id": "c8ca9bfd-1515-4069-b71a-9bcad4fe553e",
+        "r2_key": "images/public/c8ca9bfd-1515-4069-b71a-9bcad4fe553e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -857,7 +1077,11 @@
       "name": "American Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1778344113/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-03-18-171815-9a0f1468.webp"
+        "url": "https://media.potterdoc.com/images/public/e0054044-3dfd-4ef0-9e3a-9387d17b6d18.webp",
+        "image_id": "e0054044-3dfd-4ef0-9e3a-9387d17b6d18",
+        "r2_key": "images/public/e0054044-3dfd-4ef0-9e3a-9387d17b6d18.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -872,7 +1096,11 @@
       "name": "Breakthrough Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143802-f4a84d28.webp"
+        "url": "https://media.potterdoc.com/images/public/d2d86ddc-ba9f-409f-b924-3907dba2f6cb.webp",
+        "image_id": "d2d86ddc-ba9f-409f-b924-3907dba2f6cb",
+        "r2_key": "images/public/d2d86ddc-ba9f-409f-b924-3907dba2f6cb.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -887,7 +1115,11 @@
       "name": "Breakthrough White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988119/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143759-9bd7135f.webp"
+        "url": "https://media.potterdoc.com/images/public/00af4039-6e4f-4d15-a05b-01069408a851.webp",
+        "image_id": "00af4039-6e4f-4d15-a05b-01069408a851",
+        "r2_key": "images/public/00af4039-6e4f-4d15-a05b-01069408a851.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -902,7 +1134,11 @@
       "name": "Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143750-c66c36bf.webp"
+        "url": "https://media.potterdoc.com/images/public/d51a29f6-7217-4781-b259-7833b7676c7c.webp",
+        "image_id": "d51a29f6-7217-4781-b259-7833b7676c7c",
+        "r2_key": "images/public/d51a29f6-7217-4781-b259-7833b7676c7c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": null,
       "runs": null,
@@ -917,7 +1153,11 @@
       "name": "Celadon!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304417/glaze_public/j3gz35q5fecp48ncy2qp.heic"
+        "url": "https://media.potterdoc.com/images/public/bae46821-f7cd-4d71-a2f7-8aea4c13ebdd.jpg",
+        "image_id": "bae46821-f7cd-4d71-a2f7-8aea4c13ebdd",
+        "r2_key": "images/public/bae46821-f7cd-4d71-a2f7-8aea4c13ebdd.jpg",
+        "width": 3024,
+        "height": 4032
       },
       "is_food_safe": true,
       "runs": false,
@@ -932,7 +1172,11 @@
       "name": "Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988115/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143732-902c440f.webp"
+        "url": "https://media.potterdoc.com/images/public/003232c8-24f3-4da4-abe4-203e45e3e816.webp",
+        "image_id": "003232c8-24f3-4da4-abe4-203e45e3e816",
+        "r2_key": "images/public/003232c8-24f3-4da4-abe4-203e45e3e816.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -947,7 +1191,11 @@
       "name": "Choy!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336837/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144058-bd8a1b6a.webp"
+        "url": "https://media.potterdoc.com/images/public/82dbc75c-9f5d-408b-a691-95548d3948d9.webp",
+        "image_id": "82dbc75c-9f5d-408b-a691-95548d3948d9",
+        "r2_key": "images/public/82dbc75c-9f5d-408b-a691-95548d3948d9.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -962,7 +1210,11 @@
       "name": "Choy!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336835/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144101-7b631b97.webp"
+        "url": "https://media.potterdoc.com/images/public/69f24cd5-4e9a-4fb6-ad7a-00209e39a1aa.webp",
+        "image_id": "69f24cd5-4e9a-4fb6-ad7a-00209e39a1aa",
+        "r2_key": "images/public/69f24cd5-4e9a-4fb6-ad7a-00209e39a1aa.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -977,7 +1229,11 @@
       "name": "Choy!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777336838/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144104-4aa50658.webp"
+        "url": "https://media.potterdoc.com/images/public/48c9fde7-9ee9-467d-adf1-83d44c301d87.webp",
+        "image_id": "48c9fde7-9ee9-467d-adf1-83d44c301d87",
+        "r2_key": "images/public/48c9fde7-9ee9-467d-adf1-83d44c301d87.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -992,7 +1248,11 @@
       "name": "Choy!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144107-2e3380d3.webp"
+        "url": "https://media.potterdoc.com/images/public/63c2c75c-3406-4cc6-8902-b7ff0e5203b5.webp",
+        "image_id": "63c2c75c-3406-4cc6-8902-b7ff0e5203b5",
+        "r2_key": "images/public/63c2c75c-3406-4cc6-8902-b7ff0e5203b5.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1007,7 +1267,11 @@
       "name": "Choy!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144111-a155e660.webp"
+        "url": "https://media.potterdoc.com/images/public/cdcfd1d0-c021-4813-9879-d49ba74bc91a.webp",
+        "image_id": "cdcfd1d0-c021-4813-9879-d49ba74bc91a",
+        "r2_key": "images/public/cdcfd1d0-c021-4813-9879-d49ba74bc91a.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1022,7 +1286,11 @@
       "name": "Choy!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418635/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144117-cab91cc3.webp"
+        "url": "https://media.potterdoc.com/images/public/0cd85d6b-67fb-437e-8637-ade24e591fe1.webp",
+        "image_id": "0cd85d6b-67fb-437e-8637-ade24e591fe1",
+        "r2_key": "images/public/0cd85d6b-67fb-437e-8637-ade24e591fe1.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1037,7 +1305,11 @@
       "name": "Choy!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418633/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144119-700686e8.webp"
+        "url": "https://media.potterdoc.com/images/public/0393a457-47ef-4678-9e85-6bf5d58c45fa.webp",
+        "image_id": "0393a457-47ef-4678-9e85-6bf5d58c45fa",
+        "r2_key": "images/public/0393a457-47ef-4678-9e85-6bf5d58c45fa.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1052,7 +1324,11 @@
       "name": "Choy!Oribe",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418634/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144122-81bc3ac9.webp"
+        "url": "https://media.potterdoc.com/images/public/a78e1245-87dd-4043-b895-8200989fe7fa.webp",
+        "image_id": "a78e1245-87dd-4043-b895-8200989fe7fa",
+        "r2_key": "images/public/a78e1245-87dd-4043-b895-8200989fe7fa.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1067,7 +1343,11 @@
       "name": "Choy!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418632/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144130-87d21c7e.webp"
+        "url": "https://media.potterdoc.com/images/public/86209c43-dc9d-4c80-b5a7-fb9da9242096.webp",
+        "image_id": "86209c43-dc9d-4c80-b5a7-fb9da9242096",
+        "r2_key": "images/public/86209c43-dc9d-4c80-b5a7-fb9da9242096.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1082,7 +1362,11 @@
       "name": "Choy!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144134-c36e6f40.webp"
+        "url": "https://media.potterdoc.com/images/public/26f6888a-6fdd-491e-bedb-71688d8c043c.webp",
+        "image_id": "26f6888a-6fdd-491e-bedb-71688d8c043c",
+        "r2_key": "images/public/26f6888a-6fdd-491e-bedb-71688d8c043c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1097,7 +1381,11 @@
       "name": "Choy!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418631/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144141-07350804.webp"
+        "url": "https://media.potterdoc.com/images/public/92471f44-b2da-41db-8171-251ec7d51c9b.webp",
+        "image_id": "92471f44-b2da-41db-8171-251ec7d51c9b",
+        "r2_key": "images/public/92471f44-b2da-41db-8171-251ec7d51c9b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1112,7 +1400,11 @@
       "name": "Choy!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418630/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144137-87daa020.webp"
+        "url": "https://media.potterdoc.com/images/public/8a31a322-116e-48c4-847f-63e07ee7d378.webp",
+        "image_id": "8a31a322-116e-48c4-847f-63e07ee7d378",
+        "r2_key": "images/public/8a31a322-116e-48c4-847f-63e07ee7d378.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1127,7 +1419,11 @@
       "name": "Clear Crackle",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988118/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143736-da700ea4.webp"
+        "url": "https://media.potterdoc.com/images/public/78d2b767-4515-4f2b-a9de-5e68ad11b8c5.webp",
+        "image_id": "78d2b767-4515-4f2b-a9de-5e68ad11b8c5",
+        "r2_key": "images/public/78d2b767-4515-4f2b-a9de-5e68ad11b8c5.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1142,7 +1438,11 @@
       "name": "Cobalt Blue Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988120/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143753-6013693b.webp"
+        "url": "https://media.potterdoc.com/images/public/f9309f4f-910b-4e48-aca3-450637320222.webp",
+        "image_id": "f9309f4f-910b-4e48-aca3-450637320222",
+        "r2_key": "images/public/f9309f4f-910b-4e48-aca3-450637320222.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1157,7 +1457,11 @@
       "name": "Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988114/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143738-0ebbbb48.webp"
+        "url": "https://media.potterdoc.com/images/public/55bcd83c-91ad-4632-ad6d-af5134588dfe.webp",
+        "image_id": "55bcd83c-91ad-4632-ad6d-af5134588dfe",
+        "r2_key": "images/public/55bcd83c-91ad-4632-ad6d-af5134588dfe.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1172,7 +1476,11 @@
       "name": "Cornwall!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144356-5013d58d.webp"
+        "url": "https://media.potterdoc.com/images/public/5c9b6890-505c-4e1b-af2f-749a6567b524.webp",
+        "image_id": "5c9b6890-505c-4e1b-af2f-749a6567b524",
+        "r2_key": "images/public/5c9b6890-505c-4e1b-af2f-749a6567b524.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1187,7 +1495,11 @@
       "name": "Cornwall!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144358-8d13990e.webp"
+        "url": "https://media.potterdoc.com/images/public/d89f4396-5e79-439a-abf5-4972cb6484ec.webp",
+        "image_id": "d89f4396-5e79-439a-abf5-4972cb6484ec",
+        "r2_key": "images/public/d89f4396-5e79-439a-abf5-4972cb6484ec.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1202,7 +1514,11 @@
       "name": "Cornwall!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422287/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144403-8a715bfa.webp"
+        "url": "https://media.potterdoc.com/images/public/de56ad90-82e7-4e5c-a7c2-277d90273405.webp",
+        "image_id": "de56ad90-82e7-4e5c-a7c2-277d90273405",
+        "r2_key": "images/public/de56ad90-82e7-4e5c-a7c2-277d90273405.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1217,7 +1533,11 @@
       "name": "Cornwall!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144401-7646404c.webp"
+        "url": "https://media.potterdoc.com/images/public/86fb664d-f917-4129-bc93-edd4dfde4092.webp",
+        "image_id": "86fb664d-f917-4129-bc93-edd4dfde4092",
+        "r2_key": "images/public/86fb664d-f917-4129-bc93-edd4dfde4092.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1232,7 +1552,11 @@
       "name": "Cornwall!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422283/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144407-681de3f6.webp"
+        "url": "https://media.potterdoc.com/images/public/7f8b2bd6-4391-49dd-a240-08cabe80cc14.webp",
+        "image_id": "7f8b2bd6-4391-49dd-a240-08cabe80cc14",
+        "r2_key": "images/public/7f8b2bd6-4391-49dd-a240-08cabe80cc14.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1247,7 +1571,11 @@
       "name": "Cornwall!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422285/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144412-44d52168.webp"
+        "url": "https://media.potterdoc.com/images/public/4c14e13d-0fa2-4cf8-8b4e-b1f2ec6f6966.webp",
+        "image_id": "4c14e13d-0fa2-4cf8-8b4e-b1f2ec6f6966",
+        "r2_key": "images/public/4c14e13d-0fa2-4cf8-8b4e-b1f2ec6f6966.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1262,7 +1590,11 @@
       "name": "Cornwall!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144409-7baa7a5b.webp"
+        "url": "https://media.potterdoc.com/images/public/6d525202-5a84-4b1a-8e47-a4ab59997384.webp",
+        "image_id": "6d525202-5a84-4b1a-8e47-a4ab59997384",
+        "r2_key": "images/public/6d525202-5a84-4b1a-8e47-a4ab59997384.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1277,7 +1609,11 @@
       "name": "Cornwall!Oribe",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422286/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144420-3e0c4b05.webp"
+        "url": "https://media.potterdoc.com/images/public/17cfbea2-4439-40ab-97dd-d8b250ec672e.webp",
+        "image_id": "17cfbea2-4439-40ab-97dd-d8b250ec672e",
+        "r2_key": "images/public/17cfbea2-4439-40ab-97dd-d8b250ec672e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1292,7 +1628,11 @@
       "name": "Cornwall!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422284/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144426-ef4b0e8b.webp"
+        "url": "https://media.potterdoc.com/images/public/586fb759-9624-4cd5-b26d-b1d0d997ba36.webp",
+        "image_id": "586fb759-9624-4cd5-b26d-b1d0d997ba36",
+        "r2_key": "images/public/586fb759-9624-4cd5-b26d-b1d0d997ba36.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1307,7 +1647,11 @@
       "name": "Cornwall!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422280/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144423-f460d42f.webp"
+        "url": "https://media.potterdoc.com/images/public/62942c1e-6837-4dbd-ae2f-a77adf1c61dd.webp",
+        "image_id": "62942c1e-6837-4dbd-ae2f-a77adf1c61dd",
+        "r2_key": "images/public/62942c1e-6837-4dbd-ae2f-a77adf1c61dd.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1322,7 +1666,11 @@
       "name": "Cornwall!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144437-b0815439.webp"
+        "url": "https://media.potterdoc.com/images/public/b23ae179-78df-4a80-9a0d-d9a19ee6726a.webp",
+        "image_id": "b23ae179-78df-4a80-9a0d-d9a19ee6726a",
+        "r2_key": "images/public/b23ae179-78df-4a80-9a0d-d9a19ee6726a.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1337,7 +1685,11 @@
       "name": "Cornwall!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422282/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144439-adda2541.webp"
+        "url": "https://media.potterdoc.com/images/public/cf71a1e9-bbb8-4d16-8f33-217633fa62b7.webp",
+        "image_id": "cf71a1e9-bbb8-4d16-8f33-217633fa62b7",
+        "r2_key": "images/public/cf71a1e9-bbb8-4d16-8f33-217633fa62b7.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1352,7 +1704,11 @@
       "name": "Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776823398/glaze_public/zotiqbcrfmdfxtty2wmv.heic"
+        "url": "https://media.potterdoc.com/images/public/a5fd15fc-ae51-4900-a618-1986e8848637.jpg",
+        "image_id": "a5fd15fc-ae51-4900-a618-1986e8848637",
+        "r2_key": "images/public/a5fd15fc-ae51-4900-a618-1986e8848637.jpg",
+        "width": 1994,
+        "height": 2482
       },
       "is_food_safe": true,
       "runs": false,
@@ -1367,7 +1723,11 @@
       "name": "Creamy Red!Albany Blue Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422281/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144456-e479ab6e.webp"
+        "url": "https://media.potterdoc.com/images/public/3939f973-fff8-4cd8-96d0-d3efa6e6d9d4.webp",
+        "image_id": "3939f973-fff8-4cd8-96d0-d3efa6e6d9d4",
+        "r2_key": "images/public/3939f973-fff8-4cd8-96d0-d3efa6e6d9d4.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1382,7 +1742,11 @@
       "name": "Creamy Red!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144459-cc8197ac.webp"
+        "url": "https://media.potterdoc.com/images/public/02dbd1db-a502-4eca-a476-96211dbc2560.webp",
+        "image_id": "02dbd1db-a502-4eca-a476-96211dbc2560",
+        "r2_key": "images/public/02dbd1db-a502-4eca-a476-96211dbc2560.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1397,7 +1761,11 @@
       "name": "Creamy Red!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424348/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144501-94a9c3f0.webp"
+        "url": "https://media.potterdoc.com/images/public/6f4c081a-b837-4466-8943-e8a4102a97e0.webp",
+        "image_id": "6f4c081a-b837-4466-8943-e8a4102a97e0",
+        "r2_key": "images/public/6f4c081a-b837-4466-8943-e8a4102a97e0.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1412,7 +1780,11 @@
       "name": "Creamy Red!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144504-29e1237d.webp"
+        "url": "https://media.potterdoc.com/images/public/9dffcd12-2813-4b81-90be-d6987f4a4eaa.webp",
+        "image_id": "9dffcd12-2813-4b81-90be-d6987f4a4eaa",
+        "r2_key": "images/public/9dffcd12-2813-4b81-90be-d6987f4a4eaa.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1427,7 +1799,11 @@
       "name": "Creamy Red!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424349/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144506-ed08aeef.webp"
+        "url": "https://media.potterdoc.com/images/public/5950c355-867e-4850-9569-bd9bf303bccd.webp",
+        "image_id": "5950c355-867e-4850-9569-bd9bf303bccd",
+        "r2_key": "images/public/5950c355-867e-4850-9569-bd9bf303bccd.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1442,7 +1818,11 @@
       "name": "Creamy Red!Dragon Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424347/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144512-dbe4c552.webp"
+        "url": "https://media.potterdoc.com/images/public/61119cd0-f6c9-46e3-ab1a-a1f1a32fbafc.webp",
+        "image_id": "61119cd0-f6c9-46e3-ab1a-a1f1a32fbafc",
+        "r2_key": "images/public/61119cd0-f6c9-46e3-ab1a-a1f1a32fbafc.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": false,
@@ -1457,7 +1837,11 @@
       "name": "Creamy Red!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424345/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144515-5aec76d9.webp"
+        "url": "https://media.potterdoc.com/images/public/8a401043-f6ed-44a7-b5db-ca72d3901883.webp",
+        "image_id": "8a401043-f6ed-44a7-b5db-ca72d3901883",
+        "r2_key": "images/public/8a401043-f6ed-44a7-b5db-ca72d3901883.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1472,7 +1856,11 @@
       "name": "Creamy Red!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424346/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144517-713ef1b4.webp"
+        "url": "https://media.potterdoc.com/images/public/4d123022-f621-47ee-a613-cf22d89a9e17.webp",
+        "image_id": "4d123022-f621-47ee-a613-cf22d89a9e17",
+        "r2_key": "images/public/4d123022-f621-47ee-a613-cf22d89a9e17.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1487,7 +1875,11 @@
       "name": "Creamy Red!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144544-9f19268b.webp"
+        "url": "https://media.potterdoc.com/images/public/e74ca119-4124-4244-ae7e-0986ef86881e.webp",
+        "image_id": "e74ca119-4124-4244-ae7e-0986ef86881e",
+        "r2_key": "images/public/e74ca119-4124-4244-ae7e-0986ef86881e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1502,7 +1894,11 @@
       "name": "Creamy Red!Oribe",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424344/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144548-7b6f52ab.webp"
+        "url": "https://media.potterdoc.com/images/public/3aa788a0-21ea-46c1-b57e-8d2eb7402bcc.webp",
+        "image_id": "3aa788a0-21ea-46c1-b57e-8d2eb7402bcc",
+        "r2_key": "images/public/3aa788a0-21ea-46c1-b57e-8d2eb7402bcc.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1517,7 +1913,11 @@
       "name": "Creamy Red!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144555-49b704b5.webp"
+        "url": "https://media.potterdoc.com/images/public/77efefb1-f4bc-40fc-87c0-62df6df7c7b2.webp",
+        "image_id": "77efefb1-f4bc-40fc-87c0-62df6df7c7b2",
+        "r2_key": "images/public/77efefb1-f4bc-40fc-87c0-62df6df7c7b2.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1532,7 +1932,11 @@
       "name": "Creamy Red!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144553-4129fe18.webp"
+        "url": "https://media.potterdoc.com/images/public/bbf886c2-e8a8-455f-bb68-330b6885158c.webp",
+        "image_id": "bbf886c2-e8a8-455f-bb68-330b6885158c",
+        "r2_key": "images/public/bbf886c2-e8a8-455f-bb68-330b6885158c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1547,7 +1951,11 @@
       "name": "Creamy Red!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424343/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144551-163ae058.webp"
+        "url": "https://media.potterdoc.com/images/public/c28968cb-7af9-47df-adc9-8106c74d4ad9.webp",
+        "image_id": "c28968cb-7af9-47df-adc9-8106c74d4ad9",
+        "r2_key": "images/public/c28968cb-7af9-47df-adc9-8106c74d4ad9.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1562,7 +1970,11 @@
       "name": "Creamy Red!Tenmoku",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424640/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144615-3638fa8e.webp"
+        "url": "https://media.potterdoc.com/images/public/d7c4d2da-cf1f-4bd9-84e1-597c15d316d6.webp",
+        "image_id": "d7c4d2da-cf1f-4bd9-84e1-597c15d316d6",
+        "r2_key": "images/public/d7c4d2da-cf1f-4bd9-84e1-597c15d316d6.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1577,7 +1989,11 @@
       "name": "Creamy Red!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424341/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144619-7b002ab2.webp"
+        "url": "https://media.potterdoc.com/images/public/b4d8bedb-1ab2-40a1-b470-33109cc62b9e.webp",
+        "image_id": "b4d8bedb-1ab2-40a1-b470-33109cc62b9e",
+        "r2_key": "images/public/b4d8bedb-1ab2-40a1-b470-33109cc62b9e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1592,7 +2008,11 @@
       "name": "Creamy Red!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144625-46e1bb86.webp"
+        "url": "https://media.potterdoc.com/images/public/ff6dad76-c0f6-4582-a2ff-b01cfec141bb.webp",
+        "image_id": "ff6dad76-c0f6-4582-a2ff-b01cfec141bb",
+        "r2_key": "images/public/ff6dad76-c0f6-4582-a2ff-b01cfec141bb.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1607,7 +2027,11 @@
       "name": "Creamy Red!Wild Hare Fur",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424340/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144623-0b319ef7.webp"
+        "url": "https://media.potterdoc.com/images/public/a892700a-80b3-4308-94d5-747a21b0525e.webp",
+        "image_id": "a892700a-80b3-4308-94d5-747a21b0525e",
+        "r2_key": "images/public/a892700a-80b3-4308-94d5-747a21b0525e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1622,7 +2046,11 @@
       "name": "Creamy Red!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424342/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144621-ccf59b69.webp"
+        "url": "https://media.potterdoc.com/images/public/197fb43c-21c4-4ac8-b3da-c723be67a2af.webp",
+        "image_id": "197fb43c-21c4-4ac8-b3da-c723be67a2af",
+        "r2_key": "images/public/197fb43c-21c4-4ac8-b3da-c723be67a2af.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1637,7 +2065,11 @@
       "name": "Dragon Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143709-bfc538c3.webp"
+        "url": "https://media.potterdoc.com/images/public/0fffdfb9-6a6a-4ac7-b863-21f4aedbb00b.webp",
+        "image_id": "0fffdfb9-6a6a-4ac7-b863-21f4aedbb00b",
+        "r2_key": "images/public/0fffdfb9-6a6a-4ac7-b863-21f4aedbb00b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": false,
@@ -1652,7 +2084,11 @@
       "name": "French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143712-c05af528.webp"
+        "url": "https://media.potterdoc.com/images/public/080e10d1-1397-4bb4-880b-98d6b2a14f5e.webp",
+        "image_id": "080e10d1-1397-4bb4-880b-98d6b2a14f5e",
+        "r2_key": "images/public/080e10d1-1397-4bb4-880b-98d6b2a14f5e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1667,7 +2103,11 @@
       "name": "French Blue!Albany Blue Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145203-d4d25819.webp"
+        "url": "https://media.potterdoc.com/images/public/56e02691-8fb9-4439-bb48-8802dc8d742e.webp",
+        "image_id": "56e02691-8fb9-4439-bb48-8802dc8d742e",
+        "r2_key": "images/public/56e02691-8fb9-4439-bb48-8802dc8d742e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1682,7 +2122,11 @@
       "name": "French Blue!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145207-615da555.webp"
+        "url": "https://media.potterdoc.com/images/public/2000a8e1-6040-4807-be65-f12a1eb1ecd0.webp",
+        "image_id": "2000a8e1-6040-4807-be65-f12a1eb1ecd0",
+        "r2_key": "images/public/2000a8e1-6040-4807-be65-f12a1eb1ecd0.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1697,7 +2141,11 @@
       "name": "French Blue!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427619/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145219-254df0d2.webp"
+        "url": "https://media.potterdoc.com/images/public/49020d37-829d-4470-90d8-26ca0dc49284.webp",
+        "image_id": "49020d37-829d-4470-90d8-26ca0dc49284",
+        "r2_key": "images/public/49020d37-829d-4470-90d8-26ca0dc49284.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1712,7 +2160,11 @@
       "name": "French Blue!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145217-a368f014.webp"
+        "url": "https://media.potterdoc.com/images/public/cfa95b59-4e02-4a68-9819-d9d9b87dcefc.webp",
+        "image_id": "cfa95b59-4e02-4a68-9819-d9d9b87dcefc",
+        "r2_key": "images/public/cfa95b59-4e02-4a68-9819-d9d9b87dcefc.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1727,7 +2179,11 @@
       "name": "French Blue!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427620/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145221-fd891171.webp"
+        "url": "https://media.potterdoc.com/images/public/64ec6180-76a4-425a-b049-f863c77ad32a.webp",
+        "image_id": "64ec6180-76a4-425a-b049-f863c77ad32a",
+        "r2_key": "images/public/64ec6180-76a4-425a-b049-f863c77ad32a.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1742,7 +2198,11 @@
       "name": "French Blue!Dragon Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145234-25e81ca8.webp"
+        "url": "https://media.potterdoc.com/images/public/e79d8533-a930-49a1-a593-310d15ff6888.webp",
+        "image_id": "e79d8533-a930-49a1-a593-310d15ff6888",
+        "r2_key": "images/public/e79d8533-a930-49a1-a593-310d15ff6888.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1757,7 +2217,11 @@
       "name": "French Blue!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428065/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145232-8b19a30b.webp"
+        "url": "https://media.potterdoc.com/images/public/0b9c2ce0-03c5-4964-abd2-920356a378fc.webp",
+        "image_id": "0b9c2ce0-03c5-4964-abd2-920356a378fc",
+        "r2_key": "images/public/0b9c2ce0-03c5-4964-abd2-920356a378fc.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1772,7 +2236,11 @@
       "name": "French Blue!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428031/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145242-8c098253.webp"
+        "url": "https://media.potterdoc.com/images/public/93112014-88e6-4681-ae6d-b35cf9970d3b.webp",
+        "image_id": "93112014-88e6-4681-ae6d-b35cf9970d3b",
+        "r2_key": "images/public/93112014-88e6-4681-ae6d-b35cf9970d3b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1787,7 +2255,11 @@
       "name": "French Blue!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428029/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145243-b1507425.webp"
+        "url": "https://media.potterdoc.com/images/public/17d3a34a-3709-4abd-8629-ece4de85c695.webp",
+        "image_id": "17d3a34a-3709-4abd-8629-ece4de85c695",
+        "r2_key": "images/public/17d3a34a-3709-4abd-8629-ece4de85c695.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1802,7 +2274,11 @@
       "name": "French Blue!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428028/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145252-6048fa9b.webp"
+        "url": "https://media.potterdoc.com/images/public/d2483d14-bd50-4b57-8764-d2abfdd5ab2b.webp",
+        "image_id": "d2483d14-bd50-4b57-8764-d2abfdd5ab2b",
+        "r2_key": "images/public/d2483d14-bd50-4b57-8764-d2abfdd5ab2b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1817,7 +2293,11 @@
       "name": "French Blue!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145256-875c705e.webp"
+        "url": "https://media.potterdoc.com/images/public/6d457060-7f13-4a28-8cad-8f2a80291282.webp",
+        "image_id": "6d457060-7f13-4a28-8cad-8f2a80291282",
+        "r2_key": "images/public/6d457060-7f13-4a28-8cad-8f2a80291282.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1832,7 +2312,11 @@
       "name": "French Blue!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428026/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145258-40753975.webp"
+        "url": "https://media.potterdoc.com/images/public/39b52e8a-878f-4ef8-9ae8-d3e3475921e6.webp",
+        "image_id": "39b52e8a-878f-4ef8-9ae8-d3e3475921e6",
+        "r2_key": "images/public/39b52e8a-878f-4ef8-9ae8-d3e3475921e6.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1847,7 +2331,11 @@
       "name": "French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988122/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143714-b3d13f9c.webp"
+        "url": "https://media.potterdoc.com/images/public/a4f2c77a-494e-4c16-9d41-ea2bdde9a397.webp",
+        "image_id": "a4f2c77a-494e-4c16-9d41-ea2bdde9a397",
+        "r2_key": "images/public/a4f2c77a-494e-4c16-9d41-ea2bdde9a397.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1862,7 +2350,11 @@
       "name": "French Green!Albany Blue Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145210-8777b172.webp"
+        "url": "https://media.potterdoc.com/images/public/785f7228-7218-41e6-bb3d-5f43dbf7cb87.webp",
+        "image_id": "785f7228-7218-41e6-bb3d-5f43dbf7cb87",
+        "r2_key": "images/public/785f7228-7218-41e6-bb3d-5f43dbf7cb87.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1877,7 +2369,11 @@
       "name": "French Green!Albany Green Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427621/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145211-0e6e70a6.webp"
+        "url": "https://media.potterdoc.com/images/public/3ffaeaea-e7cf-4175-b59d-4f0b87a0babc.webp",
+        "image_id": "3ffaeaea-e7cf-4175-b59d-4f0b87a0babc",
+        "r2_key": "images/public/3ffaeaea-e7cf-4175-b59d-4f0b87a0babc.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1892,7 +2388,11 @@
       "name": "French Green!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427622/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145215-436c7b1e.webp"
+        "url": "https://media.potterdoc.com/images/public/ddd37b05-cd51-40cb-95d1-0ab974f0da88.webp",
+        "image_id": "ddd37b05-cd51-40cb-95d1-0ab974f0da88",
+        "r2_key": "images/public/ddd37b05-cd51-40cb-95d1-0ab974f0da88.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1907,7 +2407,11 @@
       "name": "French Green!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145214-63d483f5.webp"
+        "url": "https://media.potterdoc.com/images/public/f0160edd-01c5-4127-891c-40748ed3df94.webp",
+        "image_id": "f0160edd-01c5-4127-891c-40748ed3df94",
+        "r2_key": "images/public/f0160edd-01c5-4127-891c-40748ed3df94.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1922,7 +2426,11 @@
       "name": "French Green!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145224-99622915.webp"
+        "url": "https://media.potterdoc.com/images/public/bd1ebcb5-f094-49a2-880b-1557d6e91180.webp",
+        "image_id": "bd1ebcb5-f094-49a2-880b-1557d6e91180",
+        "r2_key": "images/public/bd1ebcb5-f094-49a2-880b-1557d6e91180.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1937,7 +2445,11 @@
       "name": "French Green!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427618/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145226-e976b11a.webp"
+        "url": "https://media.potterdoc.com/images/public/d1b8d9cc-aa57-40e7-8fec-324049e94ee7.webp",
+        "image_id": "d1b8d9cc-aa57-40e7-8fec-324049e94ee7",
+        "r2_key": "images/public/d1b8d9cc-aa57-40e7-8fec-324049e94ee7.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1952,7 +2464,11 @@
       "name": "French Green!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428032/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145229-8d0e5228.webp"
+        "url": "https://media.potterdoc.com/images/public/a0741a50-17b5-42df-b91b-ff2bc0b01303.webp",
+        "image_id": "a0741a50-17b5-42df-b91b-ff2bc0b01303",
+        "r2_key": "images/public/a0741a50-17b5-42df-b91b-ff2bc0b01303.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1967,7 +2483,11 @@
       "name": "French Green!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428030/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145245-01e8c3e8.webp"
+        "url": "https://media.potterdoc.com/images/public/f78c7b90-ee4a-4260-b0d7-8b2c002158fb.webp",
+        "image_id": "f78c7b90-ee4a-4260-b0d7-8b2c002158fb",
+        "r2_key": "images/public/f78c7b90-ee4a-4260-b0d7-8b2c002158fb.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -1982,7 +2502,11 @@
       "name": "French Green!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428027/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145251-ac2366c0.webp"
+        "url": "https://media.potterdoc.com/images/public/5a053e01-8c9e-4a10-8f2b-3f16d8c8eaef.webp",
+        "image_id": "5a053e01-8c9e-4a10-8f2b-3f16d8c8eaef",
+        "r2_key": "images/public/5a053e01-8c9e-4a10-8f2b-3f16d8c8eaef.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -1997,7 +2521,11 @@
       "name": "French Green!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428025/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145300-3502783a.webp"
+        "url": "https://media.potterdoc.com/images/public/36cb7f22-d541-49fd-82c8-e7bf1956aac0.webp",
+        "image_id": "36cb7f22-d541-49fd-82c8-e7bf1956aac0",
+        "r2_key": "images/public/36cb7f22-d541-49fd-82c8-e7bf1956aac0.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2012,7 +2540,11 @@
       "name": "French Green!Wild Hare Fur",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428545/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145303-88d1e395.webp"
+        "url": "https://media.potterdoc.com/images/public/6ee0d060-456a-49de-aa24-2a1ed4e7e1a4.webp",
+        "image_id": "6ee0d060-456a-49de-aa24-2a1ed4e7e1a4",
+        "r2_key": "images/public/6ee0d060-456a-49de-aa24-2a1ed4e7e1a4.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2027,7 +2559,11 @@
       "name": "Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988121/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143716-57d25039.webp"
+        "url": "https://media.potterdoc.com/images/public/1ff060ce-7b05-4599-972e-950bd959c736.webp",
+        "image_id": "1ff060ce-7b05-4599-972e-950bd959c736",
+        "r2_key": "images/public/1ff060ce-7b05-4599-972e-950bd959c736.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2042,7 +2578,11 @@
       "name": "Ismael's Clear",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143604-b575e1d6.webp"
+        "url": "https://media.potterdoc.com/images/public/d9694fd3-1113-4ce5-b27d-d09206e12c44.webp",
+        "image_id": "d9694fd3-1113-4ce5-b27d-d09206e12c44",
+        "r2_key": "images/public/d9694fd3-1113-4ce5-b27d-d09206e12c44.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2057,7 +2597,11 @@
       "name": "Oribe",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152844/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143606-36671346.webp"
+        "url": "https://media.potterdoc.com/images/public/179fa8e5-04d1-45c6-8fd5-0bdc8e589d91.webp",
+        "image_id": "179fa8e5-04d1-45c6-8fd5-0bdc8e589d91",
+        "r2_key": "images/public/179fa8e5-04d1-45c6-8fd5-0bdc8e589d91.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2072,7 +2616,11 @@
       "name": "Oribe!Albany Blue Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150022-f45e2d27.webp"
+        "url": "https://media.potterdoc.com/images/public/2530f004-4a78-45a1-bb1d-fabba19067df.webp",
+        "image_id": "2530f004-4a78-45a1-bb1d-fabba19067df",
+        "r2_key": "images/public/2530f004-4a78-45a1-bb1d-fabba19067df.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2087,7 +2635,11 @@
       "name": "Oribe!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429135/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150025-86e639aa.webp"
+        "url": "https://media.potterdoc.com/images/public/f7aefc41-fc5f-448e-9944-5e976aac8def.webp",
+        "image_id": "f7aefc41-fc5f-448e-9944-5e976aac8def",
+        "r2_key": "images/public/f7aefc41-fc5f-448e-9944-5e976aac8def.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2102,7 +2654,11 @@
       "name": "Oribe!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429566/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150036-af4d5e40.webp"
+        "url": "https://media.potterdoc.com/images/public/e24379ba-f91f-4ade-9d1d-aa5b1df4d08f.webp",
+        "image_id": "e24379ba-f91f-4ade-9d1d-aa5b1df4d08f",
+        "r2_key": "images/public/e24379ba-f91f-4ade-9d1d-aa5b1df4d08f.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2117,7 +2673,11 @@
       "name": "Oribe!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150033-7f972249.webp"
+        "url": "https://media.potterdoc.com/images/public/669b6e11-08d2-4326-8e2d-d53edaed09ba.webp",
+        "image_id": "669b6e11-08d2-4326-8e2d-d53edaed09ba",
+        "r2_key": "images/public/669b6e11-08d2-4326-8e2d-d53edaed09ba.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2132,7 +2692,11 @@
       "name": "Oribe!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150038-f00acdf0.webp"
+        "url": "https://media.potterdoc.com/images/public/dec980f2-d358-450c-9c8e-dc631f66586d.webp",
+        "image_id": "dec980f2-d358-450c-9c8e-dc631f66586d",
+        "r2_key": "images/public/dec980f2-d358-450c-9c8e-dc631f66586d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2147,7 +2711,11 @@
       "name": "Oribe!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429562/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150040-a1f1f04f.webp"
+        "url": "https://media.potterdoc.com/images/public/75e77f16-b3d9-4d73-94b6-c06d5aad66c2.webp",
+        "image_id": "75e77f16-b3d9-4d73-94b6-c06d5aad66c2",
+        "r2_key": "images/public/75e77f16-b3d9-4d73-94b6-c06d5aad66c2.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2162,7 +2730,11 @@
       "name": "Oribe!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150052-32f820b7.webp"
+        "url": "https://media.potterdoc.com/images/public/93d1d2b9-1592-4718-9d67-28f46a8714b2.webp",
+        "image_id": "93d1d2b9-1592-4718-9d67-28f46a8714b2",
+        "r2_key": "images/public/93d1d2b9-1592-4718-9d67-28f46a8714b2.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2177,7 +2749,11 @@
       "name": "Oribe!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429560/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150056-3a4f9c2e.webp"
+        "url": "https://media.potterdoc.com/images/public/d902518e-77dc-4282-b004-5cc611451f37.webp",
+        "image_id": "d902518e-77dc-4282-b004-5cc611451f37",
+        "r2_key": "images/public/d902518e-77dc-4282-b004-5cc611451f37.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2192,7 +2768,11 @@
       "name": "Oribe!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429557/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150058-2580d2a4.webp"
+        "url": "https://media.potterdoc.com/images/public/694497bd-c6fa-4dfd-b4d9-faa8fd72dfb5.webp",
+        "image_id": "694497bd-c6fa-4dfd-b4d9-faa8fd72dfb5",
+        "r2_key": "images/public/694497bd-c6fa-4dfd-b4d9-faa8fd72dfb5.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2207,7 +2787,11 @@
       "name": "Oribe!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150108-29d1ffc7.webp"
+        "url": "https://media.potterdoc.com/images/public/fe8b55c1-d59b-4122-8e5b-ff0c3f41c648.webp",
+        "image_id": "fe8b55c1-d59b-4122-8e5b-ff0c3f41c648",
+        "r2_key": "images/public/fe8b55c1-d59b-4122-8e5b-ff0c3f41c648.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2222,7 +2806,11 @@
       "name": "Oribe!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430200/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150106-54a37710.webp"
+        "url": "https://media.potterdoc.com/images/public/2c6f2358-7685-409e-a04d-7bb7b50afb9f.webp",
+        "image_id": "2c6f2358-7685-409e-a04d-7bb7b50afb9f",
+        "r2_key": "images/public/2c6f2358-7685-409e-a04d-7bb7b50afb9f.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2237,7 +2825,11 @@
       "name": "Oribe!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150110-aa7d0c55.webp"
+        "url": "https://media.potterdoc.com/images/public/6cd4fba4-a547-47e4-96c1-6cfdab9a878c.webp",
+        "image_id": "6cd4fba4-a547-47e4-96c1-6cfdab9a878c",
+        "r2_key": "images/public/6cd4fba4-a547-47e4-96c1-6cfdab9a878c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2252,7 +2844,11 @@
       "name": "Oribe!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430199/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150111-be1ac37e.webp"
+        "url": "https://media.potterdoc.com/images/public/5df84723-9ea8-43ff-9188-9559944e8fc4.webp",
+        "image_id": "5df84723-9ea8-43ff-9188-9559944e8fc4",
+        "r2_key": "images/public/5df84723-9ea8-43ff-9188-9559944e8fc4.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2267,7 +2863,11 @@
       "name": "Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152849/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143609-1f971f9e.webp"
+        "url": "https://media.potterdoc.com/images/public/174eb1f0-2c3b-45dc-b9a3-367a6643e65c.webp",
+        "image_id": "174eb1f0-2c3b-45dc-b9a3-367a6643e65c",
+        "r2_key": "images/public/174eb1f0-2c3b-45dc-b9a3-367a6643e65c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2282,7 +2882,11 @@
       "name": "Pharsalia!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429101/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150027-4cc00d72.webp"
+        "url": "https://media.potterdoc.com/images/public/848199cd-ae16-413c-9671-0af5676e0b29.webp",
+        "image_id": "848199cd-ae16-413c-9671-0af5676e0b29",
+        "r2_key": "images/public/848199cd-ae16-413c-9671-0af5676e0b29.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2297,7 +2901,11 @@
       "name": "Pharsalia!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429100/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150028-3cfd6d1a.webp"
+        "url": "https://media.potterdoc.com/images/public/17c5ac5f-2284-45d0-aa4f-42a063deafbd.webp",
+        "image_id": "17c5ac5f-2284-45d0-aa4f-42a063deafbd",
+        "r2_key": "images/public/17c5ac5f-2284-45d0-aa4f-42a063deafbd.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2312,7 +2920,11 @@
       "name": "Pharsalia!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429565/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150032-fdc73e56.webp"
+        "url": "https://media.potterdoc.com/images/public/b4c82452-0a86-4f8f-a4a5-885c32b52787.webp",
+        "image_id": "b4c82452-0a86-4f8f-a4a5-885c32b52787",
+        "r2_key": "images/public/b4c82452-0a86-4f8f-a4a5-885c32b52787.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2327,7 +2939,11 @@
       "name": "Pharsalia!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429099/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150030-3752c5c6.webp"
+        "url": "https://media.potterdoc.com/images/public/e80c798d-1272-4517-b424-70a148bb7ce9.webp",
+        "image_id": "e80c798d-1272-4517-b424-70a148bb7ce9",
+        "r2_key": "images/public/e80c798d-1272-4517-b424-70a148bb7ce9.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2342,7 +2958,11 @@
       "name": "Pharsalia!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429561/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150041-b30b0bd4.webp"
+        "url": "https://media.potterdoc.com/images/public/c5b7282a-b9e8-49da-8998-ebac7c9739a9.webp",
+        "image_id": "c5b7282a-b9e8-49da-8998-ebac7c9739a9",
+        "r2_key": "images/public/c5b7282a-b9e8-49da-8998-ebac7c9739a9.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2357,7 +2977,11 @@
       "name": "Pharsalia!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150048-ac6c34b8.webp"
+        "url": "https://media.potterdoc.com/images/public/714bb84c-52d1-4528-be1c-a3f3882414d1.webp",
+        "image_id": "714bb84c-52d1-4528-be1c-a3f3882414d1",
+        "r2_key": "images/public/714bb84c-52d1-4528-be1c-a3f3882414d1.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2372,7 +2996,11 @@
       "name": "Pharsalia!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429563/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150046-f7233cee.webp"
+        "url": "https://media.potterdoc.com/images/public/28f97f95-ee37-4574-b62f-c0e0c6f6fb85.webp",
+        "image_id": "28f97f95-ee37-4574-b62f-c0e0c6f6fb85",
+        "r2_key": "images/public/28f97f95-ee37-4574-b62f-c0e0c6f6fb85.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2387,7 +3015,11 @@
       "name": "Pharsalia!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429559/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150100-89228486.webp"
+        "url": "https://media.potterdoc.com/images/public/bbe0bcd7-eda5-454a-bb8a-e1fb70898ca9.webp",
+        "image_id": "bbe0bcd7-eda5-454a-bb8a-e1fb70898ca9",
+        "r2_key": "images/public/bbe0bcd7-eda5-454a-bb8a-e1fb70898ca9.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2402,7 +3034,11 @@
       "name": "Pharsalia!Oribe",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430201/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150105-783d34aa.webp"
+        "url": "https://media.potterdoc.com/images/public/433ad0a0-80e5-42ee-abb1-26e61c4f8067.webp",
+        "image_id": "433ad0a0-80e5-42ee-abb1-26e61c4f8067",
+        "r2_key": "images/public/433ad0a0-80e5-42ee-abb1-26e61c4f8067.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2417,7 +3053,11 @@
       "name": "Pharsalia!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429558/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150103-e71850c8.webp"
+        "url": "https://media.potterdoc.com/images/public/640024d4-5cab-4b14-aa76-811538619e9f.webp",
+        "image_id": "640024d4-5cab-4b14-aa76-811538619e9f",
+        "r2_key": "images/public/640024d4-5cab-4b14-aa76-811538619e9f.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2432,7 +3072,11 @@
       "name": "Pharsalia!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430198/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150113-05548c1a.webp"
+        "url": "https://media.potterdoc.com/images/public/322fc93c-680d-4d34-9896-988f14727cde.webp",
+        "image_id": "322fc93c-680d-4d34-9896-988f14727cde",
+        "r2_key": "images/public/322fc93c-680d-4d34-9896-988f14727cde.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2447,7 +3091,11 @@
       "name": "Pharsalia!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430197/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150115-b9fbdcfc.webp"
+        "url": "https://media.potterdoc.com/images/public/9ed82842-5fdb-4651-9c8a-fe6c69277969.webp",
+        "image_id": "9ed82842-5fdb-4651-9c8a-fe6c69277969",
+        "r2_key": "images/public/9ed82842-5fdb-4651-9c8a-fe6c69277969.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2462,7 +3110,11 @@
       "name": "Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152848/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143611-281c53c9.webp"
+        "url": "https://media.potterdoc.com/images/public/5a8067a3-cb9d-40dc-ae0c-00b40e0fc9c1.webp",
+        "image_id": "5a8067a3-cb9d-40dc-ae0c-00b40e0fc9c1",
+        "r2_key": "images/public/5a8067a3-cb9d-40dc-ae0c-00b40e0fc9c1.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2477,7 +3129,11 @@
       "name": "Pussywillow!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150133-20ce746e.webp"
+        "url": "https://media.potterdoc.com/images/public/ebc0f7b6-dfab-4f5e-b6b9-bbda85fe768f.webp",
+        "image_id": "ebc0f7b6-dfab-4f5e-b6b9-bbda85fe768f",
+        "r2_key": "images/public/ebc0f7b6-dfab-4f5e-b6b9-bbda85fe768f.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2492,7 +3148,11 @@
       "name": "Pussywillow!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150134-f5fbe972.webp"
+        "url": "https://media.potterdoc.com/images/public/063327ce-e1b7-4ab1-8d91-a27f54c7cba4.webp",
+        "image_id": "063327ce-e1b7-4ab1-8d91-a27f54c7cba4",
+        "r2_key": "images/public/063327ce-e1b7-4ab1-8d91-a27f54c7cba4.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2507,7 +3167,11 @@
       "name": "Pussywillow!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150136-bfaef1d7.webp"
+        "url": "https://media.potterdoc.com/images/public/425f3461-210a-480c-b387-18664be7690c.webp",
+        "image_id": "425f3461-210a-480c-b387-18664be7690c",
+        "r2_key": "images/public/425f3461-210a-480c-b387-18664be7690c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2522,7 +3186,11 @@
       "name": "Pussywillow!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150146-7b8cb6b2.webp"
+        "url": "https://media.potterdoc.com/images/public/a10c9122-5b2b-47eb-b811-044edf2caf94.webp",
+        "image_id": "a10c9122-5b2b-47eb-b811-044edf2caf94",
+        "r2_key": "images/public/a10c9122-5b2b-47eb-b811-044edf2caf94.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2537,7 +3205,11 @@
       "name": "Pussywillow!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150148-1dc36cbd.webp"
+        "url": "https://media.potterdoc.com/images/public/628af41a-cac8-443c-839c-7b2e4ea33b14.webp",
+        "image_id": "628af41a-cac8-443c-839c-7b2e4ea33b14",
+        "r2_key": "images/public/628af41a-cac8-443c-839c-7b2e4ea33b14.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2552,7 +3224,11 @@
       "name": "Pussywillow!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150150-d3b6c87f.webp"
+        "url": "https://media.potterdoc.com/images/public/cda59a4e-2ef5-49af-8efd-acb8597515fb.webp",
+        "image_id": "cda59a4e-2ef5-49af-8efd-acb8597515fb",
+        "r2_key": "images/public/cda59a4e-2ef5-49af-8efd-acb8597515fb.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2567,7 +3243,11 @@
       "name": "Pussywillow!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150156-98c19838.webp"
+        "url": "https://media.potterdoc.com/images/public/ff331756-d9ce-4e67-b815-63865521aba0.webp",
+        "image_id": "ff331756-d9ce-4e67-b815-63865521aba0",
+        "r2_key": "images/public/ff331756-d9ce-4e67-b815-63865521aba0.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2582,7 +3262,11 @@
       "name": "Pussywillow!Wild Hare Fur",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777430193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-150154-487dce3d.webp"
+        "url": "https://media.potterdoc.com/images/public/6b55499d-32ea-42f6-b968-72a425acad5e.webp",
+        "image_id": "6b55499d-32ea-42f6-b968-72a425acad5e",
+        "r2_key": "images/public/6b55499d-32ea-42f6-b968-72a425acad5e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2597,7 +3281,11 @@
       "name": "Ragnar's Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152847/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143614-67cfa51f.webp"
+        "url": "https://media.potterdoc.com/images/public/671c227b-79d6-45e1-a451-2ea09991f53c.webp",
+        "image_id": "671c227b-79d6-45e1-a451-2ea09991f53c",
+        "r2_key": "images/public/671c227b-79d6-45e1-a451-2ea09991f53c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": true,
@@ -2612,7 +3300,11 @@
       "name": "Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777337306/manual-square-crop-imports/final/glaze-types/glaze-type-2026-02-02-132633-a5e9f015.webp"
+        "url": "https://media.potterdoc.com/images/public/c157dac9-8889-42fd-a3d2-1087b4910968.webp",
+        "image_id": "c157dac9-8889-42fd-a3d2-1087b4910968",
+        "r2_key": "images/public/c157dac9-8889-42fd-a3d2-1087b4910968.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2627,7 +3319,11 @@
       "name": "Red Brown!Albany Green Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428593/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145635-adc3c925.webp"
+        "url": "https://media.potterdoc.com/images/public/21657699-6dc6-4a75-8633-858bf3cc9989.webp",
+        "image_id": "21657699-6dc6-4a75-8633-858bf3cc9989",
+        "r2_key": "images/public/21657699-6dc6-4a75-8633-858bf3cc9989.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2642,7 +3338,11 @@
       "name": "Red Brown!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145644-89adced9.webp"
+        "url": "https://media.potterdoc.com/images/public/d0a188f2-43ee-4608-839b-8aadcc25c0dc.webp",
+        "image_id": "d0a188f2-43ee-4608-839b-8aadcc25c0dc",
+        "r2_key": "images/public/d0a188f2-43ee-4608-839b-8aadcc25c0dc.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2657,7 +3357,11 @@
       "name": "Red Brown!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145652-72a144ff.webp"
+        "url": "https://media.potterdoc.com/images/public/b9c880d6-a53b-4553-ae4d-5821e67e6214.webp",
+        "image_id": "b9c880d6-a53b-4553-ae4d-5821e67e6214",
+        "r2_key": "images/public/b9c880d6-a53b-4553-ae4d-5821e67e6214.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2672,7 +3376,11 @@
       "name": "Red Brown!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428542/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145647-4ac821d5.webp"
+        "url": "https://media.potterdoc.com/images/public/90f5b800-a9c4-4ba9-9cfc-32da220bf32b.webp",
+        "image_id": "90f5b800-a9c4-4ba9-9cfc-32da220bf32b",
+        "r2_key": "images/public/90f5b800-a9c4-4ba9-9cfc-32da220bf32b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2687,7 +3395,11 @@
       "name": "Red Brown!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428541/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145657-70565f3c.webp"
+        "url": "https://media.potterdoc.com/images/public/a67466ef-db6c-47c1-8e2d-c22ded6ff985.webp",
+        "image_id": "a67466ef-db6c-47c1-8e2d-c22ded6ff985",
+        "r2_key": "images/public/a67466ef-db6c-47c1-8e2d-c22ded6ff985.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2702,7 +3414,11 @@
       "name": "Red Brown!Ismael's Clear",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428540/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145706-d74e8f82.webp"
+        "url": "https://media.potterdoc.com/images/public/428c4ac0-ef7f-4e16-aa93-5dc2b46d6233.webp",
+        "image_id": "428c4ac0-ef7f-4e16-aa93-5dc2b46d6233",
+        "r2_key": "images/public/428c4ac0-ef7f-4e16-aa93-5dc2b46d6233.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2717,7 +3433,11 @@
       "name": "Red Brown!Oribe",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428538/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145710-ab07707d.webp"
+        "url": "https://media.potterdoc.com/images/public/9dfd5965-be0a-472d-9374-6ba0aa0596db.webp",
+        "image_id": "9dfd5965-be0a-472d-9374-6ba0aa0596db",
+        "r2_key": "images/public/9dfd5965-be0a-472d-9374-6ba0aa0596db.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2732,7 +3452,11 @@
       "name": "Red Brown!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145712-e62b3fda.webp"
+        "url": "https://media.potterdoc.com/images/public/bce8af42-34e6-49b9-b9c6-bd1f71bf9ce9.webp",
+        "image_id": "bce8af42-34e6-49b9-b9c6-bd1f71bf9ce9",
+        "r2_key": "images/public/bce8af42-34e6-49b9-b9c6-bd1f71bf9ce9.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2747,7 +3471,11 @@
       "name": "Red Brown!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145720-d5825c31.webp"
+        "url": "https://media.potterdoc.com/images/public/e3c85154-5cb4-4ded-94bf-5a0abc400b48.webp",
+        "image_id": "e3c85154-5cb4-4ded-94bf-5a0abc400b48",
+        "r2_key": "images/public/e3c85154-5cb4-4ded-94bf-5a0abc400b48.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2762,7 +3490,11 @@
       "name": "Red Brown!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145724-424bb99c.webp"
+        "url": "https://media.potterdoc.com/images/public/b7dc2496-84da-413d-897e-ccb865ff3d7a.webp",
+        "image_id": "b7dc2496-84da-413d-897e-ccb865ff3d7a",
+        "r2_key": "images/public/b7dc2496-84da-413d-897e-ccb865ff3d7a.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2777,7 +3509,11 @@
       "name": "Red Brown!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145726-3fa92de0.webp"
+        "url": "https://media.potterdoc.com/images/public/83484eba-d35f-4f68-8c5a-bc3bdd0b6ff3.webp",
+        "image_id": "83484eba-d35f-4f68-8c5a-bc3bdd0b6ff3",
+        "r2_key": "images/public/83484eba-d35f-4f68-8c5a-bc3bdd0b6ff3.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2792,7 +3528,11 @@
       "name": "Silky Black",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143623-ec58c2f9.webp"
+        "url": "https://media.potterdoc.com/images/public/b94aaae0-48e7-43eb-97c9-8fe153c5d33d.webp",
+        "image_id": "b94aaae0-48e7-43eb-97c9-8fe153c5d33d",
+        "r2_key": "images/public/b94aaae0-48e7-43eb-97c9-8fe153c5d33d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": false,
@@ -2820,7 +3560,11 @@
       "name": "Tenmoku!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428544/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145640-90d65369.webp"
+        "url": "https://media.potterdoc.com/images/public/ae0ffe6b-e418-45a3-8d34-682e87977e74.webp",
+        "image_id": "ae0ffe6b-e418-45a3-8d34-682e87977e74",
+        "r2_key": "images/public/ae0ffe6b-e418-45a3-8d34-682e87977e74.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -2835,7 +3579,11 @@
       "name": "Tenmoku!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428543/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145648-be150d84.webp"
+        "url": "https://media.potterdoc.com/images/public/49fb7c07-2f50-4304-b65f-f7a6eeb4ec7c.webp",
+        "image_id": "49fb7c07-2f50-4304-b65f-f7a6eeb4ec7c",
+        "r2_key": "images/public/49fb7c07-2f50-4304-b65f-f7a6eeb4ec7c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2850,7 +3598,11 @@
       "name": "Tenmoku!Pharsalia",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777428539/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145700-72828cf7.webp"
+        "url": "https://media.potterdoc.com/images/public/e2c4a48d-0a9b-40bc-bc59-ac3365164bee.webp",
+        "image_id": "e2c4a48d-0a9b-40bc-bc59-ac3365164bee",
+        "r2_key": "images/public/e2c4a48d-0a9b-40bc-bc59-ac3365164bee.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2865,7 +3617,11 @@
       "name": "Tenmoku!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145714-f69083cd.webp"
+        "url": "https://media.potterdoc.com/images/public/51ba06c6-0f0b-4e86-abd8-dbf7a3da468c.webp",
+        "image_id": "51ba06c6-0f0b-4e86-abd8-dbf7a3da468c",
+        "r2_key": "images/public/51ba06c6-0f0b-4e86-abd8-dbf7a3da468c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2880,7 +3636,11 @@
       "name": "Tenmoku!Wild Hare Fur",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145718-7dd4211f.webp"
+        "url": "https://media.potterdoc.com/images/public/76066f8d-8c87-4861-9c2d-8ae80e0679cc.webp",
+        "image_id": "76066f8d-8c87-4861-9c2d-8ae80e0679cc",
+        "r2_key": "images/public/76066f8d-8c87-4861-9c2d-8ae80e0679cc.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2895,7 +3655,11 @@
       "name": "Tenmoku!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777429103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-145729-6a61888c.webp"
+        "url": "https://media.potterdoc.com/images/public/b410371f-54b4-4ec2-b97e-2262a6678f8c.webp",
+        "image_id": "b410371f-54b4-4ec2-b97e-2262a6678f8c",
+        "r2_key": "images/public/b410371f-54b4-4ec2-b97e-2262a6678f8c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2910,7 +3674,11 @@
       "name": "Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776988123/glaze_dev/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143647-9a0a750a.webp"
+        "url": "https://media.potterdoc.com/images/public/a139653c-b236-4756-9d76-a46808980e54.webp",
+        "image_id": "a139653c-b236-4756-9d76-a46808980e54",
+        "r2_key": "images/public/a139653c-b236-4756-9d76-a46808980e54.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2925,7 +3693,11 @@
       "name": "Turquoise!Albany Green Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418629/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144254-0342678b.webp"
+        "url": "https://media.potterdoc.com/images/public/35cedf53-6a0f-480c-b1e0-aab5702e9b13.webp",
+        "image_id": "35cedf53-6a0f-480c-b1e0-aab5702e9b13",
+        "r2_key": "images/public/35cedf53-6a0f-480c-b1e0-aab5702e9b13.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2940,7 +3712,11 @@
       "name": "Turquoise!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418628/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144257-b246c6ed.webp"
+        "url": "https://media.potterdoc.com/images/public/7896a0e3-014f-46db-845e-de52f16d5102.webp",
+        "image_id": "7896a0e3-014f-46db-845e-de52f16d5102",
+        "r2_key": "images/public/7896a0e3-014f-46db-845e-de52f16d5102.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2955,7 +3731,11 @@
       "name": "Turquoise!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144306-2303dd53.webp"
+        "url": "https://media.potterdoc.com/images/public/78808157-236c-447c-859c-8d1c39dea1f7.webp",
+        "image_id": "78808157-236c-447c-859c-8d1c39dea1f7",
+        "r2_key": "images/public/78808157-236c-447c-859c-8d1c39dea1f7.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2970,7 +3750,11 @@
       "name": "Turquoise!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144303-45995e9a.webp"
+        "url": "https://media.potterdoc.com/images/public/678329ad-fbf8-4b53-ae57-6f87b5082d2d.webp",
+        "image_id": "678329ad-fbf8-4b53-ae57-6f87b5082d2d",
+        "r2_key": "images/public/678329ad-fbf8-4b53-ae57-6f87b5082d2d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -2985,7 +3769,11 @@
       "name": "Turquoise!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144308-6ec4760c.webp"
+        "url": "https://media.potterdoc.com/images/public/76c67b32-0f7a-4ddd-8c42-1b0ecb0a57da.webp",
+        "image_id": "76c67b32-0f7a-4ddd-8c42-1b0ecb0a57da",
+        "r2_key": "images/public/76c67b32-0f7a-4ddd-8c42-1b0ecb0a57da.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3000,7 +3788,11 @@
       "name": "Turquoise!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418624/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144310-c66e5ee4.webp"
+        "url": "https://media.potterdoc.com/images/public/8a63253c-59e9-4390-911a-07d7220a1037.webp",
+        "image_id": "8a63253c-59e9-4390-911a-07d7220a1037",
+        "r2_key": "images/public/8a63253c-59e9-4390-911a-07d7220a1037.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3015,7 +3807,11 @@
       "name": "Turquoise!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418625/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144313-b903d90b.webp"
+        "url": "https://media.potterdoc.com/images/public/03e5c1c9-ed01-462a-8978-fd5bd4c33ead.webp",
+        "image_id": "03e5c1c9-ed01-462a-8978-fd5bd4c33ead",
+        "r2_key": "images/public/03e5c1c9-ed01-462a-8978-fd5bd4c33ead.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3030,7 +3826,11 @@
       "name": "Turquoise!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418623/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144320-2efd0cd7.webp"
+        "url": "https://media.potterdoc.com/images/public/2c262dbf-b245-4e92-8813-7ba3cd4886af.webp",
+        "image_id": "2c262dbf-b245-4e92-8813-7ba3cd4886af",
+        "r2_key": "images/public/2c262dbf-b245-4e92-8813-7ba3cd4886af.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3045,7 +3845,11 @@
       "name": "Turquoise!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777418627/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144317-1ffede1a.webp"
+        "url": "https://media.potterdoc.com/images/public/a26d7118-b6af-4713-a5a2-7dbfccac4f90.webp",
+        "image_id": "a26d7118-b6af-4713-a5a2-7dbfccac4f90",
+        "r2_key": "images/public/a26d7118-b6af-4713-a5a2-7dbfccac4f90.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3060,7 +3864,11 @@
       "name": "Turquoise!Oribe",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422289/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144322-0f0bf696.webp"
+        "url": "https://media.potterdoc.com/images/public/f11d896f-bccf-451a-a25a-94d7e6e56ff6.webp",
+        "image_id": "f11d896f-bccf-451a-a25a-94d7e6e56ff6",
+        "r2_key": "images/public/f11d896f-bccf-451a-a25a-94d7e6e56ff6.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3075,7 +3883,11 @@
       "name": "Turquoise!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422291/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144325-8ecb7315.webp"
+        "url": "https://media.potterdoc.com/images/public/edf44a98-140f-44c4-a31d-fa284969a693.webp",
+        "image_id": "edf44a98-140f-44c4-a31d-fa284969a693",
+        "r2_key": "images/public/edf44a98-140f-44c4-a31d-fa284969a693.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3090,7 +3902,11 @@
       "name": "Turquoise!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422288/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144330-0728eff3.webp"
+        "url": "https://media.potterdoc.com/images/public/7062f869-771a-47da-80d4-619712d639ea.webp",
+        "image_id": "7062f869-771a-47da-80d4-619712d639ea",
+        "r2_key": "images/public/7062f869-771a-47da-80d4-619712d639ea.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3105,7 +3921,11 @@
       "name": "Turquoise!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777422290/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144328-f7e8f8dd.webp"
+        "url": "https://media.potterdoc.com/images/public/58cfbf80-eca7-4787-b700-a558e96831b8.webp",
+        "image_id": "58cfbf80-eca7-4787-b700-a558e96831b8",
+        "r2_key": "images/public/58cfbf80-eca7-4787-b700-a558e96831b8.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3120,7 +3940,11 @@
       "name": "Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304349/glaze_public/eyy9whpmb5wajybtfk3p.heic"
+        "url": "https://media.potterdoc.com/images/public/5ffbc482-8fdf-4df8-ba1e-8294ee22254c.jpg",
+        "image_id": "5ffbc482-8fdf-4df8-ba1e-8294ee22254c",
+        "r2_key": "images/public/5ffbc482-8fdf-4df8-ba1e-8294ee22254c.jpg",
+        "width": 3024,
+        "height": 4032
       },
       "is_food_safe": true,
       "runs": false,
@@ -3135,7 +3959,11 @@
       "name": "Volcanic Ash!Albany Green Slip",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424339/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144651-ea71a9c3.webp"
+        "url": "https://media.potterdoc.com/images/public/55088314-4849-4d04-b0d5-dc697ac7b727.webp",
+        "image_id": "55088314-4849-4d04-b0d5-dc697ac7b727",
+        "r2_key": "images/public/55088314-4849-4d04-b0d5-dc697ac7b727.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3150,7 +3978,11 @@
       "name": "Volcanic Ash!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777424338/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144655-fbd68b16.webp"
+        "url": "https://media.potterdoc.com/images/public/23c9ca0c-2f06-4023-a23b-c51a7e7e0299.webp",
+        "image_id": "23c9ca0c-2f06-4023-a23b-c51a7e7e0299",
+        "r2_key": "images/public/23c9ca0c-2f06-4023-a23b-c51a7e7e0299.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3165,7 +3997,11 @@
       "name": "Volcanic Ash!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144729-b4db7a04.webp"
+        "url": "https://media.potterdoc.com/images/public/d307e8f0-b197-4467-aaab-9142bb951b1e.webp",
+        "image_id": "d307e8f0-b197-4467-aaab-9142bb951b1e",
+        "r2_key": "images/public/d307e8f0-b197-4467-aaab-9142bb951b1e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3180,7 +4016,11 @@
       "name": "Volcanic Ash!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426111/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144727-a392b53d.webp"
+        "url": "https://media.potterdoc.com/images/public/5304ee85-d08e-4a4e-b4a5-1edec6168635.webp",
+        "image_id": "5304ee85-d08e-4a4e-b4a5-1edec6168635",
+        "r2_key": "images/public/5304ee85-d08e-4a4e-b4a5-1edec6168635.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3195,7 +4035,11 @@
       "name": "Volcanic Ash!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144736-abea325b.webp"
+        "url": "https://media.potterdoc.com/images/public/103e4c8f-c48f-4d11-9581-eb1e39b17d10.webp",
+        "image_id": "103e4c8f-c48f-4d11-9581-eb1e39b17d10",
+        "r2_key": "images/public/103e4c8f-c48f-4d11-9581-eb1e39b17d10.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3210,7 +4054,11 @@
       "name": "Volcanic Ash!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144756-8df368da.webp"
+        "url": "https://media.potterdoc.com/images/public/46d47962-7027-4261-99c5-e4c2b01b7188.webp",
+        "image_id": "46d47962-7027-4261-99c5-e4c2b01b7188",
+        "r2_key": "images/public/46d47962-7027-4261-99c5-e4c2b01b7188.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3225,7 +4073,11 @@
       "name": "Volcanic Ash!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144754-0f5dbe35.webp"
+        "url": "https://media.potterdoc.com/images/public/3330493f-c31b-4d62-92a6-25ec4830a56e.webp",
+        "image_id": "3330493f-c31b-4d62-92a6-25ec4830a56e",
+        "r2_key": "images/public/3330493f-c31b-4d62-92a6-25ec4830a56e.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3240,7 +4092,11 @@
       "name": "Volcanic Ash!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426106/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144921-e79ae7b3.webp"
+        "url": "https://media.potterdoc.com/images/public/80bdfbbc-316a-4a45-b18a-b4c841d2df72.webp",
+        "image_id": "80bdfbbc-316a-4a45-b18a-b4c841d2df72",
+        "r2_key": "images/public/80bdfbbc-316a-4a45-b18a-b4c841d2df72.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3255,7 +4111,11 @@
       "name": "Volcanic Ash!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426105/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144922-6d3c1338.webp"
+        "url": "https://media.potterdoc.com/images/public/fb5acecb-eb7a-4439-b8a7-3f8a3d4cbdf0.webp",
+        "image_id": "fb5acecb-eb7a-4439-b8a7-3f8a3d4cbdf0",
+        "r2_key": "images/public/fb5acecb-eb7a-4439-b8a7-3f8a3d4cbdf0.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3270,7 +4130,11 @@
       "name": "Volcanic Ash!Tenmoku",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144942-11a94386.webp"
+        "url": "https://media.potterdoc.com/images/public/5488e9fa-eb58-4c98-95bf-f321234e8775.webp",
+        "image_id": "5488e9fa-eb58-4c98-95bf-f321234e8775",
+        "r2_key": "images/public/5488e9fa-eb58-4c98-95bf-f321234e8775.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3285,7 +4149,11 @@
       "name": "Volcanic Ash!Turquoise",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427193/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144943-2875c39a.webp"
+        "url": "https://media.potterdoc.com/images/public/b3f3863a-f2c7-42f0-85ec-01bc6c8166e5.webp",
+        "image_id": "b3f3863a-f2c7-42f0-85ec-01bc6c8166e5",
+        "r2_key": "images/public/b3f3863a-f2c7-42f0-85ec-01bc6c8166e5.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3300,7 +4168,11 @@
       "name": "Volcanic Ash!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427192/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144945-9f9f9c33.webp"
+        "url": "https://media.potterdoc.com/images/public/bc5c838a-3a7b-44c9-b378-6a2c0d10882c.webp",
+        "image_id": "bc5c838a-3a7b-44c9-b378-6a2c0d10882c",
+        "r2_key": "images/public/bc5c838a-3a7b-44c9-b378-6a2c0d10882c.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3315,7 +4187,11 @@
       "name": "Wild Hare Fur",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1776304189/glaze_public/jvrmpfxkjjhniqpqzqrs.heic"
+        "url": "https://media.potterdoc.com/images/public/c90543a0-c887-489f-946c-628856b80712.jpg",
+        "image_id": "c90543a0-c887-489f-946c-628856b80712",
+        "r2_key": "images/public/c90543a0-c887-489f-946c-628856b80712.jpg",
+        "width": 3024,
+        "height": 4032
       },
       "is_food_safe": true,
       "runs": false,
@@ -3330,7 +4206,11 @@
       "name": "Wild Hare Fur!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426115/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144658-f5c04a76.webp"
+        "url": "https://media.potterdoc.com/images/public/eb5ebd67-17e9-4de0-abd9-94270f263602.webp",
+        "image_id": "eb5ebd67-17e9-4de0-abd9-94270f263602",
+        "r2_key": "images/public/eb5ebd67-17e9-4de0-abd9-94270f263602.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3345,7 +4225,11 @@
       "name": "Wild Hare Fur!Celadon",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426188/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144701-f4986bf1.webp"
+        "url": "https://media.potterdoc.com/images/public/98adbaf4-fcff-4a80-bfb4-9d970231bd24.webp",
+        "image_id": "98adbaf4-fcff-4a80-bfb4-9d970231bd24",
+        "r2_key": "images/public/98adbaf4-fcff-4a80-bfb4-9d970231bd24.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3360,7 +4244,11 @@
       "name": "Wild Hare Fur!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144724-4b167952.webp"
+        "url": "https://media.potterdoc.com/images/public/a3a54dda-5fa7-4b42-858c-7afd016bb06b.webp",
+        "image_id": "a3a54dda-5fa7-4b42-858c-7afd016bb06b",
+        "r2_key": "images/public/a3a54dda-5fa7-4b42-858c-7afd016bb06b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3375,7 +4263,11 @@
       "name": "Wild Hare Fur!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426113/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144722-cd3b896b.webp"
+        "url": "https://media.potterdoc.com/images/public/d46869e7-348a-42dd-8b37-744e7134b179.webp",
+        "image_id": "d46869e7-348a-42dd-8b37-744e7134b179",
+        "r2_key": "images/public/d46869e7-348a-42dd-8b37-744e7134b179.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3390,7 +4282,11 @@
       "name": "Wild Hare Fur!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426110/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144738-361f9b9e.webp"
+        "url": "https://media.potterdoc.com/images/public/925f42fb-073f-45ca-b41e-c594a1931062.webp",
+        "image_id": "925f42fb-073f-45ca-b41e-c594a1931062",
+        "r2_key": "images/public/925f42fb-073f-45ca-b41e-c594a1931062.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3405,7 +4301,11 @@
       "name": "Wild Hare Fur!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426107/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144752-40359ede.webp"
+        "url": "https://media.potterdoc.com/images/public/e0c81f1f-be9f-4308-ad69-a121007e1c92.webp",
+        "image_id": "e0c81f1f-be9f-4308-ad69-a121007e1c92",
+        "r2_key": "images/public/e0c81f1f-be9f-4308-ad69-a121007e1c92.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3420,7 +4320,11 @@
       "name": "Wild Hare Fur!French Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426102/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144750-dcad8e1a.webp"
+        "url": "https://media.potterdoc.com/images/public/b1cbdb40-99b9-47d3-8759-06d439224dc9.webp",
+        "image_id": "b1cbdb40-99b9-47d3-8759-06d439224dc9",
+        "r2_key": "images/public/b1cbdb40-99b9-47d3-8759-06d439224dc9.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3435,7 +4339,11 @@
       "name": "Wild Hare Fur!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426103/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144929-2f4ccc10.webp"
+        "url": "https://media.potterdoc.com/images/public/25d195ef-e4f7-4ca6-a935-b32bd12c820b.webp",
+        "image_id": "25d195ef-e4f7-4ca6-a935-b32bd12c820b",
+        "r2_key": "images/public/25d195ef-e4f7-4ca6-a935-b32bd12c820b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3450,7 +4358,11 @@
       "name": "Wild Hare Fur!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144939-426c4a2e.webp"
+        "url": "https://media.potterdoc.com/images/public/2b1b1032-fe90-499c-a9c5-12a1a7fc118b.webp",
+        "image_id": "2b1b1032-fe90-499c-a9c5-12a1a7fc118b",
+        "r2_key": "images/public/2b1b1032-fe90-499c-a9c5-12a1a7fc118b.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3465,7 +4377,11 @@
       "name": "Wild Hare Fur!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427194/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144936-d406de3b.webp"
+        "url": "https://media.potterdoc.com/images/public/aa363e82-7a77-4161-a7dd-5b4a567eff5f.webp",
+        "image_id": "aa363e82-7a77-4161-a7dd-5b4a567eff5f",
+        "r2_key": "images/public/aa363e82-7a77-4161-a7dd-5b4a567eff5f.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3480,7 +4396,11 @@
       "name": "Wild Hare Fur!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427190/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144946-f8807a74.webp"
+        "url": "https://media.potterdoc.com/images/public/14535445-1132-4302-89e6-6b0c32328b40.webp",
+        "image_id": "14535445-1132-4302-89e6-6b0c32328b40",
+        "r2_key": "images/public/14535445-1132-4302-89e6-6b0c32328b40.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3495,7 +4415,11 @@
       "name": "Wild Hare Fur!Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144949-8d076bfe.webp"
+        "url": "https://media.potterdoc.com/images/public/7cc1d5d7-d43d-40d0-a995-9587b585ad6d.webp",
+        "image_id": "7cc1d5d7-d43d-40d0-a995-9587b585ad6d",
+        "r2_key": "images/public/7cc1d5d7-d43d-40d0-a995-9587b585ad6d.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3510,7 +4434,11 @@
       "name": "Xavier Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152845/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143628-9349320b.webp"
+        "url": "https://media.potterdoc.com/images/public/51d97400-6fff-45d9-9915-9873a54977ea.webp",
+        "image_id": "51d97400-6fff-45d9-9915-9873a54977ea",
+        "r2_key": "images/public/51d97400-6fff-45d9-9915-9873a54977ea.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": false,
@@ -3525,7 +4453,11 @@
       "name": "Yellow Orange",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777152846/manual-square-crop-imports/final/glaze-types/glaze-type-2026-04-22-143632-67791f11.webp"
+        "url": "https://media.potterdoc.com/images/public/a0a37f4e-8d54-4ea7-8be1-48faa7c26038.webp",
+        "image_id": "a0a37f4e-8d54-4ea7-8be1-48faa7c26038",
+        "r2_key": "images/public/a0a37f4e-8d54-4ea7-8be1-48faa7c26038.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3540,7 +4472,11 @@
       "name": "Yellow Orange!Amber",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426116/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144704-7ce58703.webp"
+        "url": "https://media.potterdoc.com/images/public/b2048305-3e21-402c-8e22-e5f6bdd08ad5.webp",
+        "image_id": "b2048305-3e21-402c-8e22-e5f6bdd08ad5",
+        "r2_key": "images/public/b2048305-3e21-402c-8e22-e5f6bdd08ad5.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3555,7 +4491,11 @@
       "name": "Yellow Orange!Choy",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144707-c1ff4642.webp"
+        "url": "https://media.potterdoc.com/images/public/f1914ec5-0d0c-4d25-9c5a-845fa6389b60.webp",
+        "image_id": "f1914ec5-0d0c-4d25-9c5a-845fa6389b60",
+        "r2_key": "images/public/f1914ec5-0d0c-4d25-9c5a-845fa6389b60.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3570,7 +4510,11 @@
       "name": "Yellow Orange!Cornwall",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426112/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144719-bcf23991.webp"
+        "url": "https://media.potterdoc.com/images/public/c11bf660-204e-46b7-a1c8-30f3ca957b37.webp",
+        "image_id": "c11bf660-204e-46b7-a1c8-30f3ca957b37",
+        "r2_key": "images/public/c11bf660-204e-46b7-a1c8-30f3ca957b37.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3585,7 +4529,11 @@
       "name": "Yellow Orange!Creamy Red",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426114/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144716-76c982cb.webp"
+        "url": "https://media.potterdoc.com/images/public/d3900bdb-b5c2-4a3f-9598-c5b2d7aea93f.webp",
+        "image_id": "d3900bdb-b5c2-4a3f-9598-c5b2d7aea93f",
+        "r2_key": "images/public/d3900bdb-b5c2-4a3f-9598-c5b2d7aea93f.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3600,7 +4548,11 @@
       "name": "Yellow Orange!Dragon Green",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144742-549cba9e.webp"
+        "url": "https://media.potterdoc.com/images/public/d64bce07-6929-419e-afc2-72604f940143.webp",
+        "image_id": "d64bce07-6929-419e-afc2-72604f940143",
+        "r2_key": "images/public/d64bce07-6929-419e-afc2-72604f940143.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": false,
       "runs": true,
@@ -3615,7 +4567,11 @@
       "name": "Yellow Orange!French Blue",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426109/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144746-f7b27016.webp"
+        "url": "https://media.potterdoc.com/images/public/a3c6ae73-bfdd-44b6-863f-1eec3804f6ca.webp",
+        "image_id": "a3c6ae73-bfdd-44b6-863f-1eec3804f6ca",
+        "r2_key": "images/public/a3c6ae73-bfdd-44b6-863f-1eec3804f6ca.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3630,7 +4586,11 @@
       "name": "Yellow Orange!Gloss White",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426108/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144744-89cde587.webp"
+        "url": "https://media.potterdoc.com/images/public/9e516d71-be91-4217-b4ca-a8e97b4e90a3.webp",
+        "image_id": "9e516d71-be91-4217-b4ca-a8e97b4e90a3",
+        "r2_key": "images/public/9e516d71-be91-4217-b4ca-a8e97b4e90a3.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3645,7 +4605,11 @@
       "name": "Yellow Orange!Ismael's Clear",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777426104/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144932-8f101692.webp"
+        "url": "https://media.potterdoc.com/images/public/82ed8e4d-b575-49a6-a5e2-498ef97060b1.webp",
+        "image_id": "82ed8e4d-b575-49a6-a5e2-498ef97060b1",
+        "r2_key": "images/public/82ed8e4d-b575-49a6-a5e2-498ef97060b1.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3660,7 +4624,11 @@
       "name": "Yellow Orange!Pussywillow",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427195/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144933-ec3a64f5.webp"
+        "url": "https://media.potterdoc.com/images/public/cc950390-22bf-4b7c-8c28-51f35e8edd86.webp",
+        "image_id": "cc950390-22bf-4b7c-8c28-51f35e8edd86",
+        "r2_key": "images/public/cc950390-22bf-4b7c-8c28-51f35e8edd86.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3675,7 +4643,11 @@
       "name": "Yellow Orange!Red Brown",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427196/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144935-b6902246.webp"
+        "url": "https://media.potterdoc.com/images/public/8765c101-3737-4bcc-ad75-203752ab771a.webp",
+        "image_id": "8765c101-3737-4bcc-ad75-203752ab771a",
+        "r2_key": "images/public/8765c101-3737-4bcc-ad75-203752ab771a.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3690,7 +4662,11 @@
       "name": "Yellow Orange!Volcanic Ash",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427189/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144950-6b27ffd4.webp"
+        "url": "https://media.potterdoc.com/images/public/3b98b045-271d-410b-9338-13c84c5b62af.webp",
+        "image_id": "3b98b045-271d-410b-9338-13c84c5b62af",
+        "r2_key": "images/public/3b98b045-271d-410b-9338-13c84c5b62af.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
@@ -3705,7 +4681,11 @@
       "name": "Yellow Orange!Wild Hare Fur",
       "firing_temperature": null,
       "test_tile_image": {
-        "url": "https://res.cloudinary.com/dxpnyhe1f/image/upload/v1777427191/manual-square-crop-imports/final/glaze-combinations/glaze-combination-2026-04-22-144952-2496de7d.webp"
+        "url": "https://media.potterdoc.com/images/public/9d044326-fb54-4c72-9691-16f9fb6c69ae.webp",
+        "image_id": "9d044326-fb54-4c72-9691-16f9fb6c69ae",
+        "r2_key": "images/public/9d044326-fb54-4c72-9691-16f9fb6c69ae.webp",
+        "width": 2000,
+        "height": 2000
       },
       "is_food_safe": true,
       "runs": true,
