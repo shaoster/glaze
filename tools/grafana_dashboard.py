@@ -269,6 +269,135 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
             },
         ],
     },
+    18: {
+        "title": "R2 Storage",
+        "type": "piechart",
+        "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "cloudflare-r2-infinity",
+        },
+        "targets": [
+            {
+                "refId": "A",
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "cloudflare-r2-infinity",
+                },
+                "type": "json",
+                "source": "url",
+                "url": "https://api.cloudflare.com/client/v4/graphql",
+                "url_options": {
+                    "method": "POST",
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2StorageAdaptiveGroups(filter: { bucketName: \\"potterdoc\\" }, limit: 1, orderBy: [datetime_DESC]) { max { payloadSize } } } } }"}',
+                    "body_type": "raw",
+                    "body_content_type": "application/json",
+                },
+                "parser": "backend",
+                "root_selector": "data.viewer.accounts.0.r2StorageAdaptiveGroups",
+                "columns": [
+                    {
+                        "selector": "max.payloadSize",
+                        "text": "Used",
+                        "type": "number",
+                    }
+                ],
+                "computed_columns": [
+                    {
+                        "selector": "10000000000 - Used",
+                        "text": "Remaining",
+                        "type": "number",
+                    }
+                ],
+                "cache_timeout_in_seconds": 3600,
+            }
+        ],
+    },
+    19: {
+        "title": "R2 Class A Operations",
+        "type": "piechart",
+        "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "cloudflare-r2-infinity",
+        },
+        "targets": [
+            {
+                "refId": "A",
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "cloudflare-r2-infinity",
+                },
+                "type": "json",
+                "source": "url",
+                "url": "https://api.cloudflare.com/client/v4/graphql",
+                "url_options": {
+                    "method": "POST",
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", actionType_in: [\\"PutObject\\", \\"CopyObject\\", \\"ListObjects\\", \\"ListBuckets\\", \\"CompleteMultipartUpload\\", \\"InitiateMultipartUpload\\", \\"UploadPart\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "body_type": "raw",
+                    "body_content_type": "application/json",
+                },
+                "parser": "backend",
+                "root_selector": "data.viewer.accounts.0.r2OperationsAdaptiveGroups",
+                "columns": [
+                    {
+                        "selector": "sum.requests",
+                        "text": "Used",
+                        "type": "number",
+                    }
+                ],
+                "computed_columns": [
+                    {
+                        "selector": "1000000 - Used",
+                        "text": "Remaining",
+                        "type": "number",
+                    }
+                ],
+                "cache_timeout_in_seconds": 3600,
+            }
+        ],
+    },
+    20: {
+        "title": "R2 Class B Operations",
+        "type": "piechart",
+        "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "cloudflare-r2-infinity",
+        },
+        "targets": [
+            {
+                "refId": "A",
+                "datasource": {
+                    "type": "yesoreyeram-infinity-datasource",
+                    "uid": "cloudflare-r2-infinity",
+                },
+                "type": "json",
+                "source": "url",
+                "url": "https://api.cloudflare.com/client/v4/graphql",
+                "url_options": {
+                    "method": "POST",
+                    "data": '{"query":"query { viewer { accounts(filter: { accountTag: \\"e43555a6c4fcc087a74f2d775c9a0513\\" }) { r2OperationsAdaptiveGroups(filter: { bucketName: \\"potterdoc\\", datetime_geq: \\"${__from:date:YYYY-MM}-01T00:00:00Z\\", actionType_in: [\\"GetObject\\", \\"HeadObject\\", \\"HeadBucket\\"] }, limit: 1000) { sum { requests } } } } }"}',
+                    "body_type": "raw",
+                    "body_content_type": "application/json",
+                },
+                "parser": "backend",
+                "root_selector": "data.viewer.accounts.0.r2OperationsAdaptiveGroups",
+                "columns": [
+                    {
+                        "selector": "sum.requests",
+                        "text": "Used",
+                        "type": "number",
+                    }
+                ],
+                "computed_columns": [
+                    {
+                        "selector": "10000000 - Used",
+                        "text": "Remaining",
+                        "type": "number",
+                    }
+                ],
+                "cache_timeout_in_seconds": 3600,
+            }
+        ],
+    },
 }
 
 EXPECTED_PANEL_IDS = set(EXPECTED_PANELS)

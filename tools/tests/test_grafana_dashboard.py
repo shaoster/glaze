@@ -53,6 +53,21 @@ def test_dashboard_json_contains_expected_sdk_fields() -> None:
     assert 13 not in panels
     assert panels[14]["targets"][0]["queryType"] == "traceql"
 
+    # R2 panels
+    assert panels[18]["title"] == "R2 Storage"
+    assert panels[18]["type"] == "piechart"
+    assert panels[18]["targets"][0]["type"] == "json"
+    assert panels[18]["targets"][0]["source"] == "url"
+    assert "payloadSize" in panels[18]["targets"][0]["url_options"]["data"]
+
+    assert panels[19]["title"] == "R2 Class A Operations"
+    assert panels[19]["type"] == "piechart"
+    assert "PutObject" in panels[19]["targets"][0]["url_options"]["data"]
+
+    assert panels[20]["title"] == "R2 Class B Operations"
+    assert panels[20]["type"] == "piechart"
+    assert "GetObject" in panels[20]["targets"][0]["url_options"]["data"]
+
 
 def test_publish_dashboard_uses_generated_dashboard_and_live_metadata(
     monkeypatch: pytest.MonkeyPatch,
@@ -106,6 +121,9 @@ def test_publish_dashboard_uses_generated_dashboard_and_live_metadata(
     assert published["uid"] == "glaze-app-summary"
     published_panels = _panel_map(published)
     assert published_panels[14]["targets"][0]["queryType"] == "traceql"
+    assert published_panels[18]["title"] == "R2 Storage"
+    assert published_panels[19]["title"] == "R2 Class A Operations"
+    assert published_panels[20]["title"] == "R2 Class B Operations"
 
 
 def test_main_validate_prints_ok(capsys: pytest.CaptureFixture[str]) -> None:
