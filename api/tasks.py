@@ -224,7 +224,7 @@ def _modal_function(app_name: str, fn_name: str) -> Any:
     """Thin wrapper around modal.Function.lookup — mock this in tests."""
     import modal  # noqa: PLC0415
 
-    return modal.Function.lookup(app_name, fn_name)
+    return modal.Function.lookup(app_name, fn_name)  # type: ignore[attr-defined]
 
 
 def get_task_interface() -> TaskInterface:
