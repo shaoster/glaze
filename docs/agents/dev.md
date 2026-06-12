@@ -526,14 +526,15 @@ Tests live in:
 
 **Keep tests in their domain-specific file.** Each Bazel target covers one coherent slice of the API so that only the relevant target re-runs when a file changes. When adding new tests, extend the existing file that already covers the same module or feature area (e.g. auth tests go in `test_auth.py`, glaze-import tests go in `test_manual_square_crop_import.py`). Do not create a new cross-cutting file — it ends up in a catch-all target that runs on every change and makes failures harder to locate.
 
-### Web build helper
+### Web test and lint helpers
 
 ```bash
 source env.sh
-gz_build
+gz_lint
+gz_test
 ```
 
-`gz_build` pre-generates TypeScript types then runs `tsc -b && vite build`.
+`gz_lint` runs all project linters and type-checkers, and `gz_test` runs all tests.
 
 ### CI
 

@@ -83,14 +83,15 @@ the generated schema exposes the field, then make the fixture match the
 generated type. **Do not** weaken `types.ts` or use it to decide which fields
 are present or optional just to satisfy the checker.
 
-## Web Build Helper
+## Web Test and Lint Helpers
 
 ```bash
 source env-agent.sh
-gz_build
+gz_lint
+gz_test
 ```
 
-`gz_build` pre-generates TypeScript types then runs `tsc -b && vite build`.
+`gz_lint` runs all project linters and type-checkers, and `gz_test` runs all tests.
 
 ## CI Jobs
 

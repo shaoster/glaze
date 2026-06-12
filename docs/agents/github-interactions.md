@@ -66,7 +66,6 @@ Before opening or pushing to a PR, verify every item:
 - If a PR includes refactoring alongside functional changes, describe both clearly in the commit and PR body.
 - All test suites pass: `gz_test`
 - All linters pass: `gz_lint`
-- The build succeeds (gz_build).
 - PR body contains "Closes #<N>" linking to the originating issue.
 - PR title is concise (under 70 characters).
 - No debug code, temporary workarounds, or stray `print`/`console.log` statements.
@@ -85,7 +84,6 @@ When running in a github action, or in any remote sandboxed environment, first `
 
 To run all tests, use `gz_test`.
 To run all linters, use `gz_lint`.
-To ensure build correctness, use `gz_build`.
 
 ### Avoid PATs — use `GITHUB_TOKEN` and `workflow_run`
 

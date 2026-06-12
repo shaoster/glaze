@@ -107,6 +107,6 @@ if: |
 source env-agent.sh
 ```
 
-To run all tests: `rtk bazel test //...`
-To run all linters: `rtk bazel build --config=lint //...`
-To verify build: `gz_build`
+To run all tests: `gz_test`
+To run all linters: `gz_lint`
+
