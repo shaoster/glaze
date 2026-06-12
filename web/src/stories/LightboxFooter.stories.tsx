@@ -28,11 +28,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const activeImage: PiecePhotoGalleryImage = {
-  url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
   caption: "",
-  cloudinary_public_id: "sample",
-  cloud_name: "demo",
   crop: null,
+  cropped_url: null,
+  r2_key: null,
   image_id: "img1",
   stateLabel: "Trimmed",
   stateId: "s1",

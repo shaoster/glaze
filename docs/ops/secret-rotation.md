@@ -23,7 +23,7 @@ For an **immediate** sync (e.g., suspected breach), see [Incident Response](inci
 |---|---|---|
 | `POSTGRES_PASSWORD` | n/a — script below | Requires `ALTER USER` + pod restart |
 | `SECRET_KEY` | n/a — script below | Invalidates all active user sessions |
-| `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | [Cloudinary Console](https://console.cloudinary.com) → Settings → Security | Rotate together |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | [Cloudflare Dashboard](https://dash.cloudflare.com) → R2 → Manage API Tokens | Create a new scoped token, update both values in Infisical together, then revoke the old token |
 | `EMAIL_HOST_PASSWORD` | [Resend Dashboard](https://resend.com/api-keys) | Generate new key, revoke old |
 | `GRAFANA_CLOUD_INSTANCE_ID` | Grafana Cloud stack → Details → OpenTelemetry / OTLP setup | Stack-scoped username used by the collector for Basic auth; rarely changes |
 | `GRAFANA_CLOUD_OTLP_TOKEN` | Grafana Cloud stack → Details → OpenTelemetry / OTLP setup | Raw stack-scoped Cloud Access Policy token for OTLP; only the collector consumes it |

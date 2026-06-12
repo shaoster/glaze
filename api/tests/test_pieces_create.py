@@ -51,15 +51,14 @@ class TestPiecesCreate:
         data = response.json()
         assert data["current_state"]["notes"] == ""
 
-    def test_create_with_cloudinary_thumbnail_does_not_queue_crop_task(
+    def test_create_with_hosted_thumbnail_does_not_queue_crop_task(
         self, client, monkeypatch
     ):
         submitted = []
         thumbnail = Image.objects.create(
             user=None,
-            url="https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg",
-            cloud_name="demo",
-            cloudinary_public_id="pieces/mug",
+            url="https://media.example.com/images/public/mug.jpg",
+            r2_key="images/public/mug.jpg",
         )
 
         monkeypatch.setattr(
@@ -78,7 +77,7 @@ class TestPiecesCreate:
         response = client.post(
             "/api/pieces/",
             {
-                "name": "Cloud Mug",
+                "name": "Hosted Mug",
                 "thumbnail": "https://example.com/ignored.jpg",
             },
             format="json",

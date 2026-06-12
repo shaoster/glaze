@@ -215,7 +215,7 @@ Once available, use the Grafana MCP tools to:
 - Search traces for the affected endpoint around the time the bug was reported
 - Look for high-latency spans, error spans, or unexpected downstream calls
 - Check whether errors originated in the backend, a sidecar, or an external
-  dependency (Cloudinary, Google OAuth)
+  dependency (Cloudflare R2, Google OAuth)
 
 Document the trace ID and relevant spans in the issue.
 
@@ -238,7 +238,7 @@ Common production-only divergences to flag in the issue:
 - `ALLOWED_HOSTS` — in prod this is a real domain; mismatches 400 with no body
 - `EMAIL_BACKEND` — console in dev, real SMTP in prod; silent send failures
 - `ADMIN_INGRESS_HOST` — controls whether the admin URL appears in `auth/me/`
-- Third-party credentials absent in dev (Cloudinary, Google OAuth) — endpoints
+- Third-party credentials absent in dev (R2, Google OAuth) — endpoints
   return 503 in dev but are expected to work in prod
 
 If any of these match the symptom, note them explicitly in the issue under a

@@ -1,126 +1,36 @@
 /**
- * CloudinaryImage — optimized image renderer.
+ * AppImage — image renderer for R2/CDN-hosted assets.
  *
- * Renders a standard <img> using the size-appropriate delivery URL computed via
- * getCloudinaryUrl (backed by Cloudinary transforms if identity is present,
- * otherwise falling back to standard URLs).
+ * Renders a standard <img> pointing at the stored CDN URL. When an eagerly
+ * generated crop exists (`croppedUrl`, materialized by the backend
+ * generate_cropped_image task), it is preferred; until the task lands the
+ * raw original renders instead. No request-time transforms exist — the URL
+ * is served as-is.
  *
- * Context-specific sizing:
- *   thumbnail — 64×64 fill, used in image lists and history rows
- *   gallery   — tile-sized fill, used in the Piece photo gallery grid
- *   lightbox  — constrained to 90 vw × 80 vh, for the full-screen viewer
+ * Context-specific chrome:
+ *   thumbnail — 64×64 box, used in image lists and history rows
+ *   gallery   — fills the local container, used in the Piece photo gallery grid
+ *   lightbox  — fit-content box, for the full-screen viewer
  *   detail    — fills the local container, for the PieceDetail hero image
- *   preview   — 64×64 fill, used for the upload preview before saving
+ *   preview   — 64×64 box, used for the upload preview before saving
  */
 import { Box, CircularProgress } from "@mui/material";
 import { useEffect, useRef, useState, Suspense } from "react";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Cloudinary } from "@cloudinary/url-gen";
-import {
-  crop as cropAction,
-  fill,
-  fit,
-  scale,
-} from "@cloudinary/url-gen/actions/resize";
-import { format, quality } from "@cloudinary/url-gen/actions/delivery";
-import { auto as autoFormat, jpg } from "@cloudinary/url-gen/qualifiers/format";
-import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
-import { relative } from "@cloudinary/url-gen/qualifiers/flag";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ImageCrop } from "../util/types";
 
 const THUMBNAIL_SIZE = 64;
-const DEFAULT_VIEWPORT_WIDTH = 1200;
-const DEFAULT_VIEWPORT_HEIGHT = 900;
-const DEFAULT_DEVICE_PIXEL_RATIO = 1;
 
-export type CloudinaryImageContext =
+export type AppImageContext =
   | "thumbnail"
   | "gallery"
   | "lightbox"
   | "detail"
   | "preview";
 
-type ViewportSnapshot = {
-  width: number;
-  height: number;
-  pixelRatio: number;
-};
-
-function getViewportSnapshot(): ViewportSnapshot {
-  return {
-    width: globalThis.window?.innerWidth ?? DEFAULT_VIEWPORT_WIDTH,
-    height: globalThis.window?.innerHeight ?? DEFAULT_VIEWPORT_HEIGHT,
-    pixelRatio:
-      globalThis.window?.devicePixelRatio ?? DEFAULT_DEVICE_PIXEL_RATIO,
-  };
-}
-
-function getCloudinaryUrl({
-  url,
-  cloud_name,
-  cloudinary_public_id,
-  context,
-  crop,
-  requestedWidth,
-  requestedHeight,
-}: {
-  url: string;
-  cloud_name?: string | null;
-  cloudinary_public_id?: string | null;
-  context: CloudinaryImageContext;
-  crop?: ImageCrop | null;
-  requestedWidth?: number;
-  requestedHeight?: number;
-}): string {
-  const cloudName = cloud_name?.trim() || null;
-  const publicId = cloudinary_public_id?.trim() || null;
-
-  if (cloudName && publicId) {
-    const cld = new Cloudinary({ cloud: { cloudName } });
-    const img = cld.image(publicId);
-    const viewport = getViewportSnapshot();
-
-    if (crop) {
-      img.resize(
-        cropAction()
-          .width(crop.width)
-          .height(crop.height)
-          .x(crop.x)
-          .y(crop.y)
-          .addFlag(relative()),
-      );
-    }
-
-    if (context === "lightbox") {
-      const vw = Math.round(viewport.width * viewport.pixelRatio * 0.9);
-      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.8);
-      img.resize(fit().width(vw).height(vh));
-    } else if (context === "detail") {
-      const vw = Math.round(viewport.width * viewport.pixelRatio);
-      const vh = Math.round(viewport.height * viewport.pixelRatio * 0.65);
-      img.resize(fit().width(vw).height(vh));
-    } else {
-      const targetWidth = Math.round(
-        context === "gallery" ? (requestedWidth ?? 320) : THUMBNAIL_SIZE,
-      );
-
-      if (crop) {
-        img.resize(scale().width(targetWidth));
-      } else {
-        const targetHeight = Math.round(
-          context === "gallery" ? (requestedHeight ?? 240) : THUMBNAIL_SIZE,
-        );
-        img.resize(fill().width(targetWidth).height(targetHeight));
-      }
-    }
-
-    img.delivery(format(context === "lightbox" ? autoFormat() : jpg()));
-    img.delivery(quality(autoQuality()));
-
-    return img.toURL();
-  }
-
-  return url;
+/** Prefer the materialized crop; fall back to the original until it exists. */
+function resolveImageUrl(url: string, croppedUrl?: string | null): string {
+  return croppedUrl?.trim() || url;
 }
 
 const imageLoadQueryOptions = (url: string) => ({
@@ -139,19 +49,16 @@ function useSuspendedImageLoad(url: string) {
   return useSuspenseQuery(imageLoadQueryOptions(url));
 }
 
-export type CloudinaryImageProps = {
-  /** Full delivery URL — always required as fallback. */
+export type AppImageProps = {
+  /** Original delivery URL — always required as fallback. */
   url: string;
-  /** Cloudinary cloud_name stored on the image record. */
-  cloud_name?: string | null;
-  /** Cloudinary public_id stored on the image record. */
-  cloudinary_public_id?: string | null;
+  /** CDN URL of the eagerly generated crop; null until the task completes. */
+  croppedUrl?: string | null;
   alt?: string;
-  /** Rendering context determines the requested dimensions. */
-  context: CloudinaryImageContext;
+  /** Rendering context determines the wrapper chrome. */
+  context: AppImageContext;
+  /** Crop coordinates — used only for skeleton aspect estimation. */
   crop?: ImageCrop | null;
-  requestedWidth?: number;
-  requestedHeight?: number;
   style?: React.CSSProperties;
   className?: string;
   onLoad?: React.ReactEventHandler<HTMLImageElement>;
@@ -159,47 +66,31 @@ export type CloudinaryImageProps = {
   "data-testid"?: string;
 };
 
-export default function CloudinaryImage({
+export default function AppImage({
   url,
-  cloud_name,
-  cloudinary_public_id,
+  croppedUrl,
   alt = "",
   context,
-  crop,
-  requestedWidth,
-  requestedHeight,
   style,
   className,
   onLoad,
   "data-testid": testId,
-}: CloudinaryImageProps) {
+}: AppImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const queryClient = useQueryClient();
+
+  const resolvedUrl = resolveImageUrl(url, croppedUrl);
 
   // Reset loading state when the image source changes. Storing the previous key
   // in state (not a ref) is the React-documented pattern for deriving state from
   // props during render — refs must not be read during render.
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  const cropKey = crop
-    ? `${crop.x}:${crop.y}:${crop.width}:${crop.height}`
-    : "";
-  const currentKey = `${url}__${cloudinary_public_id}__${context}__${cropKey}`;
+  const currentKey = `${resolvedUrl}__${context}`;
   const [prevKey, setPrevKey] = useState(currentKey);
   if (prevKey !== currentKey) {
     setPrevKey(currentKey);
     setIsLoading(true);
   }
-
-  const resolvedUrl = getCloudinaryUrl({
-    url,
-    cloud_name,
-    cloudinary_public_id,
-    context,
-    crop,
-    requestedWidth,
-    requestedHeight,
-  });
 
   useEffect(() => {
     function syncLoadedStateFromDom() {
@@ -217,20 +108,6 @@ export default function CloudinaryImage({
       document.removeEventListener("visibilitychange", syncLoadedStateFromDom);
     };
   }, [resolvedUrl]);
-
-  // Parallel prefetching: optimistically prefetch the high-res lightbox counterpart when a gallery/detail image renders
-  useEffect(() => {
-    if ((context === "gallery" || context === "detail") && url) {
-      const lightboxUrl = getCloudinaryUrl({
-        url,
-        cloud_name,
-        cloudinary_public_id,
-        crop,
-        context: "lightbox",
-      });
-      queryClient.prefetchQuery(imageLoadQueryOptions(lightboxUrl));
-    }
-  }, [url, cloud_name, cloudinary_public_id, crop, context, queryClient]);
 
   function handleLoad(event: React.SyntheticEvent<HTMLImageElement>) {
     setIsLoading(false);
@@ -315,7 +192,7 @@ export function ImageSkeleton({
   crop,
   aspectRatio,
 }: {
-  context: CloudinaryImageContext;
+  context: AppImageContext;
   crop?: ImageCrop | null;
   aspectRatio?: number | null;
 }) {
@@ -380,37 +257,24 @@ export function ImageSkeleton({
   );
 }
 
-function InnerSuspenseCloudinaryImage(props: CloudinaryImageProps) {
-  const url = getCloudinaryUrl({
-    url: props.url,
-    cloud_name: props.cloud_name,
-    cloudinary_public_id: props.cloudinary_public_id,
-    crop: props.crop,
-    context: props.context,
-    requestedWidth: props.requestedWidth,
-    requestedHeight: props.requestedHeight,
-  });
+function InnerSuspenseAppImage(props: AppImageProps) {
+  useSuspendedImageLoad(resolveImageUrl(props.url, props.croppedUrl));
 
-  useSuspendedImageLoad(url);
-
-  return <CloudinaryImage {...props} />;
+  return <AppImage {...props} />;
 }
 
-export type SuspenseCloudinaryImageProps = CloudinaryImageProps & {
+export type SuspenseAppImageProps = AppImageProps & {
   fallback?: React.ReactNode;
 };
 
-export function SuspenseCloudinaryImage({
-  fallback,
-  ...props
-}: SuspenseCloudinaryImageProps) {
+export function SuspenseAppImage({ fallback, ...props }: SuspenseAppImageProps) {
   const defaultFallback = fallback ?? (
     <ImageSkeleton context={props.context} crop={props.crop} />
   );
 
   return (
     <Suspense fallback={defaultFallback}>
-      <InnerSuspenseCloudinaryImage {...props} />
+      <InnerSuspenseAppImage {...props} />
     </Suspense>
   );
 }

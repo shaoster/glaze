@@ -36,7 +36,7 @@ function renderGallery(
   );
 }
 
-vi.mock("../CloudinaryImage", () => ({
+vi.mock("../AppImage", () => ({
   default: ({
     alt,
     url,
@@ -99,8 +99,6 @@ function makeImages(): PiecePhotoGalleryImage[] {
       url: "https://example.com/a.jpg",
       caption: "Freshly thrown",
       created: new Date("2024-01-16T10:00:00Z"),
-      cloudinary_public_id: "piece/a",
-      cloud_name: null,
       image_id: "image-a",
       stateLabel: "Throwing",
       stateId: "state-current",
@@ -110,8 +108,6 @@ function makeImages(): PiecePhotoGalleryImage[] {
       url: "https://example.com/b.jpg",
       caption: "Trimmed rim",
       created: new Date("2024-01-17T10:00:00Z"),
-      cloudinary_public_id: "piece/b",
-      cloud_name: null,
       image_id: "image-b",
       stateLabel: "Trimming",
       stateId: "state-past",
@@ -128,8 +124,6 @@ function makeSingleImage(
       url: "https://example.com/solo.jpg",
       caption: "Only photo",
       created: new Date("2024-01-18T10:00:00Z"),
-      cloudinary_public_id: "piece/solo",
-      cloud_name: null,
       image_id: "image-solo",
       stateLabel: "Throwing",
       stateId: "state-current",
@@ -239,9 +233,9 @@ describe("PiecePhotoGallery", () => {
           {
             url: "https://example.com/a.jpg",
             caption: "Updated caption",
-            cloudinary_public_id: "piece/a",
-            cloud_name: null,
             crop: null,
+            width: null,
+            height: null,
           },
         ] satisfies EditablePiecePhoto[],
       }),
@@ -310,9 +304,9 @@ describe("PiecePhotoGallery", () => {
           {
             url: "https://example.com/a.jpg",
             caption: "Wheel detail",
-            cloudinary_public_id: "piece/a",
-            cloud_name: null,
             crop: null,
+            width: null,
+            height: null,
           },
         ] satisfies EditablePiecePhoto[],
       }),
@@ -475,8 +469,6 @@ describe("PiecePhotoGallery", () => {
     const updatedPiece = makeUpdatedPiece({
       thumbnail: {
         url: "https://example.com/a.jpg",
-        cloudinary_public_id: "piece/a",
-        cloud_name: null,
       },
     });
     const updatePieceFn = vi.fn().mockResolvedValue(updatedPiece);
@@ -505,9 +497,11 @@ describe("PiecePhotoGallery", () => {
       expect(updatePieceFn).toHaveBeenCalledWith("piece-1", {
         thumbnail: {
           url: "https://example.com/a.jpg",
-          cloudinary_public_id: "piece/a",
-          cloud_name: null,
           crop: null,
+          cropped_url: null,
+          image_id: "image-a",
+          width: null,
+          height: null,
         },
       }),
     );

@@ -42,10 +42,26 @@ def test_public_admin_ingress_remains_explicitly_public():
     )
 
 
-def test_security_headers_allow_cloudinary_video_media():
+def test_security_headers_allow_r2_image_and_video_media():
     repo_root = Path(__file__).resolve().parents[1]
     security_headers = (
         repo_root / "chart/glaze/templates/middleware-security-headers.yaml"
     ).read_text()
 
-    assert "media-src 'self' https://res.cloudinary.com;" in security_headers
+    # Images and videos are served from the R2 public CDN domain; legacy
+    # res.cloudinary.com stays allowed only until the stored-URL migration
+    # (migrate_assets_to_r2) completes in prod.
+    assert (
+        "img-src 'self' data: blob: {{ .Values.appConfig.r2PublicUrl }}"
+        " https://res.cloudinary.com;" in security_headers
+    )
+    assert (
+        "media-src 'self' {{ .Values.appConfig.r2PublicUrl }}"
+        " https://res.cloudinary.com;" in security_headers
+    )
+    # Presigned PUT uploads go straight to the R2 storage endpoint.
+    assert (
+        "connect-src 'self'"
+        " https://{{ .Values.appConfig.r2AccountId }}.r2.cloudflarestorage.com;"
+        in security_headers
+    )

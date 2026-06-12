@@ -23,11 +23,6 @@ from .auth.views import (
     staff_invite_batch,
     staff_invite_code,
 )
-from .cloudinary.admin_views import (
-    admin_cloudinary_cleanup,
-    admin_cloudinary_cleanup_archive,
-)
-from .cloudinary.views import cloudinary_widget_config, cloudinary_widget_sign
 from .crop_run_views import CropRunViewSet, ImageCropRunsView
 from .global_entries.views import (
     make_global_entry_favorite_view,
@@ -55,6 +50,7 @@ from .piece.views import (
 )
 from .task_views import submit_task, task_detail
 from .telemetry_views import browser_traces
+from .uploads.views import r2_convert_image, r2_convert_image_status, r2_presigned_upload_url
 from .workflow_views import workflow_state_schema
 
 __all__ = [
@@ -63,8 +59,6 @@ __all__ = [
     "_check_async_tasks",
     "_check_database",
     "_check_migrations",
-    "admin_cloudinary_cleanup",
-    "admin_cloudinary_cleanup_archive",
     "admin_manual_square_crop_import",
     "auth_delete_account",
     "auth_export",
@@ -77,8 +71,6 @@ __all__ = [
     "auth_token",
     "auth_token_refresh",
     "auth_token_revoke",
-    "cloudinary_widget_config",
-    "cloudinary_widget_sign",
     "csrf",
     "glaze_combination_images",
     "health_live",
@@ -94,6 +86,9 @@ __all__ = [
     "piece_showcase_video",
     "piece_states",
     "pieces",
+    "r2_convert_image",
+    "r2_convert_image_status",
+    "r2_presigned_upload_url",
     "send_invite",
     "staff_invite_batch",
     "staff_invite_code",

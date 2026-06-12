@@ -1,18 +1,21 @@
-"""Backfill width/height on Image rows that have a Cloudinary identity but no dimensions."""
+"""Backfill width/height on Image rows that are missing dimensions."""
 
-import os
+import io
 import time
 
-import cloudinary
-import cloudinary.api
+import requests
 from django.core.management.base import BaseCommand
+from django.db.models import Q
+from PIL import Image as PILImage
 
+from api import r2
 from api.models import Image
 
 
 class Command(BaseCommand):
     help = (
-        "Fetch width/height from Cloudinary for Image rows that are missing dimensions."
+        "Download each Image missing dimensions and record its width/height "
+        "from the decoded pixels."
     )
 
     def add_arguments(self, parser):
@@ -32,25 +35,17 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         batch_size = options["batch_size"]
 
-        cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
-        api_key = os.environ.get("CLOUDINARY_API_KEY", "").strip()
-        api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
-
-        if not cloud_name or not api_key or not api_secret:
-            self.stderr.write(
-                "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are required."
+        # Restrict to R2-backed images and transitional Cloudinary-hosted images.
+        # A broad url__startswith="http" filter would let user-attached arbitrary
+        # URLs trigger SSRF fetches from the server when an operator runs this command.
+        qs = (
+            Image.objects.filter(width__isnull=True)
+            .exclude(url="")
+            .filter(
+                Q(r2_key__isnull=False) | Q(url__icontains="res.cloudinary.com")
             )
-            return
-
-        cloudinary.config(
-            cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True
+            .only("id", "url", "r2_key")
         )
-
-        qs = Image.objects.filter(
-            cloudinary_public_id__isnull=False,
-            cloud_name=cloud_name,
-            width__isnull=True,
-        ).only("id", "cloudinary_public_id")
 
         total = qs.count()
         self.stdout.write(f"Found {total} image(s) missing dimensions.")
@@ -60,25 +55,24 @@ class Command(BaseCommand):
 
         for i, image in enumerate(qs.iterator(), start=1):
             try:
-                result = cloudinary.api.resource(image.cloudinary_public_id)
-                w = result.get("width")
-                h = result.get("height")
+                if image.r2_key and r2.is_r2_configured():
+                    data = r2.get_object_bytes(image.r2_key)
+                else:
+                    response = requests.get(image.url, timeout=30)
+                    response.raise_for_status()
+                    data = response.content
+                with PILImage.open(io.BytesIO(data)) as pil_image:
+                    w, h = pil_image.size
                 if w and h:
                     if not dry_run:
                         Image.objects.filter(pk=image.pk).update(width=w, height=h)
-                    self.stdout.write(
-                        f"  [{i}/{total}] {image.cloudinary_public_id} → {w}×{h}"
-                    )
+                    self.stdout.write(f"  [{i}/{total}] {image.url} → {w}×{h}")
                     updated += 1
                 else:
-                    self.stdout.write(
-                        f"  [{i}/{total}] {image.cloudinary_public_id} — no dimensions in response"
-                    )
+                    self.stdout.write(f"  [{i}/{total}] {image.url} — no dimensions")
                     failed += 1
             except Exception as exc:  # noqa: BLE001
-                self.stderr.write(
-                    f"  [{i}/{total}] {image.cloudinary_public_id} — error: {exc}"
-                )
+                self.stderr.write(f"  [{i}/{total}] {image.url} — error: {exc}")
                 failed += 1
 
             if i % batch_size == 0:

@@ -69,16 +69,16 @@ spec:
                   key: SECRET_KEY
             - name: DATABASE_URL
               value: "postgres://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ include "glaze.fullname" . }}-postgres:5432/{{ .Values.postgres.database }}"
-            - name: CLOUDINARY_API_KEY
+            - name: R2_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
                   name: glaze-secrets
-                  key: CLOUDINARY_API_KEY
-            - name: CLOUDINARY_API_SECRET
+                  key: R2_ACCESS_KEY_ID
+            - name: R2_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: glaze-secrets
-                  key: CLOUDINARY_API_SECRET
+                  key: R2_SECRET_ACCESS_KEY
             - name: EMAIL_HOST_PASSWORD
               valueFrom:
                 secretKeyRef:

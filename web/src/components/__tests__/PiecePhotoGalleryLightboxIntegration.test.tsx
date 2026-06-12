@@ -18,11 +18,11 @@ Object.defineProperty(globalThis, "Image", {
   writable: true,
 });
 
-vi.mock("../CloudinaryImage", () => ({
+vi.mock("../AppImage", () => ({
   default: ({ alt, url }: { alt?: string; url: string }) => (
     <img alt={alt} src={url} />
   ),
-  SuspenseCloudinaryImage: ({ alt, url }: { alt?: string; url: string }) => (
+  SuspenseAppImage: ({ alt, url }: { alt?: string; url: string }) => (
     <img alt={alt} src={url} />
   ),
 }));
@@ -53,8 +53,6 @@ function makeImages(): PiecePhotoGalleryImage[] {
       url: "https://example.com/a.jpg",
       caption: "Photo A",
       created: new Date("2024-01-15T10:00:00Z"),
-      cloudinary_public_id: null,
-      cloud_name: null,
       image_id: "img-a",
       stateLabel: "Throwing",
       stateId: "state-1",
@@ -64,8 +62,6 @@ function makeImages(): PiecePhotoGalleryImage[] {
       url: "https://example.com/b.jpg",
       caption: "Photo B",
       created: new Date("2024-01-16T10:00:00Z"),
-      cloudinary_public_id: null,
-      cloud_name: null,
       image_id: "img-b",
       stateLabel: "Throwing",
       stateId: "state-1",

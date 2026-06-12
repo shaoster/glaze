@@ -6,14 +6,12 @@ workflow-state-machine logic derived from workflow.yml).
 """
 
 import logging
-import os
 from typing import TYPE_CHECKING
 
 import requests
 
 if TYPE_CHECKING:
     from .models import CropRun
-from cloudinary import CloudinaryImage
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -107,43 +105,20 @@ def calculate_subject_mask_remote(
         return None
 
 
-def upload_mask_to_cloudinary(mask_bytes: bytes, image) -> dict:
-    """Upload a PNG mask to Cloudinary and return the asset reference dict.
+def upload_mask_to_r2(mask_bytes: bytes, image) -> dict:
+    """Upload a PNG segmentation mask to R2 and return the asset reference dict.
 
-    The mask is stored under the crop-masks/ folder, keyed by image.id.
-    The folder name is historical; this asset is the segmentation mask that the
-    crop bbox is derived from.
+    The mask is stored under the crop-masks/ prefix, keyed by image.id. This
+    asset is the segmentation mask that the crop bbox is derived from.
     """
-    import cloudinary  # noqa: PLC0415
-    import cloudinary.uploader  # noqa: PLC0415
+    from . import r2  # noqa: PLC0415
 
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
-    api_key = os.environ.get("CLOUDINARY_API_KEY", "").strip()
-    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+    if not r2.is_r2_configured():
+        raise ValueError("R2 object storage is not configured.")
 
-    if not cloud_name or not api_key or not api_secret:
-        raise ValueError(
-            "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are required."
-        )
-
-    cloudinary.config(
-        cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True
-    )
-
-    upload_folder = os.environ.get("CLOUDINARY_UPLOAD_FOLDER", "").strip().strip("/")
-    folder = "/".join(part for part in [upload_folder, "crop-masks"] if part)
-
-    result = cloudinary.uploader.upload(
-        mask_bytes,
-        public_id=str(image.id),
-        folder=folder,
-        overwrite=True,
-        resource_type="image",
-    )
-    return {
-        "cloud_name": result.get("cloud_name") or cloud_name,
-        "cloudinary_public_id": result.get("public_id"),
-    }
+    key = f"crop-masks/{image.id}.png"
+    url = r2.upload_bytes(key, mask_bytes, "image/png")
+    return {"r2_key": key, "url": url}
 
 
 def run_crop_inference(piece_state_image, async_task=None) -> "CropRun":
@@ -233,7 +208,7 @@ def run_crop_inference(piece_state_image, async_task=None) -> "CropRun":
 
     mask_asset = None
     try:
-        mask_asset = upload_mask_to_cloudinary(mask_bytes, image)
+        mask_asset = upload_mask_to_r2(mask_bytes, image)
     except Exception as e:
         logger.warning(f"Mask upload failed for image {image.id}: {e}")
 
@@ -270,22 +245,17 @@ def image_to_dict(image) -> dict | None:
     if isinstance(image, dict):
         return {
             "url": image.get("url") or "",
-            "cloudinary_public_id": image.get("cloudinary_public_id"),
-            "cloud_name": image.get("cloud_name"),
             "image_id": image.get("image_id"),
         }
     if isinstance(image, str):
         return {
             "url": image,
-            "cloudinary_public_id": None,
-            "cloud_name": None,
             "image_id": None,
         }
     return {
         "url": image.url,
-        "cloudinary_public_id": image.cloudinary_public_id,
-        "cloud_name": image.cloud_name,
         "image_id": str(image.id) if hasattr(image, "id") else None,
+        "r2_key": getattr(image, "r2_key", None),
         "width": getattr(image, "width", None),
         "height": getattr(image, "height", None),
     }
@@ -309,108 +279,19 @@ def crop_to_dict(crop: object) -> dict | None:
     return {key: min(max(value, 0.0), 1.0) for key, value in normalized.items()}
 
 
-def _first_crop_candidate(value: object) -> dict | None:
-    if isinstance(value, dict):
-        if {"x", "y", "width", "height"}.issubset(value):
-            try:
-                return {
-                    "x": float(value["x"]),
-                    "y": float(value["y"]),
-                    "width": float(value["width"]),
-                    "height": float(value["height"]),
-                }
-            except (TypeError, ValueError):
-                return None
-        if {"x", "y", "w", "h"}.issubset(value):
-            try:
-                return {
-                    "x": float(value["x"]),
-                    "y": float(value["y"]),
-                    "width": float(value["w"]),
-                    "height": float(value["h"]),
-                }
-            except (TypeError, ValueError):
-                return None
-        for nested in value.values():
-            crop = _first_crop_candidate(nested)
-            if crop is not None:
-                return crop
-    if isinstance(value, list):
-        for nested in value:
-            crop = _first_crop_candidate(nested)
-            if crop is not None:
-                return crop
-    return None
-
-
-def parse_cloudinary_getinfo_crop(payload: object) -> dict | None:
-    """Extract Cloudinary fl_getinfo g_auto crop coordinates as relative values."""
-    crop = _first_crop_candidate(payload)
-    if crop is None:
-        return None
-    input_info = payload.get("input") if isinstance(payload, dict) else None
-    input_width = input_info.get("width") if isinstance(input_info, dict) else None
-    input_height = input_info.get("height") if isinstance(input_info, dict) else None
-    if (
-        isinstance(input_width, int | float)
-        and isinstance(input_height, int | float)
-        and input_width > 1
-        and input_height > 1
-        and (crop["x"] > 1 or crop["y"] > 1 or crop["width"] > 1 or crop["height"] > 1)
-    ):
-        crop = {
-            "x": crop["x"] / input_width,
-            "y": crop["y"] / input_height,
-            "width": crop["width"] / input_width,
-            "height": crop["height"] / input_height,
-        }
-    return crop_to_dict(crop)
-
-
-def cloudinary_getinfo_url(
-    cloud_name: str, public_id: str, *, width: int = 750
-) -> str | None:
-    """Return a Cloudinary fl_getinfo URL for an uploaded image asset."""
-    if not cloud_name or not public_id:
-        return None
-    return CloudinaryImage(public_id).build_url(
-        cloud_name=cloud_name,
-        secure=True,
-        transformation=[
-            {"crop": "crop", "gravity": "auto", "width": width},
-            {"flags": "getinfo"},
-        ],
-    )
-
-
-def fetch_cloudinary_auto_crop(
-    cloud_name: str, public_id: str, *, timeout: float = 10
-) -> dict | None:
-    """Fetch Cloudinary's g_auto crop suggestion for an existing asset."""
-    getinfo_url = cloudinary_getinfo_url(cloud_name, public_id)
-    if getinfo_url is None:
-        return None
-    response = requests.get(getinfo_url, timeout=timeout)
-    response.raise_for_status()
-    return parse_cloudinary_getinfo_crop(response.json())
-
-
 def normalize_image_payload(payload: object, user=None):
     """Return an Image row for an API/admin image payload.
 
-    Cloudinary-backed assets are deduplicated by (cloud_name, public_id). Local
-    curated thumbnails and URL-only images are deduplicated by URL.
+    Images are deduplicated by URL. The R2 object key is derived server-side
+    from the URL (never trusted from the client); URLs outside the configured
+    R2 public domain (curated local SVGs, external assets) get r2_key=None.
     """
     if payload in (None, ""):
         return None
     if isinstance(payload, str):
-        data = {"url": payload, "cloudinary_public_id": None, "cloud_name": None}
+        data: dict = {"url": payload}
     elif isinstance(payload, dict):
-        data = {
-            "url": payload.get("url") or "",
-            "cloudinary_public_id": payload.get("cloudinary_public_id") or None,
-            "cloud_name": payload.get("cloud_name") or None,
-        }
+        data = {"url": payload.get("url") or ""}
     else:
         return None
 
@@ -418,30 +299,21 @@ def normalize_image_payload(payload: object, user=None):
     if not url:
         return None
 
+    from . import r2  # noqa: PLC0415
     from .models import Image  # noqa: PLC0415
 
-    cloud_name = data["cloud_name"]
-    public_id = data["cloudinary_public_id"]
-    defaults = {"url": url, "user": user}
+    defaults: dict = {"user": user, "r2_key": r2.key_for_public_url(url)}
     raw_width = payload.get("width") if isinstance(payload, dict) else None
     raw_height = payload.get("height") if isinstance(payload, dict) else None
     if raw_width:
         defaults["width"] = int(raw_width)
     if raw_height:
         defaults["height"] = int(raw_height)
-    if cloud_name and public_id:
-        image, _ = Image.objects.update_or_create(
-            cloud_name=cloud_name,
-            cloudinary_public_id=public_id,
-            defaults=defaults,
-        )
-        return image
 
-    image, _ = Image.objects.get_or_create(
-        url=url,
-        cloudinary_public_id=public_id,
-        defaults={"cloud_name": cloud_name, "user": user},
-    )
+    image, created = Image.objects.get_or_create(url=url, defaults=defaults)
+    if not created and image.r2_key is None and defaults["r2_key"]:
+        image.r2_key = defaults["r2_key"]
+        image.save(update_fields=["r2_key"])
     return image
 
 
@@ -452,15 +324,43 @@ def captioned_image_to_dict(link) -> dict:
         **image_payload,
         "caption": link.caption,
         "crop": link.crop,
+        "cropped_url": link.cropped_image.url if link.cropped_image else None,
         "created": link.created,
         "image_id": str(link.image_id) if link.image_id else None,
+        "r2_key": image_payload.get("r2_key"),
     }
+
+
+def _crop_pair_key(image_id, crop: dict | None):
+    """Hashable identity for an (image, crop) value pair."""
+    if crop is None:
+        return None
+    return (
+        str(image_id),
+        tuple(
+            format(float(crop[axis]), ".4f") for axis in ("x", "y", "width", "height")
+        ),
+    )
 
 
 @transaction.atomic
 def replace_piece_state_images(piece_state, images: list[dict], user=None) -> None:
-    """Replace a PieceState's ordered image attachments from API payloads."""
+    """Replace a PieceState's ordered image attachments from API payloads.
+
+    Cropped derivatives are carried over from the deleted links when the
+    (image, crop) pair is unchanged; the generate_cropped_image task is
+    enqueued only for new or changed pairs (eager crop pipeline).
+    """
+    from .crops import enqueue_generate_cropped_image  # noqa: PLC0415
     from .models import PieceStateImage  # noqa: PLC0415
+
+    # Capture (image, crop) → cropped_image_id from the links being replaced so
+    # unchanged pairs keep their already-materialized derivative.
+    previous_cropped: dict = {}
+    for link in piece_state.image_links.all():
+        pair = _crop_pair_key(link.image_id, link.crop)
+        if pair is not None and link.cropped_image_id:
+            previous_cropped[pair] = link.cropped_image_id
 
     piece_state.image_links.all().delete()
     for order, payload in enumerate(images):
@@ -468,14 +368,20 @@ def replace_piece_state_images(piece_state, images: list[dict], user=None) -> No
         if image is None:
             continue
         created_val = payload.get("created") or timezone.now()
+        crop = crop_to_dict(payload.get("crop"))
+        pair = _crop_pair_key(image.id, crop)
+        carried = previous_cropped.get(pair) if pair is not None else None
         PieceStateImage.objects.create(
             piece_state=piece_state,
             image=image,
             caption=payload.get("caption") or "",
-            crop=crop_to_dict(payload.get("crop")),
+            crop=crop,
+            cropped_image_id=carried,
             created=created_val,
             order=order,
         )
+        if crop is not None and carried is None:
+            enqueue_generate_cropped_image(image, crop, user=piece_state.piece.user)
 
 
 def sync_glaze_type_singleton_combination(

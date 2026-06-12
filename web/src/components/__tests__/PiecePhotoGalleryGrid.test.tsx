@@ -4,7 +4,7 @@ import { Masonry } from "masonic";
 import { describe, expect, it, vi } from "vitest";
 import PiecePhotoGalleryGrid from "../PiecePhotoGalleryGrid";
 
-vi.mock("../CloudinaryImage", () => ({
+vi.mock("../AppImage", () => ({
   default: ({
     alt,
     url,
@@ -41,7 +41,6 @@ describe("PiecePhotoGalleryGrid", () => {
     render(
       <PiecePhotoGalleryGrid
         images={[]}
-        requestedWidth={320}
         canDeleteImages={false}
         onOpenImage={vi.fn()}
         onRequestDelete={vi.fn()}
@@ -61,13 +60,10 @@ describe("PiecePhotoGalleryGrid", () => {
           {
             url: "https://example.com/untitled.jpg",
             caption: "",
-            cloudinary_public_id: "piece/untitled",
-            cloud_name: null,
             stateLabel: "Throwing",
             editableCurrentStateIndex: 0,
           },
         ]}
-        requestedWidth={320}
         canDeleteImages
         onOpenImage={vi.fn()}
         onRequestDelete={vi.fn()}

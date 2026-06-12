@@ -67,11 +67,7 @@ class TestOpenApiNormalizationMetadata:
 class TestPieceDetail:
     def test_get_uses_a_small_number_of_queries(self, client, piece, user):
         piece.current_location = Location.objects.create(user=user, name="Studio")
-        piece.thumbnail = {
-            "url": "https://example.com/piece-thumb.jpg",
-            "cloudinary_public_id": None,
-            "cloud_name": None,
-        }
+        piece.thumbnail = {"url": "https://example.com/piece-thumb.jpg"}
         piece.save()
         PieceState.objects.create(piece=piece, state="designed")
         PieceState.objects.create(piece=piece, state="designed")
@@ -435,8 +431,6 @@ class TestPieceDetail:
     def test_patch_updates_thumbnail(self, client, piece):
         thumbnail = {
             "url": "https://example.com/thumb.jpg",
-            "cloudinary_public_id": "pieces/thumb",
-            "cloud_name": "demo-cloud",
             "crop": {"x": 0.15, "y": 0.1, "width": 0.6, "height": 0.75},
         }
 
@@ -449,17 +443,15 @@ class TestPieceDetail:
         assert response.status_code == 200
         piece.refresh_from_db()
         assert response.json()["thumbnail"] == {
-            **thumbnail,
+            "url": thumbnail["url"],
             "image_id": str(piece.thumbnail.id),
+            "r2_key": None,
             "width": None,
             "height": None,
             "crop": None,
+            "cropped_url": None,
         }
-        assert piece.thumbnail == {
-            "url": thumbnail["url"],
-            "cloudinary_public_id": thumbnail["cloudinary_public_id"],
-            "cloud_name": thumbnail["cloud_name"],
-        }
+        assert piece.thumbnail == {"url": thumbnail["url"], "r2_key": None}
 
     def test_owner_can_share_completed_piece(self, client, piece):
         PieceState.objects.create(
@@ -727,11 +719,7 @@ class TestPublicPieceMetadata:
         )
         monkeypatch.setattr(backend.urls, "_INDEX_HTML", index_html)
         PieceState.objects.create(user=piece.user, piece=piece, state="completed")
-        piece.thumbnail = {
-            "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-            "cloudinary_public_id": "pieces/sample",
-            "cloud_name": "demo",
-        }
+        piece.thumbnail = {"url": "https://media.example.com/images/1/sample.jpg"}
         piece.shared = True
         piece.save()
 
@@ -744,10 +732,7 @@ class TestPublicPieceMetadata:
         assert (
             f'<meta property="og:url" content="http://testserver/pieces/{piece.id}">'
         ) in html
-        assert (
-            "https://res.cloudinary.com/demo/image/upload/"
-            "c_fill,g_auto,h_600,q_auto,w_600,f_jpg/pieces/sample.jpg"
-        ) in html
+        assert "https://media.example.com/images/1/sample.jpg" in html
         assert '<meta name="twitter:card" content="summary_large_image">' in html
 
     def test_private_piece_spa_response_uses_default_metadata(
@@ -856,7 +841,7 @@ class TestPieceSummaryShowcaseVideoUrl:
 
     def test_public_piece_with_succeeded_task_returns_artifact_url(self, client, user):
         piece = self._make_public_terminal_piece(user)
-        artifact_url = "https://res.cloudinary.com/demo/video/upload/showcase.mp4"
+        artifact_url = "https://media.example.com/videos/showcase/showcase.mp4"
         self._make_succeeded_task(user, piece, artifact_url)
 
         response = client.get(f"/api/pieces/{piece.id}/")
@@ -878,7 +863,7 @@ class TestPieceSummaryShowcaseVideoUrl:
         terminal_state = sorted(TERMINAL_STATES)[0]
         PieceState.objects.create(piece=piece, user=user, state=terminal_state)
         # piece.shared defaults to False
-        artifact_url = "https://res.cloudinary.com/demo/video/upload/showcase.mp4"
+        artifact_url = "https://media.example.com/videos/showcase/showcase.mp4"
         self._make_succeeded_task(user, piece, artifact_url)
 
         response = client.get(f"/api/pieces/{piece.id}/")
@@ -920,7 +905,7 @@ class TestPieceSummaryShowcaseVideoUrl:
         from api.showcase.render import SHOWCASE_VIDEO_TASK_TYPE
 
         piece = self._make_public_terminal_piece(user)
-        artifact_url = "https://res.cloudinary.com/demo/video/upload/showcase.mp4"
+        artifact_url = "https://media.example.com/videos/showcase/showcase.mp4"
         AsyncTask.objects.create(
             user=user,
             task_type=SHOWCASE_VIDEO_TASK_TYPE,

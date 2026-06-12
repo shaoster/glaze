@@ -9,7 +9,7 @@ import {
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { fetchPiece } from "../util/api";
 import { type PieceDetail } from "../util/types";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 
 export function ShowcasePage({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const { id } = useParams<{ id: string }>();
@@ -142,10 +142,9 @@ function ShowcaseView({ piece }: { piece: PieceDetail; isAuthenticated: boolean 
           })}
         >
           {piece.thumbnail ? (
-            <CloudinaryImage
+            <AppImage
               url={piece.thumbnail.url}
-              cloud_name={piece.thumbnail.cloud_name}
-              cloudinary_public_id={piece.thumbnail.cloudinary_public_id}
+              croppedUrl={piece.thumbnail.cropped_url}
               crop={piece.thumbnail.crop}
               alt={piece.name}
               context="detail"

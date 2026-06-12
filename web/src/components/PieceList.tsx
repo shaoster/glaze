@@ -38,7 +38,7 @@ import {
   getPieceCardLayout,
 } from "./pieceCardHeight";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import CloudinaryImage from "./CloudinaryImage";
+import AppImage from "./AppImage";
 import TagAutocomplete from "./TagAutocomplete";
 import TagChip from "./TagChip";
 import { DEFAULT_THUMBNAIL } from "./thumbnailConstants";
@@ -178,14 +178,11 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
           aspectRatio: thumbnailAspectRatio,
         }}
       >
-        <CloudinaryImage
+        <AppImage
           url={piece.thumbnail?.url ?? DEFAULT_THUMBNAIL}
-          cloud_name={piece.thumbnail?.cloud_name}
-          cloudinary_public_id={piece.thumbnail?.cloudinary_public_id}
+          croppedUrl={piece.thumbnail?.cropped_url}
           crop={piece.thumbnail?.crop}
           context="gallery"
-          requestedWidth={Math.round(width)}
-          requestedHeight={layout.requestedHeight}
           style={{
             width: "100%",
             height: "100%",

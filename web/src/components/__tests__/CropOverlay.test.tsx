@@ -35,30 +35,10 @@ vi.mock("react-advanced-cropper", () => ({
   },
 }));
 
-vi.mock("@cloudinary/url-gen", () => {
-  const mockImg = {
-    delivery: vi.fn().mockReturnThis(),
-    toURL: vi.fn().mockReturnValue("https://res.cloudinary.com/test/image/upload/f_auto/test-id"),
-  };
-  class MockCloudinary {
-    image() { return mockImg; }
-  }
-  return { Cloudinary: MockCloudinary };
-});
-
-vi.mock("@cloudinary/url-gen/actions/delivery", () => ({
-  format: vi.fn().mockReturnValue("format-action"),
-}));
-
-vi.mock("@cloudinary/url-gen/qualifiers/format", () => ({
-  auto: vi.fn().mockReturnValue("auto-format"),
-}));
-
 import CropOverlay from "../CropOverlay";
 
 const DEFAULT_PROPS = {
-  cloudinaryPublicId: "test-id",
-  cloudName: "test-cloud",
+  url: "https://cdn.example.com/images/test-id.jpg",
   initialCrop: null,
   onSave: vi.fn().mockResolvedValue(undefined),
   onCancel: vi.fn(),

@@ -35,11 +35,13 @@ class PieceOrdering(Enum):
     CREATED_DESC = "-created"
 
 
-@strawberry.input(description="Filters for the pieces query. All filters are AND-combined.")
+@strawberry.input(
+    description="Filters for the pieces query. All filters are AND-combined."
+)
 class PieceFilter:
     state: list[str] | None = strawberry.field(
         default=strawberry.UNSET,
-        description="Workflow state names to match (e.g. \"completed\"). Multiple values are OR-combined.",
+        description='Workflow state names to match (e.g. "completed"). Multiple values are OR-combined.',
     )
     shared: bool | None = strawberry.field(
         default=strawberry.UNSET,
@@ -94,9 +96,7 @@ def _resolve_pieces(
         piece.photo_count = photo_counts.get(piece.id, 0)
 
     rows = serialize_piece_summary(page_qs, request)
-    return PiecePage(
-        count=count, results=[PieceType.from_summary(row) for row in rows]
-    )
+    return PiecePage(count=count, results=[PieceType.from_summary(row) for row in rows])
 
 
 @strawberry.type

@@ -362,7 +362,6 @@ def test_resolve_image_type_maps_to_object_schema(monkeypatch):
     image_schema = schema["properties"]["thumbnail"]
     assert image_schema["type"] == "object"
     assert "url" in image_schema["properties"]
-    assert "cloudinary_public_id" in image_schema["properties"]
     assert image_schema["required"] == ["url"]
 
 

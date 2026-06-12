@@ -73,7 +73,6 @@ SAMPLE_IMAGE = {
     "url": "https://example.com/img.jpg",
     "caption": "Front view",
     "created": "2024-01-01T00:00:00Z",
-    "cloudinary_public_id": None,
 }
 
 

@@ -26,11 +26,10 @@ A_TRACK = DEFAULT_TRACK_ID
 B_TRACK = next(t.track_id for t in get_catalog() if t.track_id != DEFAULT_TRACK_ID)
 
 
-def _add_image(state, *, url, order, public_id=None, caption="", crop=None):
+def _add_image(state, *, url, order, caption="", crop=None):
     img = Image.objects.create(
         user=state.user,
         url=url,
-        cloudinary_public_id=public_id,
     )
     PieceStateImage.objects.create(
         piece_state=state,
@@ -55,14 +54,13 @@ def rich_piece(user, db):
         s1,
         url="https://ex.com/cover.jpg",
         order=0,
-        public_id="cover_pid",
         caption="The cover",
     )
-    _add_image(s1, url="https://ex.com/a.jpg", order=1, public_id="a_pid", caption="A")
+    _add_image(s1, url="https://ex.com/a.jpg", order=1, caption="A")
     s2 = PieceState.objects.create(
         piece=piece, state=SECOND_STATE, order=2, notes="Thrown on the wheel."
     )
-    _add_image(s2, url="https://ex.com/b.jpg", order=0, public_id="b_pid", caption="B")
+    _add_image(s2, url="https://ex.com/b.jpg", order=0, caption="B")
     piece.thumbnail = thumb
     piece.save()
     return piece
@@ -83,7 +81,7 @@ def test_normal_piece_cover_first_and_deterministic_durations(rich_piece):
     assert cover.duration_ms == COVER_SLIDE_MS
     assert cover.heading == "Speckled Bowl"
     assert cover.text == "Made over a slow week."
-    assert cover.image["cloudinary_public_id"] == "cover_pid"
+    assert cover.image["url"] == "https://ex.com/cover.jpg"
     assert cover.image["fit"] == "cover"
 
     kinds = [s.kind for s in sb.slides]
@@ -91,10 +89,8 @@ def test_normal_piece_cover_first_and_deterministic_durations(rich_piece):
     assert kinds == ["cover", "image", "note", "image", "note"]
 
     # The cover image is not repeated as an image slide.
-    image_pids = [
-        s.image["cloudinary_public_id"] for s in sb.slides if s.kind == "image"
-    ]
-    assert image_pids == ["a_pid", "b_pid"]
+    image_urls = [s.image["url"] for s in sb.slides if s.kind == "image"]
+    assert image_urls == ["https://ex.com/a.jpg", "https://ex.com/b.jpg"]
 
     # Durations are derived from constants only.
     assert sb.total_duration_ms == (
@@ -121,10 +117,8 @@ def test_excluded_images_and_notes_are_omitted(rich_piece):
         excluded_image_keys=[f"{s2.id}:{image_b_id}"],
         excluded_note_keys=[str(s2.id)],
     )
-    image_pids = [
-        s.image["cloudinary_public_id"] for s in sb.slides if s.kind == "image"
-    ]
-    assert image_pids == ["a_pid"]  # b excluded
+    image_urls = [s.image["url"] for s in sb.slides if s.kind == "image"]
+    assert image_urls == ["https://ex.com/a.jpg"]  # b excluded
     note_keys = [s.key for s in sb.slides if s.kind == "note"]
     assert str(s2.id) not in note_keys
 
@@ -132,14 +126,14 @@ def test_excluded_images_and_notes_are_omitted(rich_piece):
 @pytest.mark.django_db
 def test_thumbnail_cannot_be_excluded(rich_piece):
     s1 = rich_piece.states.get(state=ENTRY_STATE)
-    cover_id = s1.image_links.get(image__cloudinary_public_id="cover_pid").image_id
+    cover_id = s1.image_links.get(image__url="https://ex.com/cover.jpg").image_id
     # Attempt to exclude the cover image's key; it must remain as the cover.
     sb = build_keepsake_storyboard(
         rich_piece, excluded_image_keys=[f"{s1.id}:{cover_id}"]
     )
     assert sb.eligible is True
     assert sb.slides[0].kind == "cover"
-    assert sb.slides[0].image["cloudinary_public_id"] == "cover_pid"
+    assert sb.slides[0].image["url"] == "https://ex.com/cover.jpg"
 
 
 @pytest.mark.django_db
@@ -157,7 +151,7 @@ def test_sparse_piece_without_images_is_ineligible(user, db):
 def test_single_image_no_notes_is_degraded_but_valid(user, db):
     piece = Piece.objects.create(user=user, name="Solo")
     s1 = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=1)
-    img = _add_image(s1, url="https://ex.com/only.jpg", order=0, public_id="only_pid")
+    img = _add_image(s1, url="https://ex.com/only.jpg", order=0)
     piece.thumbnail = img
     piece.save()
     sb = build_keepsake_storyboard(piece)
@@ -181,18 +175,16 @@ def test_slide_order_follows_state_order_not_creation_order(user, db):
     # Create the later state first to decouple creation order from `order`.
     s2 = PieceState.objects.create(piece=piece, state=SECOND_STATE, order=2)
     s1 = PieceState.objects.create(piece=piece, state=ENTRY_STATE, order=1)
-    thumb = _add_image(s1, url="https://ex.com/c.jpg", order=0, public_id="c_pid")
-    _add_image(s2, url="https://ex.com/d.jpg", order=0, public_id="d_pid")
+    thumb = _add_image(s1, url="https://ex.com/c.jpg", order=0)
+    _add_image(s2, url="https://ex.com/d.jpg", order=0)
     piece.thumbnail = thumb
     piece.save()
 
     sb = build_keepsake_storyboard(piece)
     # Cover (s1 thumbnail) first, then the s2 image — ordered by `order`.
-    image_pids = [
-        s.image["cloudinary_public_id"] for s in sb.slides if s.kind == "image"
-    ]
-    assert image_pids == ["d_pid"]
-    assert sb.slides[0].image["cloudinary_public_id"] == "c_pid"
+    image_urls = [s.image["url"] for s in sb.slides if s.kind == "image"]
+    assert image_urls == ["https://ex.com/d.jpg"]
+    assert sb.slides[0].image["url"] == "https://ex.com/c.jpg"
     assert sb.slides[0].state_label == get_state_friendly_name(ENTRY_STATE)
 
 

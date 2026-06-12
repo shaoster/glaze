@@ -8,7 +8,7 @@ import { http, HttpResponse } from "msw";
  * Rationale:
  * - Decoupled from PieceDetail in Issue #172 to allow standalone usage and better testability.
  * - Dynamically renders fields based on UISchema fetched from the backend (Issue #210).
- * - Manages Cloudinary uploads (Issue #288) and image captions.
+ * - Manages image uploads (Issue #288) and image captions.
  *
  * Edge cases:
  * - Read-only mode: Disables all inputs and hide save buttons.

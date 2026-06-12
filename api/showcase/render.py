@@ -12,7 +12,6 @@ import hashlib
 import io
 import json
 import math
-import os
 import re
 import tempfile
 import time
@@ -1015,62 +1014,39 @@ def render_storyboard_to_mp4(
     return output_path
 
 
-def _cloudinary_video_folder() -> str:
-    return os.environ.get("CLOUDINARY_VIDEO_UPLOAD_FOLDER", "").strip().strip("/")
+SHOWCASE_VIDEO_KEY_PREFIX = "videos/showcase"
 
 
-def is_showcase_video_cloudinary_enabled() -> bool:
-    return all(
-        [
-            os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip(),
-            os.environ.get("CLOUDINARY_API_KEY", "").strip(),
-            os.environ.get("CLOUDINARY_API_SECRET", "").strip(),
-            _cloudinary_video_folder(),
-        ]
-    )
+def is_showcase_video_storage_enabled() -> bool:
+    """Whether the rendered showcase MP4 can be persisted to object storage."""
+    from .. import r2  # noqa: PLC0415
+
+    return r2.is_r2_configured()
 
 
-def upload_storyboard_video_to_cloudinary(
+def showcase_video_key(input_hash: str) -> str:
+    """Deterministic R2 key for a rendered showcase video (idempotent uploads)."""
+    return f"{SHOWCASE_VIDEO_KEY_PREFIX}/{input_hash}.{SHOWCASE_VIDEO_FORMAT}"
+
+
+def upload_showcase_video_to_r2(
     video_path: Path,
     *,
     input_hash: str,
-) -> dict[str, Any] | None:
-    """Upload a rendered video to Cloudinary when credentials are available.
+) -> str | None:
+    """Upload a rendered video to R2 and return its public URL.
 
-    The upload is optional. If Cloudinary is not configured, or the upload
-    fails, callers should keep using the local artifact path.
+    Returns None when object storage is not configured; callers should keep
+    using the local artifact path in that case.
     """
 
-    if not is_showcase_video_cloudinary_enabled():
+    if not is_showcase_video_storage_enabled():
         return None
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
-    api_key = os.environ.get("CLOUDINARY_API_KEY", "").strip()
-    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
 
-    import cloudinary  # noqa: PLC0415
-    import cloudinary.uploader  # noqa: PLC0415
+    from .. import r2  # noqa: PLC0415
 
-    cloudinary.config(
-        cloud_name=cloud_name,
-        api_key=api_key,
-        api_secret=api_secret,
-        secure=True,
+    return r2.upload_file(
+        str(video_path),
+        showcase_video_key(input_hash),
+        "video/mp4",
     )
-
-    upload_kwargs: dict[str, Any] = {
-        "public_id": input_hash,
-        "folder": _cloudinary_video_folder(),
-        "overwrite": True,
-        "resource_type": "video",
-        "format": SHOWCASE_VIDEO_FORMAT,
-    }
-
-    result = cloudinary.uploader.upload(str(video_path), **upload_kwargs)
-    return {
-        "cloud_name": result.get("cloud_name") or cloud_name,
-        "public_id": result.get("public_id") or input_hash,
-        "secure_url": result.get("secure_url") or result.get("url"),
-        "asset_id": result.get("asset_id"),
-        "version": result.get("version"),
-        "resource_type": result.get("resource_type") or "video",
-    }

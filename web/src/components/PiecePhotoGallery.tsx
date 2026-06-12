@@ -27,7 +27,7 @@ export type PiecePhotoGalleryImage = CaptionedImage & {
 
 export type EditablePiecePhoto = Pick<
   CaptionedImage,
-  "url" | "caption" | "cloudinary_public_id" | "cloud_name" | "crop"
+  "url" | "caption" | "crop" | "width" | "height"
 >;
 
 type PieceStateRef = {
@@ -169,13 +169,13 @@ export default function PiecePhotoGallery({
       (left, right) =>
         left.editableCurrentStateIndex - right.editableCurrentStateIndex,
     )
-    .map(({ url, caption, cloudinary_public_id, cloud_name, crop, image_id }) => ({
+    .map(({ url, caption, crop, image_id, width, height }) => ({
       url,
       caption,
-      cloudinary_public_id: cloudinary_public_id ?? null,
-      cloud_name: cloud_name ?? null,
       crop: crop ?? null,
       image_id: image_id ?? null,
+      width: width ?? null,
+      height: height ?? null,
     }));
 
   async function persistCurrentStateImages(nextImages: EditablePiecePhoto[]) {
@@ -192,9 +192,9 @@ export default function PiecePhotoGallery({
       images: nextImages.map((image) => ({
         url: image.url,
         caption: image.caption,
-        cloudinary_public_id: image.cloudinary_public_id ?? null,
-        cloud_name: image.cloud_name ?? null,
         crop: image.crop ?? null,
+        width: image.width ?? null,
+        height: image.height ?? null,
       })),
       custom_fields: normalizeFields(currentStateCustomFields ?? {}),
     });
@@ -208,9 +208,11 @@ export default function PiecePhotoGallery({
     const updated = await updatePieceFn(pieceId, {
       thumbnail: {
         url: image.url,
-        cloudinary_public_id: image.cloudinary_public_id ?? null,
-        cloud_name: image.cloud_name ?? null,
         crop: image.crop ?? null,
+        cropped_url: image.cropped_url ?? null,
+        image_id: image.image_id ?? null,
+        width: image.width ?? null,
+        height: image.height ?? null,
       },
     });
     onPieceUpdated(updated);
@@ -239,12 +241,12 @@ export default function PiecePhotoGallery({
       } else if (image.editableCurrentStateIndex === null && updatePastStateFn && pieceId) {
         const siblingImages = images
           .filter((img) => img.stateId === image.stateId && img !== image)
-          .map(({ url, caption, cloudinary_public_id, cloud_name, crop }) => ({
+          .map(({ url, caption, crop, width, height }) => ({
             url,
             caption,
-            cloudinary_public_id: cloudinary_public_id ?? null,
-            cloud_name: cloud_name ?? null,
             crop: crop ?? null,
+            width: width ?? null,
+            height: height ?? null,
           }));
         const updated = await updatePastStateFn(pieceId, image.stateId, {
           images: siblingImages,
@@ -339,7 +341,10 @@ export default function PiecePhotoGallery({
           onCropSave={onPieceUpdated ? handleCropSave : undefined}
           canEditImage={(i) => {
             const img = images[i];
-            return !!(img?.cloudinary_public_id && img?.cloud_name && img?.image_id);
+            // Only R2-backed images can have crops materialized server-side.
+            // Legacy externally-hosted images (r2_key null) would enter a
+            // permanently pending state with no task ever writing cropped_url.
+            return !!(img?.image_id && (img as { r2_key?: string | null }).r2_key);
           }}
           footerActions={(props) => {
             const onSaveCaption =

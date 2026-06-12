@@ -25,30 +25,27 @@ import type { PieceSummary } from "../util/types";
  *    space, resolved from the thumbnail image's current crop in piece history.
  *
  * 2. **`getThumbnailAspectRatio(piece)`** (`pieceCardHeight.ts`) — returns a CSS
- *    `aspect-ratio` string. When crop is present: `"<crop.width> / <crop.height>"`.
- *    When absent: the `DEFAULT_THUMBNAIL_ASPECT_WIDTH / DEFAULT_THUMBNAIL_ASPECT_HEIGHT`
- *    fallback (currently 4:3). This value is applied directly to the thumbnail
- *    shell `<Box>` so the container always has a defined height, even while
- *    `CloudinaryImage` is loading at `opacity:0`.
+ *    `aspect-ratio` string. When a materialized crop is present (`crop` plus
+ *    `cropped_url`): `"<crop.width> / <crop.height>"` (scaled by the original
+ *    pixel dimensions when stored). Otherwise the stored `width / height`, or the
+ *    `DEFAULT_THUMBNAIL_ASPECT_WIDTH / DEFAULT_THUMBNAIL_ASPECT_HEIGHT` fallback
+ *    (currently 4:3). This value is applied directly to the thumbnail shell
+ *    `<Box>` so the container always has a defined height, even while `AppImage`
+ *    is loading at `opacity:0`.
  *
  *    **Critical invariant**: the shell must never have an undefined `aspect-ratio`.
- *    Without it, the container collapses to zero height during the Cloudinary load
+ *    Without it, the container collapses to zero height during the image load
  *    phase, causing masonic to measure the card as chrome-only height (~112 px)
  *    and place the next card too close — producing the visible overlap bug that
  *    was fixed in the `issue-masonry-debug` branch.
  *
  * 3. **`estimateCardHeight(piece, columnWidth)`** (`pieceCardHeight.ts`) — mirrors
  *    the shell aspect ratio in pixels so masonic's pre-seed matches real rendered
- *    height. Crop present: `round(columnWidth × crop.height / crop.width) + CARD_CHROME_HEIGHT`.
- *    Crop absent: `round(columnWidth × DEFAULT_THUMBNAIL_ASPECT_HEIGHT / DEFAULT_THUMBNAIL_ASPECT_WIDTH) + CARD_CHROME_HEIGHT`.
- *
- * 4. **`requestedHeight` on `CloudinaryImage`** — for no-crop pieces in the gallery
- *    context, `PieceCard` passes `round(width × 3/4)` so the Cloudinary `fill`
- *    transform delivers an image whose intrinsic size matches the shell dimensions.
- *    Crop pieces omit `requestedHeight`; Cloudinary infers height from the crop ratio.
+ *    height. Materialized crop: `round(columnWidth × crop.height / crop.width) + CARD_CHROME_HEIGHT`.
+ *    Otherwise: the same formula applied to the fallback aspect ratio.
  *
  * When adding a new thumbnail display context (e.g. a different grid density),
- * update all four parts together.
+ * update all three parts together.
  *
  * Edge cases:
  * - Empty library: filter count shows 0.
@@ -132,9 +129,8 @@ const mixedCropPieces: PieceSummary[] = [
       created: new Date("2026-05-01"),
     } as any,
     thumbnail: {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+      cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.1, y: 0.0, width: 0.5, height: 0.9 }, // portrait
     },
   }),
@@ -152,9 +148,8 @@ const mixedCropPieces: PieceSummary[] = [
     name: "Round Mug",
     current_state: { state: "glazed", created: new Date("2026-05-03") } as any,
     thumbnail: {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+      cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.0, y: 0.1, width: 0.8, height: 0.8 }, // near-square
     },
   }),
@@ -178,9 +173,8 @@ const mixedCropPieces: PieceSummary[] = [
       created: new Date("2026-05-05"),
     } as any,
     thumbnail: {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+      cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.0, y: 0.2, width: 0.9, height: 0.4 }, // landscape
     },
   }),
@@ -247,9 +241,8 @@ const largePieceDataset: PieceSummary[] = Array.from({ length: 24 }, (_, i) => {
       created: new Date("2026-05-01"),
     } as any,
     thumbnail: {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+      cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: crop ?? null,
     },
     tags: tagSets[i % tagSets.length],
@@ -267,9 +260,8 @@ const firstLoadOverlapPieces: PieceSummary[] = [
       created: new Date("2026-05-01"),
     } as any,
     thumbnail: {
-      url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      cloudinary_public_id: "sample",
-      cloud_name: "demo",
+      url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
+      cropped_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&fit=crop",
       crop: { x: 0.08, y: 0.0, width: 0.45, height: 0.92 },
     },
   }),
@@ -315,7 +307,7 @@ export const Default: Story = {
  * pre-seeds card heights from `estimateCardHeight`, which for cropped pieces uses
  * the exact crop aspect ratio and for uncropped pieces uses the 4:3 fallback.
  * The thumbnail shell always has `aspect-ratio` set (never undefined), so the
- * card occupies the correct height even before the Cloudinary image loads.
+ * card occupies the correct height even before the image loads.
  *
  * If you see cards overlapping on first load in this story, `getThumbnailAspectRatio`
  * or `estimateCardHeight` in `pieceCardHeight.ts` is returning inconsistent values.

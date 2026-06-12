@@ -9,6 +9,19 @@ interface PieceDetailPageProps {
   showBackToPieces?: boolean;
 }
 
+/** True while any R2-backed image has crop coordinates but no materialized crop yet. */
+function hasPendingCrops(piece: PieceDetail): boolean {
+  const states = [piece.current_state, ...(piece.history ?? [])];
+  return states.some((state) =>
+    (state.images ?? []).some(
+      (img) =>
+        img.crop &&
+        !img.cropped_url &&
+        (img as { r2_key?: string | null }).r2_key,
+    ),
+  );
+}
+
 export default function PieceDetailPage({
   showBackToPieces = true,
 }: PieceDetailPageProps) {
@@ -39,6 +52,11 @@ export default function PieceDetailPage({
     queryKey: pieceQueryKey,
     queryFn: () => fetchPiece(id!),
     enabled: init !== undefined && (!!init.user || !initFetching),
+    // Crops are materialized asynchronously by the backend: while any image
+    // has coordinates but no cropped_url yet, poll so the cropped version
+    // appears without a page reload once the task lands.
+    refetchInterval: (query) =>
+      query.state.data && hasPendingCrops(query.state.data) ? 3000 : false,
   });
 
   return (

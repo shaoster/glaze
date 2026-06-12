@@ -7,7 +7,8 @@
 # obligation, not editorial copy.
 #
 # `audio.format` is the lossless container the renderer consumes. `audio.url` is
-# the Cloudinary URL for the hosted asset, kept intentionally distinct from
+# the R2 CDN URL for the hosted asset (audio/showcase_music/ in the bucket),
+# kept intentionally distinct from
 # `download_url` (the human source page, which may only offer mp3). See
 # assets/showcase_music/CREDITS.md for how the files were produced and their attribution.
 #
@@ -32,7 +33,7 @@ tracks:
       Music promoted by Audio Library https://youtu.be/MkNeIUgNPQ8
     audio:
       format: flac
-      url: https://res.cloudinary.com/dxpnyhe1f/video/upload/glaze_public/showcase_music/adventures-a-himitsu.flac
+      url: https://media.potterdoc.com/audio/showcase_music/adventures-a-himitsu.flac
 
   good-for-you-thbd:
     title: Good For You
@@ -51,7 +52,7 @@ tracks:
       Music promoted by Audio Library https://youtu.be/-K_YSjqKgvQ
     audio:
       format: flac
-      url: https://res.cloudinary.com/dxpnyhe1f/video/upload/glaze_public/showcase_music/good-for-you-thbd.flac
+      url: https://media.potterdoc.com/audio/showcase_music/good-for-you-thbd.flac
 
   we-are-one-vexento:
     title: We Are One
@@ -70,4 +71,4 @@ tracks:
       Music promoted by Audio Library https://youtu.be/Ssvu2yncgWU
     audio:
       format: flac
-      url: https://res.cloudinary.com/dxpnyhe1f/video/upload/glaze_public/showcase_music/we-are-one-vexento.flac
+      url: https://media.potterdoc.com/audio/showcase_music/we-are-one-vexento.flac

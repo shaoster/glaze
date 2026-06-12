@@ -1,12 +1,8 @@
 import json
-import os
-import re
 from typing import Any, ClassVar
 from urllib.parse import urlencode
 
-import cloudinary
 from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
-from cloudinary import CloudinaryImage
 from django import forms
 from django.apps import apps
 from django.conf import settings
@@ -150,16 +146,6 @@ def _make_public_library_form(model_cls):
     )
 
 
-def _cloudinary_public_id(url: str) -> str | None:
-    """Extract the Cloudinary public_id from a delivery URL.
-
-    Handles URLs with or without a version segment (v1234567890/).
-    Returns None for non-Cloudinary or malformed URLs.
-    """
-    match = re.search(r"/image/upload/(?:v\d+/)?(.+?)(?:\.[^./]+)?$", url)
-    return match.group(1) if match else None
-
-
 def _json_image_payload(value: str) -> dict | None:
     try:
         parsed = json.loads(value)
@@ -171,9 +157,8 @@ def _json_image_payload(value: str) -> dict | None:
 def _image_url(value: dict | str | None) -> str:
     """Extract a plain URL string from an image field value.
 
-    Accepts the new dict format ``{"url": "...", "cloudinary_public_id": "..."}``
-    as well as its prepared JSON-string form and legacy plain URL strings.
-    Returns an empty string for missing/None values.
+    Accepts Image rows / ``{"url": ...}`` dicts, their prepared JSON-string
+    form, and plain URL strings. Returns an empty string for missing values.
     """
     if not value:
         return ""
@@ -181,7 +166,7 @@ def _image_url(value: dict | str | None) -> str:
         parsed = _json_image_payload(value)
         if isinstance(parsed, dict):
             return _image_url(parsed)
-        return value  # legacy string
+        return value
     image_payload = image_to_dict(value)
     if image_payload:
         return image_payload.get("url", "")
@@ -190,181 +175,98 @@ def _image_url(value: dict | str | None) -> str:
     return ""
 
 
-def _image_cloud_name(value: dict | str | None) -> str:
-    if isinstance(value, str):
-        parsed = _json_image_payload(value)
-        if isinstance(parsed, dict):
-            return _image_cloud_name(parsed)
-        return os.environ.get("CLOUDINARY_CLOUD_NAME", "")
-    image_payload = image_to_dict(value)
-    if image_payload:
-        return image_payload.get("cloud_name") or os.environ.get(
-            "CLOUDINARY_CLOUD_NAME", ""
-        )
-    if isinstance(value, dict):
-        return value.get("cloud_name") or os.environ.get("CLOUDINARY_CLOUD_NAME", "")
-    return os.environ.get("CLOUDINARY_CLOUD_NAME", "")
-
-
-def _cloudinary_preview_url(value: dict | str | None) -> str:
-    """Return a JPG thumbnail URL (200×200 fill) for a Cloudinary delivery URL."""
-    url = _image_url(value)
-    cloud_name = _image_cloud_name(value)
-    if not url or not cloud_name:
-        return url
-    if isinstance(value, str):
-        parsed = _json_image_payload(value)
-        if isinstance(parsed, dict):
-            value = parsed
-    image_payload = image_to_dict(value)
-    public_id = (
-        (value.get("cloudinary_public_id") if isinstance(value, dict) else None)
-        or (image_payload or {}).get("cloudinary_public_id")
-        or _cloudinary_public_id(url)
-    )
-    if not public_id:
-        return url
-    cloudinary.config(cloud_name=cloud_name)
-    return CloudinaryImage(public_id).build_url(
-        width=200, height=200, crop="fill", format="jpg", secure=True
-    )
-
-
-def _cloudinary_lightbox_url(value: dict | str | None) -> str:
-    """Return a full-size JPG URL suitable for a lightbox modal."""
-    url = _image_url(value)
-    cloud_name = _image_cloud_name(value)
-    if not url or not cloud_name:
-        return url
-    if isinstance(value, str):
-        parsed = _json_image_payload(value)
-        if isinstance(parsed, dict):
-            value = parsed
-    image_payload = image_to_dict(value)
-    if isinstance(value, dict) and "cloudinary_public_id" not in value:
-        raise AssertionError("image values must include cloudinary_public_id")
-    public_id = (
-        (value.get("cloudinary_public_id") if isinstance(value, dict) else None)
-        or (image_payload or {}).get("cloudinary_public_id")
-        or _cloudinary_public_id(url)
-    )
-    if not public_id:
-        return url
-    cloudinary.config(cloud_name=cloud_name)
-    return CloudinaryImage(public_id).build_url(format="jpg", secure=True)
-
-
 def _admin_image_preview(value: dict | str | None) -> str:
-    if not value:
-        return "—"
-    preview_src = _cloudinary_preview_url(value)
-    lightbox_src = _cloudinary_lightbox_url(value)
-    if not preview_src:
+    """Thumbnail markup for an image value; clicking opens a lightbox.
+
+    Assets are plain URLs (R2 CDN or external) — no transform service, so the
+    preview constrains the original via CSS and the lightbox shows it as-is.
+    """
+    url = _image_url(value)
+    if not url:
         return "—"
     return format_html(
-        '<img src="{}" data-full-url="{}" class="cloudinary-preview"'
+        '<img src="{}" data-full-url="{}" class="r2-image-preview"'
         ' style="display:block;max-height:48px;max-width:64px;object-fit:cover;'
         'cursor:pointer;border-radius:4px;" alt="preview">',
-        preview_src,
-        lightbox_src,
+        url,
+        url,
     )
 
 
-class CloudinaryImageWidget(widgets.TextInput):
-    """Text input that adds a Cloudinary Upload Widget button when configured.
+class R2ImageWidget(widgets.TextInput):
+    """URL text input with a direct-to-R2 file upload button and preview.
 
-    The field value is a JSON object ``{"url": "...", "cloudinary_public_id": "..."}``.
-    The text input stores the JSON string representation; the JS upload handler
-    writes new uploads in that format and the preview reads the url from it.
+    The field value is a bare URL string — ``normalize_image_payload`` accepts
+    plain strings and derives the R2 object key server-side. The upload button
+    is wired up by ``admin/js/r2_image_widget.js``: it requests a presigned PUT
+    URL from ``/api/uploads/r2/presigned-url/`` (session + CSRF), uploads the
+    file straight to R2, and writes the resulting public URL into the input.
 
-    If CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY are not set the button is
-    omitted and only the plain text input is shown.
+    When R2 is not configured the button is omitted and only the plain URL
+    input is shown (paste-a-URL still works).
     """
 
     class Media:
-        js = (
-            "https://upload-widget.cloudinary.com/global/all.js",
-            "admin/js/cloudinary_image_widget.js",
-        )
+        js = ("admin/js/r2_image_widget.js",)
 
     def format_value(self, value):
-        """Encode a dict value to a JSON string for display in the text input."""
+        """Render the stored image value as its bare URL string."""
         if isinstance(value, str):
+            parsed = _json_image_payload(value)
+            if isinstance(parsed, dict):
+                return parsed.get("url", "")
             return value
-        image_payload = image_to_dict(value)
-        if image_payload:
-            return json.dumps(image_payload)
-        if isinstance(value, dict):
-            return json.dumps(value)
-        return value  # None or already a string
+        url = _image_url(value)
+        return url if url else value
 
     def render(self, name, value, attrs=None, renderer=None):
-        cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
-        api_key = os.environ.get("CLOUDINARY_API_KEY", "")
+        from . import r2  # noqa: PLC0415
 
-        folder = os.environ.get("CLOUDINARY_PUBLIC_UPLOAD_FOLDER", "").strip()
+        upload_enabled = r2.is_r2_configured()
 
         final_attrs = dict(attrs or {})
-        if cloud_name and api_key:
-            final_attrs["data-cloudinary-cloud-name"] = cloud_name
-            final_attrs["data-cloudinary-api-key"] = api_key
-            if folder:
-                final_attrs["data-cloudinary-folder"] = folder
-
         text_html = super().render(name, value, final_attrs, renderer)
 
-        if not cloud_name or not api_key:
+        if not upload_enabled:
             return text_html
-
-        if not folder:
-            return format_html(
-                "{}"
-                "<br>"
-                '<button type="button" disabled'
-                ' title="Set CLOUDINARY_PUBLIC_UPLOAD_FOLDER to enable uploads"'
-                ' style="margin-top:4px;cursor:not-allowed;">Upload Image</button>'
-                '<span style="display:inline-flex;align-items:center;margin-left:8px;">'
-                '<span style="background:#ba1a1a;color:#fff;font-size:0.8em;padding:2px 8px;border-radius:3px;">'
-                "CLOUDINARY_PUBLIC_UPLOAD_FOLDER must be set to upload public library images from Django Admin"
-                "</span></span>",
-                text_html,
-            )
 
         input_id = final_attrs.get("id", f"id_{name}")
         preview_id = f"preview-{input_id}"
-
-        preview_src = _cloudinary_preview_url(value) if value else ""
-        lightbox_src = _cloudinary_lightbox_url(value) if value else ""
+        file_id = f"file-{input_id}"
+        url = _image_url(value) if value else ""
 
         return format_html(
             '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
             "{}"
             '<img id="{}" src="{}" data-full-url="{}"'
-            ' class="cloudinary-preview"'
+            ' class="r2-image-preview"'
             ' style="display:{};max-height:80px;cursor:pointer;border-radius:4px;" alt="preview">'
+            '<input type="file" id="{}" accept="image/*" style="display:none;">'
             '<div style="display:flex;gap:4px;">'
-            '<button type="button" class="cloudinary-upload-btn"'
-            ' data-input-id="{}" data-preview-id="{}">Upload Image</button>'
-            '<button type="button" class="cloudinary-clear-btn"'
+            '<button type="button" class="r2-upload-btn"'
+            ' data-input-id="{}" data-preview-id="{}" data-file-id="{}">Upload Image</button>'
+            '<button type="button" class="r2-clear-btn"'
             ' data-input-id="{}" data-preview-id="{}"'
             ' style="display:{};">Remove Image</button>'
             "</div>"
             "</div>",
             text_html,
             preview_id,
-            preview_src,
-            lightbox_src,
-            "block" if value else "none",
+            url,
+            url,
+            "block" if url else "none",
+            file_id,
             input_id,
             preview_id,
+            file_id,
             input_id,
             preview_id,
-            "inline-block" if value else "none",
+            "inline-block" if url else "none",
         )
 
 
-class CloudinaryImageFormField(forms.Field):
-    widget = CloudinaryImageWidget
+class R2ImageFormField(forms.Field):
+    widget = R2ImageWidget
 
     def prepare_value(self, value):
         import uuid
@@ -376,9 +278,9 @@ class CloudinaryImageFormField(forms.Field):
                 value = Image.objects.get(pk=value)
             except Image.DoesNotExist:
                 value = None
-        image_payload = image_to_dict(value)
-        if image_payload:
-            return json.dumps(image_payload)
+        url = _image_url(value)
+        if url:
+            return url
         return super().prepare_value(value)
 
     def clean(self, value):
@@ -386,10 +288,10 @@ class CloudinaryImageFormField(forms.Field):
         if value in self.empty_values:
             return None
         if isinstance(value, str):
-            try:
-                value = json.loads(value)
-            except json.JSONDecodeError:
-                value = {"url": value}
+            # Accept legacy JSON payloads pasted into the field, but the
+            # canonical value is a bare URL string.
+            parsed = _json_image_payload(value)
+            value = parsed if isinstance(parsed, dict) else value.strip()
         return normalize_image_payload(value)
 
 
@@ -406,7 +308,7 @@ class PublicLibraryAdmin(admin.ModelAdmin):
 
     The `user` field is excluded from forms — public objects are always unowned
     and there is no meaningful value to show or edit.  Fields with type: image
-    in workflow.yml automatically use CloudinaryImageWidget.
+    in workflow.yml automatically use R2ImageWidget.
     """
 
     list_display: ClassVar[tuple[str, ...]] = ("name", "is_public_entry")  # type: ignore[misc]
@@ -424,7 +326,7 @@ class PublicLibraryAdmin(admin.ModelAdmin):
         form_class = super().get_form(request, obj, change=change, **kwargs)
         for field_name in get_image_fields_for_global_model(self.model):
             if field_name in form_class.base_fields:
-                form_class.base_fields[field_name] = CloudinaryImageFormField(
+                form_class.base_fields[field_name] = R2ImageFormField(
                     required=False,
                     label=form_class.base_fields[field_name].label,
                     help_text=form_class.base_fields[field_name].help_text,
@@ -785,7 +687,7 @@ class PieceAdmin(ExportMixin, admin.ModelAdmin):
 
 
 class PieceStateImageAdminForm(forms.ModelForm):
-    image = CloudinaryImageFormField(required=False)
+    image = R2ImageFormField(required=False)
 
     class Meta:
         model = PieceStateImage
@@ -1012,8 +914,8 @@ class CropRunAdmin(admin.ModelAdmin):
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
-    list_display = ("id", "cloud_name", "cloudinary_public_id", "url", "created")
-    search_fields = ("cloudinary_public_id", "url")
+    list_display = ("id", "r2_key", "url", "created")
+    search_fields = ("r2_key", "url")
     readonly_fields = ("id", "created", "last_modified")
 
 

@@ -15,6 +15,7 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
+from ..crops import apply_crop
 from ..models import Image, PieceStateImage
 from ..serializers import ImageCropSerializer, PieceDetailSerializer
 from .helpers import (
@@ -101,7 +102,7 @@ def patch_image_crop(request, image_id):
     # target the most recently created PSI (highest id) which is the one the user
     # last interacted with.
     link = (
-        PieceStateImage.objects.select_related("piece_state__piece")
+        PieceStateImage.objects.select_related("piece_state__piece", "image")
         .filter(image=image, piece_state__piece__user=request.user)
         .order_by("-id")
         .first()
@@ -110,8 +111,10 @@ def patch_image_crop(request, image_id):
         raise Http404
     piece = link.piece_state.piece
 
-    link.crop = serializer.validated_data
-    link.save(update_fields=["crop"])
+    # Eager crop pipeline: clears cropped_* and enqueues generate_cropped_image;
+    # the response therefore carries crop set and cropped_url null, and the
+    # frontend polls the piece until the task populates cropped_url.
+    apply_crop(link, serializer.validated_data)
 
     piece = get_object_or_404(piece_detail_queryset(request), pk=piece.pk)
     return Response(serialize_piece_detail(piece, request))

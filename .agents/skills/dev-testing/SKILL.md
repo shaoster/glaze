@@ -126,7 +126,7 @@ Determine which `py_test` target to add to by matching the test's concern:
 | Piece CRUD, state transitions, sealed state | `//api:api_piece_test` |
 | Auth (login, logout, Google OAuth) | `//api:api_auth_test` |
 | Glaze combination, public library, import tool | `//api:api_glaze_test` |
-| Admin, Cloudinary, exports | `//api:api_admin_test` |
+| Admin, R2 uploads, exports | `//api:api_admin_test` |
 
 ### TypeScript (`web/`)
 

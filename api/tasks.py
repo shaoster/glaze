@@ -261,9 +261,8 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
             "reason": f"No PieceStateImage found for image {image_id}",
         }
 
-    # Cloudinary-backed assets only (as per constraints)
-    if not image.cloud_name or not image.cloudinary_public_id:
-        return {"status": "skipped", "reason": "Not a Cloudinary image"}
+    if not image.url:
+        return {"status": "skipped", "reason": "Image has no URL"}
 
     logger.info("Offloading subject detection to remote service.")
     crop_run = run_crop_inference(piece_state_image, async_task=task)
@@ -274,13 +273,16 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     psi_skip_reason = None
     if piece_state_image is not None:
         with transaction.atomic():
-            psi = PieceStateImage.objects.select_for_update().get(
-                id=piece_state_image.id
+            psi = (
+                PieceStateImage.objects.select_for_update()
+                .select_related("image", "piece_state__piece")
+                .get(id=piece_state_image.id)
             )
             if psi.crop is None:
-                psi.crop = crop
-                psi.save(update_fields=["crop"])
-                return {"status": "success", "crop": crop, "updated": True}
+                from .crops import apply_crop
+
+                apply_crop(psi, crop)
+                return {"status": "success", "crop": psi.crop, "updated": True}
             else:
                 psi_skip_reason = "PieceStateImage already has a crop"
                 logger.warning(
@@ -292,15 +294,176 @@ def detect_subject_crop(task: AsyncTask) -> dict | None:
     }
 
 
+@TaskRegistry.register("generate_cropped_image")
+def generate_cropped_image(task: AsyncTask) -> dict:
+    """Materialize a PieceStateImage crop as an eager JPEG derivative in R2.
+
+    Input is the value pair ``(image_id, crop coords)`` — never a PSI pk —
+    so completion can update every current row matching the pair even if the
+    triggering row was deleted and recreated while the task ran.
+    """
+    from . import r2
+    from .crops import crop_key_for, generate_cropped_image_bytes, set_cropped_fields
+    from .models import Image
+    from .utils import crop_to_dict
+
+    params = task.input_params or {}
+    image_id = params.get("image_id")
+    crop = crop_to_dict(params.get("crop"))
+    if not image_id:
+        raise ValueError("Missing image_id in task params")
+    if crop is None:
+        raise ValueError("Missing or invalid crop in task params")
+
+    try:
+        image = Image.objects.get(id=image_id)
+    except Image.DoesNotExist:
+        return {"status": "skipped", "reason": f"Image {image_id} not found"}
+
+    if not image.r2_key:
+        return {"status": "skipped", "reason": "Image is not stored in R2"}
+    if not r2.is_r2_configured():
+        return {"status": "skipped", "reason": "R2 object storage is not configured"}
+
+    key = crop_key_for(image.r2_key, crop)
+    url = r2.public_url_for_key(key)
+
+    if r2.object_exists(key):
+        updated = set_cropped_fields(image, crop, r2_key=key, url=url)
+        return {
+            "status": "success",
+            "cropped_url": url,
+            "updated_links": updated,
+            "reused_existing_object": True,
+        }
+
+    original = r2.get_object_bytes(image.r2_key)
+    derived_bytes = generate_cropped_image_bytes(original, crop)
+    r2.upload_bytes(key, derived_bytes, "image/jpeg")
+    updated = set_cropped_fields(image, crop, r2_key=key, url=url)
+    return {
+        "status": "success",
+        "cropped_url": url,
+        "updated_links": updated,
+        "reused_existing_object": False,
+    }
+
+
+@TaskRegistry.register("convert_image_to_jpeg")
+def convert_image_to_jpeg(task: AsyncTask) -> dict:
+    """Convert an R2-hosted image to a JPEG derivative at a new key.
+
+    Triggered immediately after a presigned-PUT upload for any non-JPEG image
+    (PNG, WebP, HEIC/HEIF, AVIF, GIF). After conversion the original object is
+    deleted and the Image model row is updated to point at the JPEG URL.
+
+    Input params:
+        key        R2 key of the uploaded source image.
+        image_id   UUID of the Image row to rewrite after conversion.
+
+    Returns ``url``, ``key``, ``width``, and ``height`` of the new JPEG.
+    """
+    import io  # noqa: PLC0415
+    import uuid  # noqa: PLC0415
+
+    from PIL import Image as PILImage  # noqa: PLC0415
+    from PIL import ImageOps  # noqa: PLC0415
+    from pillow_heif import register_heif_opener  # noqa: PLC0415
+
+    from . import r2
+    from .models import Image
+
+    params = task.input_params or {}
+    source_key: str | None = params.get("key")
+    image_id: str | None = params.get("image_id")
+
+    if not source_key:
+        raise ValueError("Missing key in task params")
+    if not r2.is_r2_configured():
+        return {"status": "skipped", "reason": "R2 is not configured"}
+
+    register_heif_opener()
+    original = r2.get_object_bytes(source_key)
+
+    with PILImage.open(io.BytesIO(original)) as src:
+        img = ImageOps.exif_transpose(src)
+        assert img is not None
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGB")
+        elif img.mode == "RGBA":
+            # Flatten transparency onto white before JPEG encoding.
+            background = PILImage.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])
+            img = background
+        long_edge = max(img.size)
+        _MAX = 2560
+        if long_edge > _MAX:
+            scale = _MAX / long_edge
+            img = img.resize(
+                (max(1, round(img.size[0] * scale)), max(1, round(img.size[1] * scale)))
+            )
+        width, height = img.size
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=85, optimize=True)
+
+    # Derive a stable JPEG key: same prefix/owner path, new UUID, .jpg extension.
+    # e.g. images/42/abc.heic  →  images/42/<new-uuid>.jpg
+    parts = source_key.rsplit("/", 1)
+    owner_prefix = parts[0] if len(parts) == 2 else "images"
+    new_key = f"{owner_prefix}/{uuid.uuid4()}.jpg"
+
+    jpeg_bytes = out.getvalue()
+    new_url = r2.upload_bytes(new_key, jpeg_bytes, "image/jpeg")
+
+    # Source object is kept in R2 for provenance (GC handles cleanup later).
+
+    # Ensure a source Image row exists so the lineage FK is meaningful, then
+    # create a new JPEG Image row derived from it.
+    source_public_url = r2.public_url_for_key(source_key)
+    if image_id:
+        source_image = Image.objects.filter(id=image_id).first()
+    else:
+        source_image = None
+    if source_image is None:
+        source_image, _ = Image.objects.get_or_create(
+            url=source_public_url,
+            defaults={"r2_key": source_key, "user": task.user},
+        )
+
+    from .models import PieceStateImage  # noqa: PLC0415
+
+    jpeg_image = Image.objects.create(
+        url=new_url,
+        r2_key=new_key,
+        user=task.user,
+        width=width,
+        height=height,
+        derived_from=source_image,
+        derived_type="jpeg_conversion",
+    )
+    # Redirect any existing PSI rows that reference the HEIC/AVIF/non-JPEG
+    # source to the new JPEG so they immediately serve a browser-renderable URL.
+    PieceStateImage.objects.filter(image=source_image).update(image=jpeg_image)
+
+    return {
+        "status": "success",
+        "url": new_url,
+        "key": new_key,
+        "width": width,
+        "height": height,
+        "source_key": source_key,
+    }
+
+
 @TaskRegistry.register("generate_showcase_video")
 def generate_showcase_video(task: AsyncTask) -> dict:
     """Render a deterministic Keepsake showcase video from a storyboard snapshot."""
     from .showcase import (
         SHOWCASE_VIDEO_RENDER_VERSION,
         compute_storyboard_hash,
-        is_showcase_video_cloudinary_enabled,
+        is_showcase_video_storage_enabled,
         render_storyboard_to_mp4,
-        upload_storyboard_video_to_cloudinary,
+        upload_showcase_video_to_r2,
         validate_storyboard,
     )
 
@@ -315,13 +478,13 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     validate_storyboard(storyboard)
 
     # input_hash is now a piece-level deduplication hash (compute_piece_input_hash).
-    # Use it for Cloudinary asset naming so uploads are idempotent.  Fall back to
+    # Use it for the R2 object key so uploads are idempotent.  Fall back to
     # the storyboard hash for tasks created before this change.
     stored_hash = params.get("input_hash")
     input_hash = stored_hash or compute_storyboard_hash(storyboard)
 
-    if not is_showcase_video_cloudinary_enabled():
-        raise ValueError("Cloudinary showcase video upload is not configured.")
+    if not is_showcase_video_storage_enabled():
+        raise ValueError("Showcase video object storage is not configured.")
 
     task.progress = 0
     task.save(update_fields=["progress", "last_modified"])
@@ -332,15 +495,15 @@ def generate_showcase_video(task: AsyncTask) -> dict:
 
     output_path = render_storyboard_to_mp4(storyboard, on_progress=_report_progress)
     try:
-        cloudinary_asset = upload_storyboard_video_to_cloudinary(
+        artifact_url = upload_showcase_video_to_r2(
             output_path,
             input_hash=input_hash,
         )
-        if not cloudinary_asset:
-            raise ValueError("Cloudinary showcase video upload failed.")
+        if not artifact_url:
+            raise ValueError("Showcase video upload to R2 failed.")
     except Exception:
         logger.exception(
-            f"Cloudinary upload failed for showcase video task {task.id}; "
+            f"R2 upload failed for showcase video task {task.id}; "
             "marking the task as failed."
         )
         raise
@@ -358,10 +521,9 @@ def generate_showcase_video(task: AsyncTask) -> dict:
         "render_version": SHOWCASE_VIDEO_RENDER_VERSION,
         "input_hash": input_hash,
         "artifact_filename": f"{input_hash}.mp4",
-        "artifact_url": cloudinary_asset["secure_url"],
-        "download_url": cloudinary_asset["secure_url"],
+        "artifact_url": artifact_url,
+        "download_url": artifact_url,
         "content_type": "video/mp4",
-        "cloudinary_asset": cloudinary_asset,
         "storyboard": storyboard,
     }
 

@@ -23,7 +23,7 @@ For each target component:
 
 - **GitHub**: Use `gh pr list --search "Component" --state merged` and `gh issue list --search "Component" --state closed` to find the design rationale and reported bugs.
 - **Git**: Use `git log -p <file>` to see how props and internal state have evolved.
-- **Extraction**: Extract meaningful prop values, loading/error states, and specific workflow configurations (e.g., "how it looks when a Cloudinary upload fails").
+- **Extraction**: Extract meaningful prop values, loading/error states, and specific workflow configurations (e.g., "how it looks when an R2 upload fails").
 
 ### 3. Implementation
 

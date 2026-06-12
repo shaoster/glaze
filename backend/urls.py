@@ -1,5 +1,3 @@
-from urllib.parse import quote
-
 from django.conf import settings
 from django.contrib import admin
 from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
@@ -37,16 +35,9 @@ def _spa(request: HttpRequest) -> HttpResponse | HttpResponseNotFound:
     return HttpResponseNotFound("Frontend not built.")
 
 
-def _cloudinary_share_image_url(thumbnail: dict) -> str:
-    cloud_name = (thumbnail.get("cloud_name") or "").strip()
-    public_id = (thumbnail.get("cloudinary_public_id") or "").strip()
-    if cloud_name and public_id:
-        return (
-            f"https://res.cloudinary.com/{quote(cloud_name)}/image/upload/"
-            f"c_fill,g_auto,h_{_SHARE_IMAGE_SIZE},q_auto,w_{_SHARE_IMAGE_SIZE},f_jpg/"
-            f"{quote(public_id, safe='/')}.jpg"
-        )
-    return str(thumbnail.get("url") or "")
+def _share_image_url(thumbnail: dict) -> str:
+    """Prefer the eagerly cropped derivative; fall back to the raw asset URL."""
+    return str(thumbnail.get("cropped_url") or thumbnail.get("url") or "")
 
 
 def _inject_piece_metadata(index_html: str, request: HttpRequest, piece_id) -> str:
@@ -56,7 +47,7 @@ def _inject_piece_metadata(index_html: str, request: HttpRequest, piece_id) -> s
 
     piece = (
         Piece.objects.select_related("thumbnail")
-        .prefetch_related("states")
+        .prefetch_related("states", "states__image_links")
         .filter(id=piece_id, shared=True)
         .first()
     )
@@ -68,7 +59,9 @@ def _inject_piece_metadata(index_html: str, request: HttpRequest, piece_id) -> s
     description = "Powered by PotterDoc"
     url = request.build_absolute_uri(request.path)
     thumbnail = image_to_dict(piece.thumbnail)
-    image_url = _cloudinary_share_image_url(thumbnail) if thumbnail else ""
+    if thumbnail:
+        thumbnail["cropped_url"] = piece.get_thumbnail_cropped_url()
+    image_url = _share_image_url(thumbnail) if thumbnail else ""
     if image_url.startswith("/"):
         image_url = request.build_absolute_uri(image_url)
 

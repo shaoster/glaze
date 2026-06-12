@@ -29,16 +29,6 @@ urlpatterns = [
         name="image-crop-runs",
     ),
     path(
-        "admin/cloudinary-cleanup/",
-        views.admin_cloudinary_cleanup,
-        name="admin-cloudinary-cleanup",
-    ),
-    path(
-        "admin/cloudinary-cleanup/archive/",
-        views.admin_cloudinary_cleanup_archive,
-        name="admin-cloudinary-cleanup-archive",
-    ),
-    path(
         "analysis/glaze-combination-images/",
         views.glaze_combination_images,
         name="analysis-glaze-combination-images",
@@ -94,14 +84,19 @@ urlpatterns = [
         name="piece-showcase-video",
     ),
     path(
-        "uploads/cloudinary/widget-config/",
-        views.cloudinary_widget_config,
-        name="cloudinary-widget-config",
+        "uploads/r2/presigned-url/",
+        views.r2_presigned_upload_url,
+        name="r2-presigned-upload-url",
     ),
     path(
-        "uploads/cloudinary/widget-signature/",
-        views.cloudinary_widget_sign,
-        name="cloudinary-widget-sign",
+        "uploads/r2/convert-image/",
+        views.r2_convert_image,
+        name="r2-convert-image",
+    ),
+    path(
+        "uploads/r2/convert-image/<uuid:task_id>/",
+        views.r2_convert_image_status,
+        name="r2-convert-image-status",
     ),
     path(
         "workflow/schema/<str:state_id>/",

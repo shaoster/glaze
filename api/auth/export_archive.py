@@ -15,17 +15,35 @@ import httpx
 
 from backend.otel import traced
 
-from ..cloudinary_cleanup import _StreamingZipBuffer
 from ..models import Image
 
 logger = logging.getLogger(__name__)
 
 
+class _StreamingZipBuffer:
+    """File-like sink that buffers ZIP bytes for incremental streaming."""
+
+    def __init__(self) -> None:
+        self._chunks: list[bytes] = []
+
+    def write(self, data: bytes) -> int:
+        self._chunks.append(bytes(data))
+        return len(data)
+
+    def flush_chunks(self) -> list[bytes]:
+        chunks, self._chunks = self._chunks, []
+        return chunks
+
+    def flush(self) -> None:
+        return None
+
+
 @traced
 def export_image_name(image: Image) -> str:
-    """Return the ZIP member path for an exported Cloudinary image."""
-    public_id = cast(str, image.cloudinary_public_id)
-    sanitized = public_id.replace("/", "__")
+    """Return the ZIP member path for an exported hosted image."""
+    identifier = image.r2_key or urlparse(image.url).path.lstrip("/")
+    stem, _ = posixpath.splitext(identifier)
+    sanitized = stem.replace("/", "__")
     _, ext = posixpath.splitext(urlparse(image.url).path)
     return f"images/{sanitized}{ext}"
 
@@ -56,7 +74,7 @@ async def stream_export_archive(
                 except httpx.HTTPError as exc:
                     logger.warning(
                         "Export: failed to fetch image %s: %s",
-                        image.cloudinary_public_id,
+                        image.url,
                         exc,
                     )
                 for c in buffer.flush_chunks():

@@ -91,10 +91,12 @@ SECRET_KEY=your_highly_secure_django_secret_key
 DOMAIN=yourdomain.com
 ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 
-# (Optional) Cloudinary credentials for image storage
-# CLOUDINARY_CLOUD_NAME=your_cloud_name
-# CLOUDINARY_API_KEY=your_api_key
-# CLOUDINARY_API_SECRET=your_api_secret
+# (Optional) Cloudflare R2 credentials for image storage (all five required together)
+# R2_ACCOUNT_ID=your_cloudflare_account_id
+# R2_ACCESS_KEY_ID=your_r2_token_key_id
+# R2_SECRET_ACCESS_KEY=your_r2_token_secret
+# R2_BUCKET_NAME=your_bucket_name
+# R2_PUBLIC_URL=https://media.yourdomain.com
 
 # (Optional) Google OAuth Client ID for sign-in
 # GOOGLE_OAUTH_CLIENT_ID=your_google_oauth_client_id

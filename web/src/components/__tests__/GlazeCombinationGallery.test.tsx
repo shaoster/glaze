@@ -10,8 +10,8 @@ import ErrorBoundary from "../ErrorBoundary";
 import * as api from "../../util/api";
 import type { GlazeCombinationImageEntry } from "../../util/types";
 
-// Stub out CloudinaryImage to avoid Cloudinary SDK internals in unit tests.
-vi.mock("../CloudinaryImage", () => ({
+// Stub out AppImage to keep these unit tests focused on gallery behavior.
+vi.mock("../AppImage", () => ({
   default: ({ url, alt }: { url: string; alt?: string }) => (
     <img src={url} alt={alt ?? ""} />
   ),
@@ -83,8 +83,6 @@ const MOCK_IMAGE = {
   url: "https://example.com/mug.jpg",
   caption: "Front view",
   created: new Date("2024-01-15T00:00:00Z"),
-  cloudinary_public_id: null,
-  cloud_name: null,
 };
 
 const MOCK_COMBO_ENTRY: GlazeCombinationImageEntry = {
@@ -250,8 +248,6 @@ describe("GlazeCombinationGallery", () => {
           ...MOCK_COMBO_ENTRY.glaze_combination,
           test_tile_image: {
             url: "https://example.com/tile.jpg",
-            cloudinary_public_id: null,
-            cloud_name: null,
           },
         } as any,
       };
@@ -272,8 +268,6 @@ describe("GlazeCombinationGallery", () => {
           ...MOCK_COMBO_ENTRY.glaze_combination,
           test_tile_image: {
             url: "https://example.com/tile.jpg",
-            cloudinary_public_id: null,
-            cloud_name: null,
           },
         } as any,
       };

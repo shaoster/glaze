@@ -8,9 +8,7 @@ records are inserted.  The command is safe to run multiple times (idempotent).
 
 import hashlib
 import json
-import re
 from pathlib import Path
-from urllib.parse import urlparse
 
 from django.apps import apps
 from django.conf import settings
@@ -19,33 +17,6 @@ from django.db import connection
 
 from api.models import PublicLibraryVersion
 from api.utils import normalize_image_payload
-
-_CLOUDINARY_HOSTNAME = "res.cloudinary.com"
-_TRANSFORM_RE = re.compile(r"^[a-z][a-z0-9]*_")
-
-
-def _extract_cloud_name(url: str) -> str | None:
-    """Extract Cloudinary cloud_name from a delivery URL for fixture backfill."""
-    try:
-        parsed = urlparse(url)
-    except Exception:
-        return None
-    if parsed.hostname != _CLOUDINARY_HOSTNAME:
-        return None
-    parts = parsed.path.split("/")
-    if len(parts) < 4 or parts[2] != "image" or parts[3] != "upload":
-        return None
-    return parts[1] or None
-
-
-def _normalize_image_field(value: object) -> object:
-    """Ensure image dicts carry all three fields; fill cloud_name from URL if missing."""
-    if not isinstance(value, dict):
-        return value
-    if "cloud_name" not in value:
-        value = {**value, "cloud_name": _extract_cloud_name(value.get("url", "") or "")}
-    return value
-
 
 _DEFAULT_FIXTURE = Path(settings.BASE_DIR) / "fixtures" / "public_library.json"
 
@@ -140,12 +111,10 @@ class Command(BaseCommand):
                         field_obj.is_relation
                         and field_obj.related_model._meta.model_name == "image"
                     ):
-                        v = normalize_image_payload(_normalize_image_field(v))
+                        v = normalize_image_payload(v)
                     elif field_obj.is_relation and isinstance(v, int):
                         # Resolve FK integer values to model instances.
                         v = field_obj.related_model.objects.get(pk=v)
-                    elif field_obj.get_internal_type() == "JSONField":
-                        v = _normalize_image_field(v)
                 except Exception:
                     pass
                 defaults[k] = v

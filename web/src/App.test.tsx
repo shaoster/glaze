@@ -56,8 +56,6 @@ vi.mock("./util/api", async (importOriginal) => {
     updatePiece: vi.fn(),
     fetchGlobalEntries: vi.fn().mockResolvedValue([]),
     createGlobalEntry: vi.fn(),
-    hasCloudinaryUploadConfig: vi.fn().mockReturnValue(false),
-    uploadImageToCloudinary: vi.fn(),
     fetchGlazeCombinationImages: vi.fn().mockResolvedValue([]),
     updateUserPreferences: vi.fn(async (preferences) => ({
       alias: "",
@@ -117,10 +115,6 @@ vi.mock("./components/GlazeCombinationGallery", () => ({
 
 vi.mock("./pages/GlazeImportToolPage", () => ({
   default: () => <div>Glaze Import Tool Page</div>,
-}));
-
-vi.mock("./pages/CloudinaryCleanupPage", () => ({
-  default: () => <div>Cloudinary Cleanup Page</div>,
 }));
 
 vi.mock("./util/telemetry", () => ({
@@ -627,30 +621,6 @@ describe("App auth flow", () => {
     await waitFor(() => {
       expect(screen.getByText("Glaze Import Tool Page")).toBeInTheDocument();
       expect(window.location.pathname).toBe("/tools/glaze-import");
-    });
-  });
-
-  it("shows the Cloudinary cleanup menu item only for admin users and routes to it", async () => {
-    vi.mocked(fetchAppInit).mockResolvedValue({
-      googleOauthClientId: "test-client-id",
-      adminBaseUrl: "https://admin.potterdoc.com",
-      user: MOCK_ADMIN_USER,
-    });
-
-    render(<App />);
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /new piece/i }),
-      ).toBeInTheDocument();
-    });
-
-    await userEvent.click(screen.getByTestId("ExpandMoreIcon"));
-    await userEvent.click(screen.getByText("Cloudinary Cleanup"));
-
-    await waitFor(() => {
-      expect(screen.getByText("Cloudinary Cleanup Page")).toBeInTheDocument();
-      expect(window.location.pathname).toBe("/tools/cloudinary-cleanup");
     });
   });
 

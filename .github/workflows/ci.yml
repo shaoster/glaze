@@ -562,10 +562,9 @@ jobs:
             --set appConfig.appOrigin=http://localhost \
             --set appConfig.inviteLinkBaseUrl=http://localhost/accept-invite \
             --set appConfig.googleOauthClientId=ci \
-            --set appConfig.cloudinaryCloudName=ci \
-            --set appConfig.cloudinaryUploadFolder=ci \
-            --set appConfig.cloudinaryUploadPreset=ci \
-            --set appConfig.cloudinaryPublicUploadFolder=ci
+            --set appConfig.r2AccountId=ci \
+            --set appConfig.r2BucketName=ci \
+            --set appConfig.r2PublicUrl=https://media.ci.invalid
 
           # Render full manifest and verify no empty required env vars leak through
           helm template glaze chart/glaze/ \
@@ -574,10 +573,9 @@ jobs:
             --set appConfig.appOrigin=http://localhost \
             --set appConfig.inviteLinkBaseUrl=http://localhost/accept-invite \
             --set appConfig.googleOauthClientId=ci \
-            --set appConfig.cloudinaryCloudName=ci \
-            --set appConfig.cloudinaryUploadFolder=ci \
-            --set appConfig.cloudinaryUploadPreset=ci \
-            --set appConfig.cloudinaryPublicUploadFolder=ci \
+            --set appConfig.r2AccountId=ci \
+            --set appConfig.r2BucketName=ci \
+            --set appConfig.r2PublicUrl=https://media.ci.invalid \
             | grep -E '^\s+[A-Z_]+:\s*""' && {
               echo "Empty required env vars found in rendered chart" >&2
               exit 1

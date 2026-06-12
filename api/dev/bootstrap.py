@@ -256,9 +256,7 @@ def seed_dev_pieces(user, count: int = 75) -> None:
         p = Piece.objects.create(
             user=user,
             name=f"{adj} {form} #{i + 1}",
-            thumbnail=normalize_image_payload(
-                {"url": T[thumb], "cloudinary_public_id": None}, user=user
-            ),
+            thumbnail=normalize_image_payload({"url": T[thumb]}, user=user),
         )
 
         n_tags = rng.choices([0, 1, 2, 3], weights=[3, 4, 2, 1])[0]

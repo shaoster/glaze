@@ -7,9 +7,11 @@ import {
 export type ImageEntry = {
   url: string;
   caption: string;
-  cloudinary_public_id?: string | null;
-  cloud_name?: string | null;
   crop?: ImageCrop | null;
+  /** CDN URL of the eagerly generated crop; read-only, null until the task lands. */
+  cropped_url?: string | null;
+  /** Non-null when backed by R2; null for legacy external images. Gates crop UI. */
+  r2_key?: string | null;
   width?: number | null;
   height?: number | null;
 };
@@ -141,9 +143,9 @@ function stateImages(pieceState: PieceState): ImageEntry[] {
   return (pieceState.images || []).map((img) => ({
     url: img.url,
     caption: img.caption,
-    cloudinary_public_id: img.cloudinary_public_id ?? null,
-    cloud_name: img.cloud_name ?? null,
     crop: img.crop ?? null,
+    cropped_url: img.cropped_url ?? null,
+    r2_key: (img as { r2_key?: string | null }).r2_key ?? null,
     width: img.width ?? null,
     height: img.height ?? null,
   }));

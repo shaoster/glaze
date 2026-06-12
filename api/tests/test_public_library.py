@@ -214,10 +214,10 @@ class TestPublicLibraryAdmin:
         obj.refresh_from_db()
         assert obj.user is None
 
-    def test_get_form_uses_public_library_form_and_cloudinary_widget(self):
+    def test_get_form_uses_public_library_form_and_r2_widget(self):
         from api.admin import (
-            CloudinaryImageWidget,
             PublicLibraryAdmin,
+            R2ImageWidget,
             _make_public_library_form,
         )
 
@@ -238,7 +238,7 @@ class TestPublicLibraryAdmin:
         assert form_class._meta.model is GlazeType
         assert "user" not in form_class.base_fields
         assert isinstance(
-            form_class.base_fields["test_tile_image"].widget, CloudinaryImageWidget
+            form_class.base_fields["test_tile_image"].widget, R2ImageWidget
         )
 
     def test_get_queryset_excludes_private_objects(self):
@@ -446,25 +446,21 @@ class TestGlazeTypeAdmin:
 
         assert "test_tile_image_preview" in GlazeTypeAdmin.list_display
 
-    def test_test_tile_image_preview_renders_json_image(self, monkeypatch):
+    def test_test_tile_image_preview_renders_image(self):
         from api.admin import GlazeTypeAdmin
 
-        monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
         ma = GlazeTypeAdmin(GlazeType, AdminSite())
         glaze_type = GlazeType(
             name="Admin Celadon",
             test_tile_image={
-                "url": "https://res.cloudinary.com/demo/image/upload/test/tile.heic",
-                "cloudinary_public_id": "test/tile",
-                "cloud_name": "demo",
+                "url": "https://media.example.com/images/public/tile.heic",
             },
         )
 
         html = ma.test_tile_image_preview(glaze_type)
 
-        assert "cloudinary-preview" in html
-        assert "res.cloudinary.com/demo" in html
-        assert "test/tile" in html
+        assert "r2-image-preview" in html
+        assert "https://media.example.com/images/public/tile.heic" in html
 
     def test_save_model_syncs_singleton_combination(self):
         from api.admin import GlazeTypeAdmin

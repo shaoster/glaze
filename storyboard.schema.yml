@@ -87,8 +87,8 @@ $defs:
         type: string
         description: >-
           Stable source key. For image slides this matches the picker's image key
-          scheme (`<state_id>:<image_id|cloudinary_public_id|index>`); for note
-          slides it is the source state id.
+          scheme (`<state_id>:<image_id|index>`); for note slides it is the
+          source state id.
       duration_ms:
         type: integer
         minimum: 1
@@ -119,8 +119,6 @@ $defs:
     required:
       - url
       - image_id
-      - cloudinary_public_id
-      - cloud_name
       - crop
       - fit
     properties:
@@ -130,10 +128,6 @@ $defs:
       image_id:
         type: [string, "null"]
         description: Image model UUID when available.
-      cloudinary_public_id:
-        type: [string, "null"]
-      cloud_name:
-        type: [string, "null"]
       crop:
         description: Crop rectangle when one is stored, otherwise null.
         type: [object, "null"]

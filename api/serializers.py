@@ -180,8 +180,7 @@ class GlobalImageSerializer(serializers.Serializer):
     """Structured image value for ``type: image`` fields on global models."""
 
     url = serializers.CharField()
-    cloudinary_public_id = serializers.CharField(allow_null=True, required=False)
-    cloud_name = serializers.CharField(allow_null=True, required=False)
+    r2_key = serializers.CharField(read_only=True, allow_null=True, default=None)
 
 
 class GlazeTypeRefSerializer(serializers.Serializer):
@@ -276,12 +275,15 @@ class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField(allow_blank=True, default="")
     created = serializers.DateTimeField(required=False)
-    cloudinary_public_id = serializers.CharField(
-        allow_blank=True, required=False, default=None, allow_null=True
-    )
-    cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = ImageCropSerializer(required=False, allow_null=True, default=None)
+    # Public URL of the eagerly cropped derivative. Written by the
+    # generate_cropped_image task only — never accepted from clients.
+    cropped_url = serializers.CharField(read_only=True, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    # Non-null when the image is stored in R2 and eligible for server-side
+    # crop materialization. Clients use this to gate the crop UI and avoid
+    # treating externally-hosted images as perpetually pending.
+    r2_key = serializers.CharField(read_only=True, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
     )
@@ -426,7 +428,7 @@ class PieceStateSerializer(serializers.ModelSerializer):
     def get_images(self, obj: PieceState) -> list[dict]:
         links = getattr(obj, "_prefetched_objects_cache", {}).get("image_links")
         if links is None:
-            links = obj.image_links.select_related("image").order_by("order", "pk")
+            links = obj.image_links.select_related("image", "cropped_image").order_by("order", "pk")
         return [captioned_image_to_dict(link) for link in links]
 
 
@@ -438,11 +440,8 @@ class StateSummarySerializer(serializers.Serializer):
 
 class ThumbnailSerializer(serializers.Serializer):
     url = serializers.CharField()
-    cloudinary_public_id = serializers.CharField(
-        allow_blank=True, allow_null=True, default=None
-    )
-    cloud_name = serializers.CharField(allow_null=True, required=False, default=None)
     crop = ImageCropSerializer(required=False, allow_null=True, default=None)
+    cropped_url = serializers.CharField(required=False, allow_null=True, default=None)
     image_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     width = serializers.IntegerField(
         required=False, allow_null=True, default=None, min_value=0
@@ -503,7 +502,11 @@ class PieceSummarySerializer(serializers.ModelSerializer):
                     Coalesce(latest_state_lm, "fields_last_modified"),
                 )
             )
-            .prefetch_related("states__image_links__image", "tag_links__tag")
+            .prefetch_related(
+                "states__image_links__image",
+                "states__image_links__cropped_image",
+                "tag_links__tag",
+            )
             .order_by(display_field)
         )
 
@@ -542,7 +545,10 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         crop = getattr(obj, "thumbnail_crop", _NOT_ANNOTATED)
         if crop is _NOT_ANNOTATED:
             crop = obj.get_thumbnail_crop()
-        return {**thumbnail, "crop": crop}
+        cropped_url = getattr(obj, "thumbnail_cropped_url", _NOT_ANNOTATED)
+        if cropped_url is _NOT_ANNOTATED:
+            cropped_url = obj.get_thumbnail_cropped_url()
+        return {**thumbnail, "crop": crop, "cropped_url": cropped_url}
 
     @extend_schema_field(serializers.IntegerField(min_value=0))
     def get_photo_count(self, obj: Piece) -> int:
@@ -660,7 +666,7 @@ class PieceCreateSerializer(serializers.ModelSerializer):
         required=False, allow_blank=True, allow_null=True, default=None
     )
     # Accept a bare URL string from the curated SVG gallery; wrap it into the
-    # {url, cloudinary_public_id} shape that Piece.thumbnail now stores.
+    # Image row that Piece.thumbnail now stores.
     thumbnail = serializers.CharField(required=False, allow_blank=True, default=None)
 
     class Meta:

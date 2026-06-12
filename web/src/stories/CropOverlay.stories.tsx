@@ -12,8 +12,8 @@ import CropOverlay from "../components/CropOverlay";
  *
  * These stories render the real react-advanced-cropper (not a mock), so they
  * double as an integration check that the library is wired correctly — the
- * unit tests mock the library wholesale. They load Cloudinary's public
- * `demo/sample` asset.
+ * unit tests mock the library wholesale. They load a public sample image by
+ * URL.
  */
 const meta = {
   title: "Components/CropOverlay",
@@ -27,8 +27,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const baseArgs = {
-  cloudinaryPublicId: "sample",
-  cloudName: "demo",
+  url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800",
   onSave: async () => {},
   onCancel: () => {},
 };

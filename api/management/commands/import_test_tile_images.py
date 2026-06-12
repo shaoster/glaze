@@ -3,20 +3,16 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
-import cloudinary
-import cloudinary.uploader
-import requests
-from cloudinary.utils import cloudinary_url
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from PIL import Image
 from pillow_heif import register_heif_opener
 
+from api import r2
 from api.models import GlazeCombination, GlazeCombinationLayer, GlazeType
 from api.utils import normalize_image_payload
 
@@ -95,17 +91,12 @@ _GLAZE_COMBINATION_SPECS = [
 ]
 
 
-def _configure_cloudinary() -> None:
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
-    api_key = os.environ.get("CLOUDINARY_API_KEY", "").strip()
-    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
-    if not cloud_name or not api_key or not api_secret:
+def _require_r2() -> None:
+    if not r2.is_r2_configured():
         raise CommandError(
-            "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are required."
+            "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, "
+            "and R2_PUBLIC_URL are required."
         )
-    cloudinary.config(
-        cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True
-    )
 
 
 def _load_image(path: Path) -> Image.Image:
@@ -122,22 +113,16 @@ def _save_crop(src: Path, dst: Path, crop_box: tuple[int, int, int, int]) -> Non
         cropped.save(dst, "JPEG", quality=95)
 
 
-def _upload_file(path: Path, public_id: str, folder: str | None = None) -> dict:
-    upload_kwargs = {
-        "public_id": public_id,
-        "overwrite": True,
-        "resource_type": "image",
-    }
-    if folder:
-        upload_kwargs["folder"] = folder
-    return cloudinary.uploader.upload(str(path), **upload_kwargs)
+def _upload_file(path: Path, key: str) -> str:
+    """Upload a local JPEG to R2 and return its public URL."""
+    return r2.upload_file(str(path), key, "image/jpeg")
 
 
-def _download_file(url: str, dst: Path) -> None:
+def _save_inspection_jpg(src: Path, dst: Path) -> None:
+    """Render a local inspection JPG of the full source image."""
     dst.parent.mkdir(parents=True, exist_ok=True)
-    response = requests.get(url, timeout=60)
-    response.raise_for_status()
-    dst.write_bytes(response.content)
+    with _load_image(src) as image:
+        image.save(dst, "JPEG", quality=90)
 
 
 def _ensure_single_layer_combination(glaze_type: GlazeType) -> GlazeCombination:
@@ -178,9 +163,9 @@ def _ensure_combination_layers(
 
 class Command(BaseCommand):
     help = (
-        "Upload the issue-146 test-tile HEICs for inspection, crop the centered tile + "
-        "lower label, upload the corrected crops to Cloudinary, and upsert public "
-        "GlazeType / GlazeCombination rows."
+        "Render the issue-146 test-tile HEICs to local inspection JPGs, crop the "
+        "centered tile + lower label, upload the corrected crops to R2, and upsert "
+        "public GlazeType / GlazeCombination rows."
     )
 
     def add_arguments(self, parser):
@@ -188,14 +173,14 @@ class Command(BaseCommand):
             "--batch-folder",
             default="",
             help=(
-                "Cloudinary folder prefix for this import batch. Defaults to "
-                "<CLOUDINARY_UPLOAD_FOLDER>/issue-146-public-test-tiles."
+                "R2 key prefix for this import batch. Defaults to "
+                "issue-146-public-test-tiles."
             ),
         )
         parser.add_argument(
             "--inspection-dir",
             default=str(_DEFAULT_INSPECTION_DIR),
-            help="Local directory for downloaded inspection JPGs from Cloudinary.",
+            help="Local directory for rendered inspection JPGs.",
         )
         parser.add_argument(
             "--crop-dir",
@@ -205,20 +190,15 @@ class Command(BaseCommand):
         parser.add_argument(
             "--manifest",
             default=str(_DEFAULT_MANIFEST),
-            help="JSON file where the import mapping and Cloudinary URLs are written.",
+            help="JSON file where the import mapping and asset URLs are written.",
         )
 
     def handle(self, *args, **options):
-        _configure_cloudinary()
+        _require_r2()
 
         base_folder = options["batch_folder"].strip().strip("/")
         if not base_folder:
-            env_folder = (
-                os.environ.get("CLOUDINARY_UPLOAD_FOLDER", "").strip().strip("/")
-            )
-            base_folder = "/".join(
-                part for part in [env_folder, "issue-146-public-test-tiles"] if part
-            )
+            base_folder = "issue-146-public-test-tiles"
         inspection_dir = Path(options["inspection_dir"])
         crop_dir = Path(options["crop_dir"])
         manifest_path = Path(options["manifest"])
@@ -276,39 +256,22 @@ class Command(BaseCommand):
         if not src.exists():
             raise CommandError(f"Missing source HEIC: {src}")
 
-        inspection_public_id = f"glaze-type-source-{Path(spec.filename).stem}"
-        inspection_upload = _upload_file(
-            src,
-            public_id=inspection_public_id,
-            folder=f"{base_folder}/inspection/glaze-types",
-        )
-        jpg_url, _ = cloudinary_url(
-            inspection_upload["public_id"],
-            secure=True,
-            format="jpg",
-            resource_type="image",
-            type="upload",
-        )
         inspection_path = (
             inspection_dir / "glaze_types" / f"{Path(spec.filename).stem}.jpg"
         )
-        _download_file(jpg_url, inspection_path)
+        _save_inspection_jpg(src, inspection_path)
 
         cropped_path = crop_dir / "glaze_types" / f"{Path(spec.filename).stem}.jpg"
         _save_crop(src, cropped_path, spec.crop_box)
-        final_upload = _upload_file(
+        final_url = _upload_file(
             cropped_path,
-            public_id=f"glaze-type-{Path(spec.filename).stem}",
-            folder=f"{base_folder}/final/glaze-types",
+            key=(
+                f"{base_folder}/final/glaze-types/"
+                f"glaze-type-{Path(spec.filename).stem}.jpg"
+            ),
         )
         glaze_type, created = GlazeType.objects.get_or_create(user=None, name=spec.name)
-        glaze_type.test_tile_image = normalize_image_payload(
-            {
-                "url": final_upload["secure_url"],
-                "cloudinary_public_id": final_upload["public_id"],
-                "cloud_name": cloudinary.config().cloud_name or None,
-            }
-        )
+        glaze_type.test_tile_image = normalize_image_payload({"url": final_url})
         glaze_type.save(update_fields=["test_tile_image"])
         _ensure_single_layer_combination(glaze_type)
         return {
@@ -316,11 +279,9 @@ class Command(BaseCommand):
             "filename": spec.filename,
             "name": spec.name,
             "source_path": str(src),
-            "inspection_jpg_url": jpg_url,
-            "inspection_public_id": inspection_upload["public_id"],
+            "inspection_path": str(inspection_path),
             "cropped_path": str(cropped_path),
-            "final_cloudinary_url": final_upload["secure_url"],
-            "final_public_id": final_upload["public_id"],
+            "final_url": final_url,
         }, created
 
     def _import_glaze_combination(
@@ -338,32 +299,21 @@ class Command(BaseCommand):
                 f"Combination spec is missing glaze references: {spec.filename}"
             )
 
-        inspection_public_id = f"glaze-combination-source-{Path(spec.filename).stem}"
-        inspection_upload = _upload_file(
-            src,
-            public_id=inspection_public_id,
-            folder=f"{base_folder}/inspection/glaze-combinations",
-        )
-        jpg_url, _ = cloudinary_url(
-            inspection_upload["public_id"],
-            secure=True,
-            format="jpg",
-            resource_type="image",
-            type="upload",
-        )
         inspection_path = (
             inspection_dir / "glaze_combinations" / f"{Path(spec.filename).stem}.jpg"
         )
-        _download_file(jpg_url, inspection_path)
+        _save_inspection_jpg(src, inspection_path)
 
         cropped_path = (
             crop_dir / "glaze_combinations" / f"{Path(spec.filename).stem}.jpg"
         )
         _save_crop(src, cropped_path, spec.crop_box)
-        final_upload = _upload_file(
+        final_url = _upload_file(
             cropped_path,
-            public_id=f"glaze-combination-{Path(spec.filename).stem}",
-            folder=f"{base_folder}/final/glaze-combinations",
+            key=(
+                f"{base_folder}/final/glaze-combinations/"
+                f"glaze-combination-{Path(spec.filename).stem}.jpg"
+            ),
         )
 
         first = GlazeType.objects.get(user=None, name=spec.first_glaze)
@@ -371,13 +321,7 @@ class Command(BaseCommand):
         combo, created = GlazeCombination.objects.get_or_create(
             user=None, name=spec.name
         )
-        combo.test_tile_image = normalize_image_payload(
-            {
-                "url": final_upload["secure_url"],
-                "cloudinary_public_id": final_upload["public_id"],
-                "cloud_name": cloudinary.config().cloud_name or None,
-            }
-        )
+        combo.test_tile_image = normalize_image_payload({"url": final_url})
         combo.save(update_fields=["test_tile_image"])
         _ensure_combination_layers(combo, [first, second])
         return {
@@ -387,11 +331,9 @@ class Command(BaseCommand):
             "first_glaze": spec.first_glaze,
             "second_glaze": spec.second_glaze,
             "source_path": str(src),
-            "inspection_jpg_url": jpg_url,
-            "inspection_public_id": inspection_upload["public_id"],
+            "inspection_path": str(inspection_path),
             "cropped_path": str(cropped_path),
-            "final_cloudinary_url": final_upload["secure_url"],
-            "final_public_id": final_upload["public_id"],
+            "final_url": final_url,
         }, created
 
     def _verify(self) -> dict:

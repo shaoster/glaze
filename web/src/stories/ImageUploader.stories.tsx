@@ -3,7 +3,7 @@ import ImageUploader from "../components/ImageUploader";
 import type { ImageEntry } from "../components/workflowStateDraft";
 
 /**
- * ImageUploader manages the full Cloudinary upload lifecycle and renders the
+ * ImageUploader manages the full direct-to-R2 upload lifecycle and renders the
  * upload trigger for adding photos to a workflow state.
  *
  * Rationale: Extracted from WorkflowState.tsx (Issue #406) and refactored to

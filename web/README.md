@@ -27,7 +27,7 @@ want web-only overrides for local development.
 
 To enable Google Sign-In locally, add `GOOGLE_OAUTH_CLIENT_ID=<your-client-id>` to your root `.env.local` — it is loaded by `source env.sh` and will be in the shell environment when `gz_start` launches the Vite dev server.
 
-Cloudinary uploads are signed by Django; set `CLOUDINARY_*` in root `.env.local` so the API secret never appears in browser code.
+R2 uploads use presigned URLs issued by Django; set the `R2_*` vars in root `.env.local` so the access keys never appear in browser code.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
@@ -127,11 +127,11 @@ export default defineConfig([
 The web UI is organized around a small set of React components in `src/components/`. Each component owns a distinct slice of product behavior:
 
 - `NewPieceDialog.tsx`: Creates a new piece from the list page, including name entry, optional notes, location selection/creation, curated thumbnail picking, save validation, and discard-confirmation when the form is dirty.
-- `PieceList.tsx`: Renders the main piece masonry on the list page. It filters and sorts `PieceSummary` rows, measures the container width, and seeds a Masonic positioner before the first paint so cropped cards do not flash an incorrect first layout or overlap while the grid settles. Masonic gives us a positioner/cache API, but not a way for `PieceCard` to report its final height before layout, so `PieceList` keeps the card-layout math in one shared helper and uses it for the grid seed, thumbnail shell, and Cloudinary request.
+- `PieceList.tsx`: Renders the main piece masonry on the list page. It filters and sorts `PieceSummary` rows, measures the container width, and seeds a Masonic positioner before the first paint so cropped cards do not flash an incorrect first layout or overlap while the grid settles. Masonic gives us a positioner/cache API, but not a way for `PieceCard` to report its final height before layout, so `PieceList` keeps the card-layout math in one shared helper and uses it for the grid seed, thumbnail shell, and image sizing.
 - `PieceDetail.tsx`: Displays a single piece header, renders the current editable workflow state, exposes valid next-state transitions from `workflow.yml`, blocks navigation when edits are unsaved, and lets the user expand past state history with image previews. When **edit piece history** mode is active (`is_editable=true`), clicking any past state in the Timeline section **rewinds** the view to that state — the top editing panel switches to show that historical state (using `updatePastState` to save changes), and all later states in the timeline are greyed out. Clicking the rewound state again (or the ✕ dismiss button on the banner) clears the rewind. Sealing the piece automatically resets the view to the topologically latest state.
-- `WorkflowState.tsx`: Handles editing the current state itself, including notes, current location, workflow-driven additional fields, save/error states, image URL entry, optional Cloudinary uploads, caption editing, image removal, and lightbox launch for current-state images.
-- `GlobalEntryField.tsx` + `GlobalEntryDialog.tsx`: Together provide the reusable UI for workflow globals — `GlobalEntryField` renders the autocomplete chip input and select affordance, while `GlobalEntryDialog` hosts the searchable list, inline creation form, and Cloudinary image upload for the selected global type.
-- `CloudinaryImage.tsx`: Optimized image renderer that computes size-appropriate Cloudinary delivery URLs for five named contexts (`thumbnail`, `gallery`, `lightbox`, `detail`, `preview`). Backed by TanStack Query (`useSuspenseQuery`) so image URLs are prefetched into the query cache and shared across components. Exports `SuspenseCloudinaryImage` — a Suspense-wrapped variant for use inside lightboxes and galleries where the surrounding layout can show a skeleton while the URL resolves.
+- `WorkflowState.tsx`: Handles editing the current state itself, including notes, current location, workflow-driven additional fields, save/error states, direct-to-R2 image uploads, caption editing, image removal, and lightbox launch for current-state images.
+- `GlobalEntryField.tsx` + `GlobalEntryDialog.tsx`: Together provide the reusable UI for workflow globals — `GlobalEntryField` renders the autocomplete chip input and select affordance, while `GlobalEntryDialog` hosts the searchable list, inline creation form, and R2 image upload for the selected global type.
+- `AppImage.tsx`: Image renderer for R2/CDN-hosted assets across five named contexts (`thumbnail`, `gallery`, `lightbox`, `detail`, `preview`). Renders a plain `<img>` at the stored CDN URL, preferring the eagerly generated crop (`cropped_url`) when it exists — there are no request-time transforms. Backed by TanStack Query (`useSuspenseQuery`) so image loads are cached and shared across components. Exports `SuspenseAppImage` — a Suspense-wrapped variant for use inside lightboxes and galleries where the surrounding layout can show a skeleton while the image loads.
 - `ImageLightbox.tsx`: Shows piece images in a full-screen modal with captions plus desktop button navigation and touch swipe navigation for browsing multiple images. Uses TanStack Query and `React.Suspense` so the lightbox skeleton is shown while the full-resolution URL is being prefetched.
 - `WorkflowSummary.tsx`: Renders the read-only summary section declared on terminal states in `workflow.yml` — displays promoted field values, computed numeric results, and static text with optional `when` conditions.
 - `PieceShareControls.tsx`: Owner-only sharing controls shown on terminal pieces — toggles the public sharing flag and provides a copyable share link.
@@ -146,32 +146,32 @@ The current design prevents that bad first frame:
 - `useContainerPosition()` waits for a real container width before `MasonryScroller` mounts, because a width-0 first commit would poison the cache with chrome-only measurements.
 - `PieceList` seeds Masonic's positioner before paint with crop-backed heights, because a post-mount correction pass is what caused the overlap/flicker race.
 - Cards without crops intentionally stay on the default `itemHeightEstimate`, because their true height is not known until Masonic measures them.
-- Each thumbnail shell reserves its crop aspect ratio up front, and `CloudinaryImage` receives matching dimensions so the image load does not force a second layout correction.
+- Each thumbnail shell reserves its crop aspect ratio up front, and `AppImage` receives matching dimensions so the image load does not force a second layout correction.
 
 If this ever changes, the first question to ask is "will the first paint still be correct without relying on a later scroll or resize?" If the answer is no, the old bug is back.
 
-## Cloudinary image uploads (web)
+## R2 image uploads (web)
 
-Images attached to piece states are uploaded via the [Cloudinary Upload Widget](https://cloudinary.com/documentation/upload_widget) using backend-signed uploads — `CLOUDINARY_API_SECRET` never reaches the browser.
+Images attached to piece states are uploaded directly from the browser to Cloudflare R2 using short-lived presigned PUT URLs issued by Django — the R2 access keys never reach the browser.
 
-Set these in `.env.local` before starting Django:
+Set these in `.env.local` before starting Django (all five required together):
 
 ```bash
-export CLOUDINARY_CLOUD_NAME=<your-cloud-name>
-export CLOUDINARY_API_KEY=<your-api-key>
-export CLOUDINARY_API_SECRET=<your-api-secret>
-export CLOUDINARY_UPLOAD_FOLDER=glaze   # optional; user-uploaded images are placed in this folder
-export CLOUDINARY_PUBLIC_UPLOAD_FOLDER=glaze_public   # optional; public library images are placed in this folder
+export R2_ACCOUNT_ID=<cloudflare-account-id>
+export R2_ACCESS_KEY_ID=<r2-token-key-id>
+export R2_SECRET_ACCESS_KEY=<r2-token-secret>
+export R2_BUCKET_NAME=<bucket-name>
+export R2_PUBLIC_URL=<public-cdn-base-url>   # e.g. https://media.potterdoc.com
 ```
 
 **How it works:**
 
-1. `WorkflowState` calls `GET /api/uploads/cloudinary/widget-config/` to retrieve the cloud name, API key, and optional folder.
-2. The Cloudinary Upload Widget opens in the browser. For each upload, the widget calls `POST /api/uploads/cloudinary/widget-signature/` to get a server-signed signature.
-3. On success, the widget returns a `secure_url` and `public_id`. These are stored alongside the image in the `CaptionedImage` record.
-4. Images are rendered via `CloudinaryImage`, which uses `public_id` to request viewport-appropriate renditions (auto format, auto quality, size-matched to context).
+1. `uploadImageToR2` (`src/util/r2Upload.ts`) downscales the image client-side (long edge capped at 2560px) so phone photos do not ship at full sensor resolution.
+2. It calls `POST /api/uploads/r2/presigned-url/`, which validates the content type and returns `{upload_url, key, public_url, expires_in}` with a fully server-generated object key.
+3. The bytes are PUT directly to R2; the signature in the URL is the credential. The resulting `{url, width, height}` is persisted through the normal `PATCH` state flow into the `CaptionedImage` record.
+4. Images are rendered via `AppImage`, which displays `cropped_url ?? url`. Crops are materialized eagerly by the backend `generate_cropped_image` task — no request-time transforms.
 
-Cloudinary is optional — if the env vars are not set, the config endpoint returns 503 and the UI falls back to URL-paste mode.
+R2 is optional in dev — if the env vars are not set, the presigned-url endpoint returns 503 and the upload button surfaces an error; already-stored URLs still render.
 
 ## Google OAuth (web)
 

@@ -9,12 +9,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import GlazeImportToolPage from "../GlazeImportToolPage";
-import type { CloudinaryUploadWidgetOptions } from "../../cloudinary-widget";
-import {
-  fetchCloudinaryWidgetConfig,
-  importManualSquareCropRecords,
-  signCloudinaryWidgetParams,
-} from "../../util/api";
+import { importManualSquareCropRecords } from "../../util/api";
+import { uploadImageToR2 } from "../../util/r2Upload";
 
 vi.mock("../../util/api", () => ({
   extractErrorMessage: vi.fn((error: unknown, defaultMessage: string) => {
@@ -28,9 +24,11 @@ vi.mock("../../util/api", () => ({
     }
     return error instanceof Error ? error.message : defaultMessage;
   }),
-  fetchCloudinaryWidgetConfig: vi.fn(),
   importManualSquareCropRecords: vi.fn(),
-  signCloudinaryWidgetParams: vi.fn(),
+}));
+
+vi.mock("../../util/r2Upload", () => ({
+  uploadImageToR2: vi.fn(),
 }));
 import { createWorker } from "tesseract.js";
 
@@ -80,7 +78,6 @@ describe("GlazeImportToolPage", () => {
         callback(new Blob(["preview"], { type: "image/webp" })),
       ),
     });
-    window.cloudinary = undefined;
   });
 
   it("renders the tabbed workflow headings", () => {
@@ -95,7 +92,7 @@ describe("GlazeImportToolPage", () => {
       screen.getByRole("button", { name: "Bulk Upload Images" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Upload Via Cloudinary" }),
+      screen.getByRole("button", { name: "Upload Via Cloud" }),
     ).toBeInTheDocument();
   });
 
@@ -121,81 +118,59 @@ describe("GlazeImportToolPage", () => {
     });
   });
 
-  it("shows an error when the Cloudinary config request fails", async () => {
-    vi.mocked(fetchCloudinaryWidgetConfig).mockRejectedValue(new Error("nope"));
-
-    render(<GlazeImportToolPage />);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Upload Via Cloudinary" }),
-    );
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Failed to load Cloudinary upload configuration."),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("shows an error when the Cloudinary widget is unavailable", async () => {
-    vi.mocked(fetchCloudinaryWidgetConfig).mockResolvedValue({
-      cloud_name: "demo-cloud",
-      api_key: "demo-key",
+  it("creates a record from a successful cloud upload", async () => {
+    vi.mocked(uploadImageToR2).mockResolvedValue({
+      url: "https://cdn.example.com/images/ash-blue.jpg",
+      width: 640,
+      height: 480,
     });
 
     render(<GlazeImportToolPage />);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Upload Via Cloudinary" }),
-    );
+    const remoteInput = screen.getByTestId("remote-upload-input");
+    const file = new File(["image-bytes"], "ash-blue.jpg", {
+      type: "image/jpeg",
+    });
+    fireEvent.change(remoteInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          "Cloudinary upload widget is not available in this browser.",
-        ),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("creates a record from a successful Cloudinary widget upload", async () => {
-    const openMock = vi.fn();
-    window.cloudinary = {
-      createUploadWidget: vi.fn((_options, callback) => ({
-        open: () => {
-          openMock();
-          callback(null, {
-            event: "success",
-            info: {
-              public_id: "glaze/public-id",
-              original_filename: "ash-blue",
-              format: "jpg",
-            },
-          });
-        },
-        close: () => {},
-        destroy: () => {},
-      })),
-      openUploadWidget: vi.fn(),
-    };
-    vi.mocked(fetchCloudinaryWidgetConfig).mockResolvedValue({
-      cloud_name: "demo-cloud",
-      api_key: "demo-key",
-    });
-
-    render(<GlazeImportToolPage />);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Upload Via Cloudinary" }),
-    );
-
-    await waitFor(() => {
-      expect(openMock).toHaveBeenCalled();
+      expect(uploadImageToR2).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
       expect(screen.getByText("ash-blue.jpg")).toBeInTheDocument();
     });
-    expect(window.cloudinary?.createUploadWidget).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "2. Crop" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+  });
+
+  it("shows an error entry when the cloud upload fails", async () => {
+    vi.mocked(uploadImageToR2).mockRejectedValue(new Error("nope"));
+
+    render(<GlazeImportToolPage />);
+
+    const remoteInput = screen.getByTestId("remote-upload-input");
+    const file = new File(["image-bytes"], "ash-blue.jpg", {
+      type: "image/jpeg",
+    });
+    fireEvent.change(remoteInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Cloud upload failed, or the uploaded image could not be loaded.",
+        ),
+      ).toBeInTheDocument();
+    });
+    // The failed upload does not produce a record or advance the workflow.
+    expect(screen.getByText("No records uploaded yet.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "1. Upload" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("shows that no records have been uploaded yet on first render", () => {
@@ -326,67 +301,6 @@ describe("GlazeImportToolPage", () => {
     expect(screen.getByDisplayValue("glaze_combination")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Iron Red")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Clear")).toBeInTheDocument();
-  });
-
-  it("shows an error when the Cloudinary widget callback fails", async () => {
-    window.cloudinary = {
-      createUploadWidget: vi.fn((_options, callback) => ({
-        open: vi.fn(() => {
-          callback(new Error("upload failed"), null);
-        }),
-        close: () => {},
-        destroy: () => {},
-      })),
-      openUploadWidget: vi.fn(),
-    };
-    vi.mocked(fetchCloudinaryWidgetConfig).mockResolvedValue({
-      cloud_name: "demo-cloud",
-      api_key: "demo-key",
-    });
-
-    render(<GlazeImportToolPage />);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Upload Via Cloudinary" }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("Cloudinary upload failed.")).toBeInTheDocument();
-    });
-  });
-
-  it("shows an error when Cloudinary upload signing fails", async () => {
-    let uploadSignature:
-      | CloudinaryUploadWidgetOptions["uploadSignature"]
-      | undefined;
-    window.cloudinary = {
-      createUploadWidget: vi.fn((options) => {
-        uploadSignature = options.uploadSignature;
-        return { open: vi.fn(), close: () => {}, destroy: () => {} };
-      }),
-      openUploadWidget: vi.fn(),
-    };
-    vi.mocked(fetchCloudinaryWidgetConfig).mockResolvedValue({
-      cloud_name: "demo-cloud",
-      api_key: "demo-key",
-    });
-    vi.mocked(signCloudinaryWidgetParams).mockRejectedValue(
-      new Error("sign failed"),
-    );
-
-    render(<GlazeImportToolPage />);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Upload Via Cloudinary" }),
-    );
-
-    await waitFor(() => expect(uploadSignature).toBeDefined());
-    uploadSignature?.(vi.fn(), { timestamp: "123" });
-    await waitFor(() => {
-      expect(
-        screen.getByText("Failed to sign Cloudinary upload."),
-      ).toBeInTheDocument();
-    });
   });
 
   it("shows formatted API validation errors when import fails", async () => {

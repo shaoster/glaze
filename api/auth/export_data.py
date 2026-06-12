@@ -45,11 +45,18 @@ def collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Ima
         default=str,
     )
 
+    # Restrict to R2-backed images and transitional Cloudinary-hosted images.
+    # An overly broad URL filter (url__startswith="http") would let an
+    # authenticated user attach arbitrary URLs and trigger SSRF via the
+    # export's httpx fetch of image.url during ZIP assembly.
     images = list(
-        Image.objects.filter(cloudinary_public_id__isnull=False)
+        Image.objects.filter(
+            Q(r2_key__isnull=False) | Q(url__icontains="res.cloudinary.com")
+        )
         .filter(
             Q(thumbnail_for_pieces__user=user)
             | Q(piece_state_links__piece_state__user=user)
+            | Q(crop_links__piece_state__user=user)
         )
         .distinct()
     )

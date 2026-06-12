@@ -22,7 +22,7 @@ from ..showcase import (
     SHOWCASE_VIDEO_RENDER_VERSION,
     build_keepsake_storyboard,
     compute_piece_input_hash,
-    is_showcase_video_cloudinary_enabled,
+    is_showcase_video_storage_enabled,
 )
 from ..showcase.render import SHOWCASE_VIDEO_TASK_TYPE
 from ..tasks import get_task_interface
@@ -85,9 +85,9 @@ def _latest_showcase_task(piece: Piece) -> AsyncTask | None:
 
 
 def _video_disabled_reason() -> str | None:
-    if is_showcase_video_cloudinary_enabled():
+    if is_showcase_video_storage_enabled():
         return None
-    return "Cloudinary showcase video uploads are not configured."
+    return "Showcase video object storage is not configured."
 
 
 def _status_payload(
@@ -100,7 +100,7 @@ def _status_payload(
     storyboard: dict | None = None,
     request: Request,
 ) -> dict:
-    enabled = is_showcase_video_cloudinary_enabled()
+    enabled = is_showcase_video_storage_enabled()
     disabled_reason = _video_disabled_reason()
     task_data = task.input_params if task is not None else {}
     stored_input_hash = None
@@ -203,7 +203,9 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
                 .annotate(
                     current_state_name=_current_state_name_subquery(),
                     has_images=Exists(
-                        PieceStateImage.objects.filter(piece_state__piece=OuterRef("pk"))
+                        PieceStateImage.objects.filter(
+                            piece_state__piece=OuterRef("pk")
+                        )
                     ),
                 )
                 .get(pk=piece_id)
@@ -258,9 +260,9 @@ def piece_showcase_video(request: Request, piece_id: str) -> Response:
     serializer = ShowcaseVideoRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    if not is_showcase_video_cloudinary_enabled():
+    if not is_showcase_video_storage_enabled():
         return Response(
-            {"detail": ("Cloudinary showcase video uploads are not configured.")},
+            {"detail": ("Showcase video object storage is not configured.")},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 

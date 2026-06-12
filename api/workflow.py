@@ -176,7 +176,7 @@ def get_image_fields_for_global_model(
 ) -> list[str]:
     """Return field names declared as type: image for the given global model.
 
-    Used by admin to identify which fields should render a Cloudinary upload widget
+    Used by admin to identify which fields should render an image upload widget
     rather than a plain text input.  Returns an empty list if the model is not a
     registered global or has no image fields.
     """
@@ -466,7 +466,6 @@ def _resolve_field_def_cached(field_def_hashable: Any) -> dict:
                 "type": "object",
                 "properties": {
                     "url": {"type": "string"},
-                    "cloudinary_public_id": {"type": ["string", "null"]},
                 },
                 "required": ["url"],
             }

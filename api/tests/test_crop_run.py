@@ -31,9 +31,8 @@ EMPTY_MASK_B64 = _make_mask_b64(has_subject=False)
 @pytest.fixture
 def image(db, user):
     return Image.objects.create(
-        url="https://res.cloudinary.com/demo/image/upload/test.jpg",
-        cloud_name="demo",
-        cloudinary_public_id="test",
+        url="https://media.example.com/images/1/test.jpg",
+        r2_key="images/1/test.jpg",
         user=user,
     )
 
@@ -65,7 +64,7 @@ class TestRunCropInference:
             "api.utils.calculate_subject_mask_remote",
             return_value={"mask": MOCK_MASK_B64},
         ):
-            with patch("api.utils.upload_mask_to_cloudinary", return_value=None):
+            with patch("api.utils.upload_mask_to_r2", return_value=None):
                 crop_run = run_crop_inference(piece_state_image)
 
         assert crop_run.status == CropRun.Status.SUCCESS
@@ -133,7 +132,7 @@ class TestRunCropInference:
             return_value={"mask": MOCK_MASK_B64},
         ):
             with patch(
-                "api.utils.upload_mask_to_cloudinary",
+                "api.utils.upload_mask_to_r2",
                 side_effect=ValueError("upload failed"),
             ):
                 crop_run = run_crop_inference(piece_state_image)

@@ -27,7 +27,6 @@ function render(ui: ReactElement) {
 }
 import userEvent from "@testing-library/user-event";
 import WorkflowState from "../WorkflowState";
-import type { CloudinaryUploadWidgetOptions } from "../../cloudinary-widget";
 import type { ResolvedCustomField } from "../../util/workflow";
 import {
   buildCustomFieldInputMap,
@@ -38,6 +37,7 @@ import {
 import type { PieceState, PieceDetail } from "../../util/types";
 import * as api from "../../util/api";
 import type { UpdateStatePayload } from "../../util/api";
+import { uploadImageToR2 } from "../../util/r2Upload";
 
 const { mockWorkflow } = vi.hoisted(() => ({
   mockWorkflow: {
@@ -195,14 +195,15 @@ vi.mock("../../util/api", () => ({
   updatePiece: vi.fn(),
   createGlobalEntry: vi.fn(),
   toggleGlobalEntryFavorite: vi.fn().mockResolvedValue(undefined),
-  fetchCloudinaryWidgetConfig: vi
-    .fn()
-    .mockResolvedValue({ cloud_name: "demo", api_key: "123456" }),
-  signCloudinaryWidgetParams: vi.fn().mockResolvedValue("mock-signature"),
 }));
 
-// Render CloudinaryImage as a plain <img> so tests can assert on src/testid
-vi.mock("../CloudinaryImage", () => ({
+// Mock the direct-to-R2 upload helper used by ImageUploader.
+vi.mock("../../util/r2Upload", () => ({
+  uploadImageToR2: vi.fn(),
+}));
+
+// Render AppImage as a plain <img> so tests can assert on src/testid
+vi.mock("../AppImage", () => ({
   default: ({
     url,
     "data-testid": testId,
@@ -272,53 +273,14 @@ function setScreenWidth(width: number) {
   window.dispatchEvent(new Event("resize"));
 }
 
-// Helper to simulate a successful Cloudinary Upload Widget upload.
-// The widget fires display-changed (shown) then success when open() is called.
-function setupUploadWidget(
-  overrides: { secure_url?: string; public_id?: string; width?: number; height?: number } = {},
-) {
-  const secure_url =
-    overrides.secure_url ??
-    "https://res.cloudinary.com/demo/image/upload/sample.jpg";
-  const public_id = overrides.public_id ?? "sample";
-  const width = overrides.width ?? 1200;
-  const height = overrides.height ?? 900;
-  window.cloudinary = {
-    createUploadWidget: vi.fn((_options, callback) => ({
-      open: vi.fn(() => {
-        callback(null, { event: "display-changed", info: { state: "shown" } });
-        callback(null, {
-          event: "success",
-          info: { secure_url, public_id, resource_type: "image", width, height },
-        });
-      }),
-      close: noop,
-      destroy: noop,
-    })),
-    openUploadWidget: vi.fn(),
-  };
+// Helper to push files through ImageUploader's hidden file input.
+function selectUploadFiles(files: File[]) {
+  const input = screen.getByTestId("image-upload-input");
+  fireEvent.change(input, { target: { files } });
 }
 
-// Helper that sets up a controllable widget — events are fired manually via the
-// returned triggerEvent function, allowing assertions mid-flight.
-function setupControllableWidget() {
-  let savedCallback: (error: unknown, result: unknown) => void = noop;
-  window.cloudinary = {
-    createUploadWidget: vi.fn((_options, callback) => {
-      savedCallback = callback;
-      return { open: vi.fn(), close: noop, destroy: noop };
-    }),
-    openUploadWidget: vi.fn(),
-  };
-  return {
-    triggerEvent: (event: string, info: unknown) =>
-      savedCallback(null, { event, info }),
-    triggerError: (err: Error) =>
-      savedCallback(err, {
-        event: "error",
-        info: { secure_url: "", public_id: "", resource_type: "image" },
-      }),
-  };
+function makeUploadFile(name = "photo.jpg") {
+  return new File(["binary"], name, { type: "image/jpeg" });
 }
 
 beforeEach(() => {
@@ -337,8 +299,6 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }));
-  // Reset window.cloudinary between tests
-  window.cloudinary = undefined;
 });
 
 describe("WorkflowState", () => {
@@ -861,15 +821,7 @@ describe("WorkflowState", () => {
     expect(
       screen.queryByRole("button", { name: "Upload Image" }),
     ).not.toBeInTheDocument();
-    expect(api.fetchCloudinaryWidgetConfig).not.toHaveBeenCalled();
-  });
-
-  it("does not open the upload widget when read-only", async () => {
-    await act(async () => {
-      render(<WorkflowState {...defaultProps} readOnly />);
-    });
-
-    expect(api.fetchCloudinaryWidgetConfig).not.toHaveBeenCalled();
+    expect(uploadImageToR2).not.toHaveBeenCalled();
   });
 
   it("shows a floating camera action on mobile layouts", async () => {
@@ -882,25 +834,25 @@ describe("WorkflowState", () => {
     expect(uploadAction).toHaveClass("MuiFab-root");
   });
 
-  it("successful widget upload saves the image to state with no crop", async () => {
+  it("successful upload saves the image to state with no crop", async () => {
     const updated = makePieceDetail();
     vi.mocked(api.updateCurrentState).mockResolvedValue(updated);
-    setupUploadWidget({
-      secure_url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      public_id: "sample",
+    vi.mocked(uploadImageToR2).mockResolvedValue({
+      url: "https://cdn.example.com/images/sample.jpg",
       width: 1200,
       height: 900,
     });
     render(<WorkflowState {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+
+    selectUploadFiles([makeUploadFile("sample.jpg")]);
+
     await waitFor(() =>
       expect(api.updateCurrentState).toHaveBeenCalledWith(
         "test-piece-id",
         expect.objectContaining({
           images: expect.arrayContaining([
             expect.objectContaining({
-              url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-              cloudinary_public_id: "sample",
+              url: "https://cdn.example.com/images/sample.jpg",
               crop: null,
               width: 1200,
               height: 900,
@@ -911,7 +863,7 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("appends every image from a multi-image widget upload", async () => {
+  it("appends every image from a multi-file upload", async () => {
     vi.mocked(api.updateCurrentState).mockImplementation(
       async (_pieceId: string, payload: UpdateStatePayload) => {
         const currentState = makeState({ images: payload.images ?? [] });
@@ -921,26 +873,20 @@ describe("WorkflowState", () => {
         });
       },
     );
-    const { triggerEvent } = setupControllableWidget();
+    vi.mocked(uploadImageToR2)
+      .mockResolvedValueOnce({
+        url: "https://cdn.example.com/images/one.jpg",
+        width: 800,
+        height: 600,
+      })
+      .mockResolvedValueOnce({
+        url: "https://cdn.example.com/images/two.jpg",
+        width: 800,
+        height: 600,
+      });
     render(<WorkflowState {...defaultProps} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-
-    await waitFor(() =>
-      expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled(),
-    );
-    await act(async () => {
-      triggerEvent("success", {
-        secure_url: "https://res.cloudinary.com/demo/image/upload/one.jpg",
-        public_id: "one",
-        resource_type: "image",
-      });
-      triggerEvent("success", {
-        secure_url: "https://res.cloudinary.com/demo/image/upload/two.jpg",
-        public_id: "two",
-        resource_type: "image",
-      });
-    });
+    selectUploadFiles([makeUploadFile("one.jpg"), makeUploadFile("two.jpg")]);
 
     await waitFor(() =>
       expect(api.updateCurrentState).toHaveBeenCalledTimes(2),
@@ -962,45 +908,15 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("widget upload error shows error message", async () => {
-    const { triggerError } = setupControllableWidget();
+  it("upload failure shows error message", async () => {
+    vi.mocked(uploadImageToR2).mockRejectedValue(new Error("Upload failed"));
     render(<WorkflowState {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-    // Wait for createUploadWidget to have been called (config fetch has resolved)
-    await waitFor(() =>
-      expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled(),
-    );
-    await act(async () => triggerError(new Error("Upload failed")));
+
+    selectUploadFiles([makeUploadFile()]);
+
     await waitFor(() =>
       expect(
         screen.getByText("Upload failed. Please try again."),
-      ).toBeInTheDocument(),
-    );
-  });
-
-  it("widget signature failure shows error message", async () => {
-    let uploadSignature:
-      | CloudinaryUploadWidgetOptions["uploadSignature"]
-      | undefined;
-    window.cloudinary = {
-      createUploadWidget: vi.fn((options) => {
-        uploadSignature = options.uploadSignature;
-        return { open: vi.fn(), close: noop, destroy: noop };
-      }),
-      openUploadWidget: vi.fn(),
-    };
-    vi.mocked(api.signCloudinaryWidgetParams).mockRejectedValue(
-      new Error("sign failed"),
-    );
-    render(<WorkflowState {...defaultProps} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-
-    await waitFor(() => expect(uploadSignature).toBeDefined());
-    uploadSignature?.(vi.fn(), { timestamp: "123" });
-    await waitFor(() =>
-      expect(
-        screen.getByText("Failed to sign upload. Please try again."),
       ).toBeInTheDocument(),
     );
   });
@@ -1009,13 +925,14 @@ describe("WorkflowState", () => {
     vi.mocked(api.updateCurrentState).mockRejectedValue(
       new Error("Failed to save image"),
     );
-    setupUploadWidget({
-      secure_url: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      public_id: "sample",
+    vi.mocked(uploadImageToR2).mockResolvedValue({
+      url: "https://cdn.example.com/images/sample.jpg",
+      width: 1200,
+      height: 900,
     });
     render(<WorkflowState {...defaultProps} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+    selectUploadFiles([makeUploadFile()]);
 
     await waitFor(() =>
       expect(
@@ -1024,69 +941,69 @@ describe("WorkflowState", () => {
     );
   });
 
-  it("upload button shows spinner and is disabled while widget is loading", async () => {
-    setupControllableWidget();
+  it("upload button shows spinner and is disabled while the upload is in flight", async () => {
+    let resolveUpload: (value: {
+      url: string;
+      width: number | null;
+      height: number | null;
+    }) => void = noop;
+    vi.mocked(uploadImageToR2).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveUpload = resolve;
+        }),
+    );
+    vi.mocked(api.updateCurrentState).mockResolvedValue(makePieceDetail());
     await act(async () => {
       render(<WorkflowState {...defaultProps} />);
     });
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-    // widgetLoading is set synchronously on click, before the async config fetch
-    expect(screen.getByRole("button", { name: "Upload Image" })).toBeDisabled();
+
+    selectUploadFiles([makeUploadFile()]);
+
+    // While the upload is in flight the trigger is disabled and its label
+    // switches to the uploading status.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Uploading…" }),
+      ).toBeDisabled(),
+    );
     expect(
       screen.getByRole("progressbar", { hidden: true }),
     ).toBeInTheDocument();
-  });
 
-  it("upload button re-enables after display-changed shown", async () => {
-    const { triggerEvent } = setupControllableWidget();
-    render(<WorkflowState {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-    await waitFor(() =>
-      expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled(),
+    await act(async () =>
+      resolveUpload({
+        url: "https://cdn.example.com/images/sample.jpg",
+        width: 800,
+        height: 600,
+      }),
     );
-    await act(async () => triggerEvent("display-changed", { state: "shown" }));
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Upload Image" }),
       ).not.toBeDisabled(),
     );
-    expect(
-      screen.queryByRole("progressbar", { hidden: true }),
-    ).not.toBeInTheDocument();
   });
 
-  it("upload button re-enables after widget error", async () => {
-    const { triggerError } = setupControllableWidget();
+  it("upload button re-enables after an upload error", async () => {
+    vi.mocked(uploadImageToR2).mockRejectedValue(new Error("Upload failed"));
     render(<WorkflowState {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
-    await waitFor(() =>
-      expect(window.cloudinary!.createUploadWidget).toHaveBeenCalled(),
-    );
-    await act(async () => triggerError(new Error("Upload failed")));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Upload Image" }),
-      ).not.toBeDisabled(),
-    );
-    expect(
-      screen.queryByRole("progressbar", { hidden: true }),
-    ).not.toBeInTheDocument();
-  });
 
-  it("widget config fetch failure shows error message", async () => {
-    vi.mocked(api.fetchCloudinaryWidgetConfig).mockRejectedValue(
-      new Error("Network error"),
-    );
-    render(<WorkflowState {...defaultProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+    selectUploadFiles([makeUploadFile()]);
+
     await waitFor(() =>
       expect(
-        screen.getByText(
-          "Failed to load upload configuration. Please try again.",
-        ),
+        screen.getByText("Upload failed. Please try again."),
       ).toBeInTheDocument(),
     );
+    expect(
+      screen.getByRole("button", { name: "Upload Image" }),
+    ).not.toBeDisabled();
+    expect(
+      screen.queryByRole("progressbar", { hidden: true }),
+    ).not.toBeInTheDocument();
   });
+
   it("does not render uploaded image entries in the workflow section", async () => {
     await act(async () => {
       render(

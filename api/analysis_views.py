@@ -105,8 +105,6 @@ def glaze_combination_images(request: Request) -> Response:
                 "url": link.image.url,
                 "caption": link.caption,
                 "created": link.created,
-                "cloudinary_public_id": link.image.cloudinary_public_id,
-                "cloud_name": link.image.cloud_name,
             }
             for link in ps.image_links.all()
         ]

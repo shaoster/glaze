@@ -256,9 +256,8 @@ class TestGlazeCombinationAdmin:
         from api.models import Image
 
         image = Image.objects.create(
-            url="https://res.cloudinary.com/demo/image/upload/test/tile.jpg",
-            cloudinary_public_id="test/tile",
-            cloud_name="demo",
+            url="https://media.example.com/images/public/tile.jpg",
+            r2_key="images/public/tile.jpg",
         )
         combo.test_tile_image = image
         combo.save(update_fields=["test_tile_image"])

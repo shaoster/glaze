@@ -49,11 +49,9 @@ def test_dashboard_json_contains_expected_sdk_fields() -> None:
         == '{trace:rootService="glaze" && (duration > 500ms || status=error)}'
     )
 
-    assert panels[13]["transformations"][0]["id"] == "filterFieldsByName"
-    assert (
-        panels[13]["transformations"][1]["options"]["renameByName"]["remaining"]
-        == "Headroom"
-    )
+    # The Cloudinary quota panel (id 13) was retired with the move to R2.
+    assert 13 not in panels
+    assert panels[14]["targets"][0]["queryType"] == "traceql"
 
 
 def test_publish_dashboard_uses_generated_dashboard_and_live_metadata(
@@ -107,12 +105,7 @@ def test_publish_dashboard_uses_generated_dashboard_and_live_metadata(
     assert published["title"] == "Glaze Application Observability"
     assert published["uid"] == "glaze-app-summary"
     published_panels = _panel_map(published)
-    assert (
-        published_panels[13]["transformations"][1]["options"]["renameByName"][
-            "remaining"
-        ]
-        == "Headroom"
-    )
+    assert published_panels[14]["targets"][0]["queryType"] == "traceql"
 
 
 def test_main_validate_prints_ok(capsys: pytest.CaptureFixture[str]) -> None:

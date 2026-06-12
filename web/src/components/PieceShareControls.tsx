@@ -4,35 +4,20 @@ import IosShareIcon from "@mui/icons-material/IosShare";
 import PublicIcon from "@mui/icons-material/Public";
 import PublicOffIcon from "@mui/icons-material/PublicOff";
 import { alpha, Box, Button, Stack, Typography } from "@mui/material";
-import { Cloudinary } from "@cloudinary/url-gen";
-import { fill } from "@cloudinary/url-gen/actions/resize";
-import { format, quality } from "@cloudinary/url-gen/actions/delivery";
-import { jpg } from "@cloudinary/url-gen/qualifiers/format";
-import { auto as autoQuality } from "@cloudinary/url-gen/qualifiers/quality";
-import { autoGravity } from "@cloudinary/url-gen/qualifiers/gravity";
 import type { PieceDetail, Thumbnail } from "../util/types";
 import { formatState } from "../util/workflow";
 import { updatePiece } from "../util/api";
 
-const SHARE_IMAGE_SIZE = 600;
-
 function buildThumbnailShareUrl(thumbnail: Thumbnail): string {
-  const cloudName = thumbnail.cloud_name?.trim() ?? null;
-  const publicId = thumbnail.cloudinary_public_id?.trim() ?? null;
-  if (cloudName && publicId) {
-    const cld = new Cloudinary({ cloud: { cloudName } });
-    const img = cld.image(publicId);
-    img.resize(
-      fill()
-        .width(SHARE_IMAGE_SIZE)
-        .height(SHARE_IMAGE_SIZE)
-        .gravity(autoGravity()),
-    );
-    img.delivery(format(jpg()));
-    img.delivery(quality(autoQuality()));
-    return img.toURL();
-  }
-  return thumbnail.url;
+  return thumbnail.cropped_url?.trim() || thumbnail.url;
+}
+
+/**
+ * Only remote CDN-hosted thumbnails are fetchable as share attachments —
+ * bundled placeholder SVGs (relative `/thumbnails/...` paths) are not.
+ */
+function isShareableThumbnailUrl(url: string): boolean {
+  return /^https?:\/\//.test(url);
 }
 
 function publicPieceUrl(pieceId: string): string {
@@ -88,8 +73,10 @@ export default function ShareControls({
         title: buildShareText(piece),
         url: publicUrl,
       };
-      if (piece.thumbnail?.cloudinary_public_id) {
-        const imageUrl = buildThumbnailShareUrl(piece.thumbnail);
+      const imageUrl = piece.thumbnail
+        ? buildThumbnailShareUrl(piece.thumbnail)
+        : null;
+      if (imageUrl && isShareableThumbnailUrl(imageUrl)) {
         try {
           const response = await fetch(imageUrl);
           const blob = await response.blob();

@@ -124,7 +124,7 @@ def _ordered_states(piece: Piece) -> list:
 
 def _image_key(state_id: str, image: dict, index: int) -> str:
     """Mirror the frontend picker's image key scheme so exclusions line up."""
-    ident = image.get("image_id") or image.get("cloudinary_public_id") or str(index)
+    ident = image.get("image_id") or str(index)
     return ":".join(part for part in (str(state_id), str(ident)) if part)
 
 
@@ -132,17 +132,13 @@ def _slide_image(image: dict) -> dict:
     return {
         "url": image.get("url") or "",
         "image_id": image.get("image_id"),
-        "cloudinary_public_id": image.get("cloudinary_public_id"),
-        "cloud_name": image.get("cloud_name"),
         "crop": image.get("crop"),
         "fit": _IMAGE_FIT,
     }
 
 
-def _thumbnail_public_id(piece: Piece) -> str:
-    if not piece.thumbnail_id:
-        return ""
-    return (piece.thumbnail.cloudinary_public_id or "").strip()
+def _thumbnail_image_id(piece: Piece) -> str:
+    return str(piece.thumbnail_id) if piece.thumbnail_id else ""
 
 
 def build_keepsake_storyboard(
@@ -163,7 +159,7 @@ def build_keepsake_storyboard(
     music_track_id = resolve_track_id(music_track_id)
     excluded_images = set(excluded_image_keys)
     excluded_notes = set(excluded_note_keys)
-    thumb_pid = _thumbnail_public_id(piece)
+    thumb_image_id = _thumbnail_image_id(piece)
 
     # Walk the timeline once, collecting included images (with their captions and
     # state labels) and the included note per state.
@@ -175,8 +171,8 @@ def build_keepsake_storyboard(
         for index, image in enumerate(state.images):
             key = _image_key(state.id, image, index)
             is_thumbnail = (
-                bool(thumb_pid)
-                and (image.get("cloudinary_public_id") or "").strip() == thumb_pid
+                bool(thumb_image_id)
+                and str(image.get("image_id") or "") == thumb_image_id
             )
             # The thumbnail is the locked cover and is never excluded.
             if not is_thumbnail and key in excluded_images:

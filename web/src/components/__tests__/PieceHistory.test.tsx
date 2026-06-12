@@ -245,8 +245,6 @@ describe("PieceHistory", () => {
                   url: "http://example.com/img1.jpg",
                   caption: "First",
                   created: new Date(),
-                  cloudinary_public_id: null,
-                  cloud_name: null,
                 },
               ],
             }),

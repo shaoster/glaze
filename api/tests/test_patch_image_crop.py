@@ -92,8 +92,6 @@ class TestPatchImageCrop:
         image = Image.objects.create(
             user=user,
             url="https://example.com/thumb.jpg",
-            cloud_name="demo",
-            cloudinary_public_id="pieces/thumb",
         )
         original_crop = {"x": 0.05, "y": 0.1, "width": 0.6, "height": 0.6}
         PieceStateImage.objects.create(

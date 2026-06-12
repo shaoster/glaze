@@ -13,7 +13,7 @@ import { http, HttpResponse } from "msw";
  * Edge cases:
  * - Missing Story: Layout collapses gracefully if no showcase story is provided.
  * - No Showcase Fields: Hides the "Details" section if no fields are selected for showcase.
- * - Large Images: Hero image uses Cloudinary's "detail" context for high quality.
+ * - Large Images: Hero image uses the AppImage "detail" context for high quality.
  */
 const meta = {
   title: "Components/PublicPieceShell",

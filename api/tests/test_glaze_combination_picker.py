@@ -54,11 +54,7 @@ class TestGlazeCombinationGetShape:
             runs=False,
             highlights_grooves=None,
             is_different_on_white_and_brown_clay=True,
-            test_tile_image={
-                "url": "https://example.com/tile.jpg",
-                "cloudinary_public_id": "tile",
-                "cloud_name": None,
-            },
+            test_tile_image={"url": "https://example.com/tile.jpg"},
         )
 
         response = client.get("/api/globals/glaze_combination/")
@@ -68,9 +64,8 @@ class TestGlazeCombinationGetShape:
         assert item["name"] == combo.name
         assert item["test_tile_image"] == {
             "url": "https://example.com/tile.jpg",
-            "cloudinary_public_id": "tile",
-            "cloud_name": None,
             "image_id": str(combo.test_tile_image.id),
+            "r2_key": None,
             "width": None,
             "height": None,
         }

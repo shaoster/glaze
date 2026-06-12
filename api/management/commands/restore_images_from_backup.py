@@ -15,14 +15,10 @@ Only the following are treated as restorable:
   - Piece.thumbnail: restored when the DB thumbnail is null/empty and the
     backup has a non-null, non-question-mark thumbnail.
 
-Images are written as {url, cloudinary_public_id, cloud_name} dicts; the
-command derives cloudinary_public_id and cloud_name from the URL using the
-same logic as migration 0026 so restored images are immediately usable.
+Images are deduplicated and restored by URL.
 """
 
-import re
 from pathlib import Path
-from urllib.parse import urlparse
 
 import yaml
 from django.core.management.base import BaseCommand, CommandError
@@ -31,49 +27,11 @@ from django.db import transaction
 from api.models import Piece, PieceState
 from api.utils import normalize_image_payload, replace_piece_state_images
 
-_CLOUDINARY_HOSTNAME = "res.cloudinary.com"
-_TRANSFORM_RE = re.compile(r"^[a-z]{1,4}_")
-_VERSION_RE = re.compile(r"^v\d+$")
-
-
-def _parse_cloudinary_url(url: str) -> tuple[str | None, str | None]:
-    try:
-        parsed = urlparse(url)
-    except Exception:
-        return None, None
-    if parsed.hostname != _CLOUDINARY_HOSTNAME:
-        return None, None
-    parts = parsed.path.split("/")
-    if len(parts) < 5 or parts[2] != "image" or parts[3] != "upload":
-        return None, None
-    cloud_name = parts[1] or None
-    after_upload = parts[4:]
-    i = 0
-    while i < len(after_upload) - 1 and (
-        _TRANSFORM_RE.match(after_upload[i]) or _VERSION_RE.match(after_upload[i])
-    ):
-        i += 1
-    public_id_parts = after_upload[i:]
-    if not public_id_parts:
-        return cloud_name, None
-    public_id_parts[-1] = re.sub(r"\.[^.]+$", "", public_id_parts[-1])
-    result = "/".join(public_id_parts)
-    return cloud_name, (result or None)
-
 
 def _normalize_image(img: dict) -> dict:
-    """Ensure the image dict has cloudinary_public_id and cloud_name set."""
-    url = img.get("url") or ""
-    cloud_name = img.get("cloud_name")
-    public_id = img.get("cloudinary_public_id")
-    if not cloud_name or not public_id:
-        derived_cloud, derived_id = _parse_cloudinary_url(url)
-        cloud_name = cloud_name or derived_cloud
-        public_id = public_id or derived_id
+    """Reduce a backup image record to the url-keyed restore payload."""
     return {
-        "url": url,
-        "cloudinary_public_id": public_id,
-        "cloud_name": cloud_name,
+        "url": img.get("url") or "",
         "caption": img.get("caption", ""),
         "created": img.get("created"),
     }
@@ -190,11 +148,7 @@ class Command(BaseCommand):
                 try:
                     backup_thumb = _json.loads(backup_thumb_raw)
                 except (ValueError, TypeError):
-                    backup_thumb = {
-                        "url": backup_thumb_raw,
-                        "cloudinary_public_id": None,
-                        "cloud_name": None,
-                    }
+                    backup_thumb = {"url": backup_thumb_raw}
             elif isinstance(backup_thumb_raw, dict):
                 backup_thumb = backup_thumb_raw
             else:

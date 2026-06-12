@@ -39,8 +39,7 @@ export type UploadedRecord = {
   reviewed: boolean;
   ocrStatus: "idle" | "running" | "done" | "error";
   ocrError: string | null;
-  sourceKind: "local" | "cloudinary";
-  cloudinaryPublicId: string | null;
+  sourceKind: "local" | "remote";
 };
 
 export type UploadProgressEntry = {

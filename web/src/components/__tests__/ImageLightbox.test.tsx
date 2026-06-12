@@ -27,11 +27,11 @@ vi.mock("react-advanced-cropper", () => ({
   },
 }));
 
-vi.mock("../CloudinaryImage", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../CloudinaryImage")>();
+vi.mock("../AppImage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../AppImage")>();
   return {
     ...actual,
-    SuspenseCloudinaryImage: (props: any) => {
+    SuspenseAppImage: (props: any) => {
       if (props.url === "suspending-url") {
         return <actual.ImageSkeleton context={props.context} crop={props.crop} />;
       }
@@ -382,18 +382,16 @@ describe("ImageLightbox", () => {
   });
 
   describe("crop button", () => {
-    function makeCloudinaryImage(url: string, caption = ""): CaptionedImage {
+    function makeCroppableImage(url: string, caption = ""): CaptionedImage {
       return {
         url,
         caption,
         created: new Date("2024-01-15T10:00:00Z"),
-        cloudinary_public_id: "test-public-id",
-        cloud_name: "test-cloud",
         image_id: "test-image-id",
       };
     }
 
-    const CLOUDINARY_IMAGE = makeCloudinaryImage("/img/a.jpg", "First");
+    const CROPPABLE_IMAGE = makeCroppableImage("/img/a.jpg", "First");
 
     // footerActions that renders the crop button when onCrop is passed.
     function cropFooter({ onCrop }: { onCrop?: () => void; [k: string]: unknown }) {
@@ -405,7 +403,7 @@ describe("ImageLightbox", () => {
     it("does not show Crop button when onCropSave is not provided", () => {
       render(
         <ImageLightbox
-          images={[CLOUDINARY_IMAGE]}
+          images={[CROPPABLE_IMAGE]}
           initialIndex={0}
           onClose={vi.fn()}
           footerActions={cropFooter}
@@ -418,7 +416,7 @@ describe("ImageLightbox", () => {
       const onCropSave = vi.fn().mockResolvedValue(undefined);
       render(
         <ImageLightbox
-          images={[CLOUDINARY_IMAGE]}
+          images={[CROPPABLE_IMAGE]}
           initialIndex={0}
           onClose={vi.fn()}
           onCropSave={onCropSave}
@@ -433,7 +431,7 @@ describe("ImageLightbox", () => {
       const onCropSave = vi.fn().mockResolvedValue(undefined);
       render(
         <ImageLightbox
-          images={[CLOUDINARY_IMAGE]}
+          images={[CROPPABLE_IMAGE]}
           initialIndex={0}
           onClose={vi.fn()}
           onCropSave={onCropSave}

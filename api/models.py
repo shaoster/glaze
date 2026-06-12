@@ -119,26 +119,34 @@ class Image(models.Model):
         related_name="images",
     )
     url = models.CharField(max_length=2048)
-    cloudinary_public_id = models.CharField(max_length=1024, null=True, blank=True)
-    cloud_name = models.CharField(max_length=255, null=True, blank=True)
+    # Object key in the R2 bucket for assets stored in R2; NULL for external
+    # URLs (curated local SVGs, legacy assets not yet migrated).
+    r2_key = models.CharField(max_length=1024, null=True, blank=True)
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
+    # Lineage fields for derived assets (JPEG conversions, materialized crops).
+    # derived_from → source Image; derived_type ∈ {"jpeg_conversion", "crop"}.
+    derived_from = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="derivatives",
+    )
+    derived_type = models.CharField(max_length=32, null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["cloud_name", "cloudinary_public_id"],
-                condition=Q(
-                    cloud_name__isnull=False, cloudinary_public_id__isnull=False
-                ),
-                name="uniq_image_cloudinary_identity",
+                fields=["url"],
+                name="uniq_image_url",
             ),
             models.UniqueConstraint(
-                fields=["url"],
-                condition=Q(cloudinary_public_id__isnull=True),
-                name="uniq_image_url_without_cloudinary_id",
+                fields=["r2_key"],
+                condition=Q(r2_key__isnull=False),
+                name="uniq_image_r2_key",
             ),
         ]
 
@@ -148,8 +156,7 @@ class Image(models.Model):
     def as_dict(self) -> dict:
         return {
             "url": self.url,
-            "cloudinary_public_id": self.cloudinary_public_id,
-            "cloud_name": self.cloud_name,
+            "r2_key": self.r2_key,
         }
 
     def __getitem__(self, key: str):
@@ -159,8 +166,7 @@ class Image(models.Model):
         if isinstance(other, dict):
             return self.as_dict() == {
                 "url": other.get("url") or "",
-                "cloudinary_public_id": other.get("cloudinary_public_id"),
-                "cloud_name": other.get("cloud_name"),
+                "r2_key": other.get("r2_key"),
             }
         return super().__eq__(other)
 
@@ -306,20 +312,18 @@ class Piece(models.Model):
             return self.fields_last_modified
         return max(self.fields_last_modified, cs.last_modified)
 
-    def _thumbnail_crop_from_history(self) -> dict | None:
-        """Return the current thumbnail crop from piece history when available."""
+    def _thumbnail_crop_link_from_history(self) -> "PieceStateImage | None":
+        """Return the latest cropped PieceStateImage link for the thumbnail."""
 
         thumbnail = self.thumbnail if self.thumbnail_id else None
         if thumbnail is None:
             return None
 
-        def _crop_from_links(links):
+        def _cropped_link(links):
             matching_links = [link for link in links if link.image_id == thumbnail.id]
-            if not matching_links:
-                return None
             for link in sorted(matching_links, key=lambda link: link.pk, reverse=True):
                 if link.crop is not None:
-                    return link.crop
+                    return link
             return None
 
         states = self._prefetched_states()
@@ -332,7 +336,7 @@ class Piece(models.Model):
                 if prefetched_links is None:
                     continue
                 links.extend(prefetched_links)
-            return _crop_from_links(links)
+            return _cropped_link(links)
 
         links = list(
             PieceStateImage.objects.filter(
@@ -340,12 +344,21 @@ class Piece(models.Model):
                 image=thumbnail,
             )
             .order_by("-pk")
-            .only("crop", "image_id")
+            .select_related("cropped_image")
+            .only("crop", "image_id", "cropped_image")
         )
-        return _crop_from_links(links)
+        return _cropped_link(links)
 
     def get_thumbnail_crop(self) -> dict | None:
-        return self._thumbnail_crop_from_history()
+        link = self._thumbnail_crop_link_from_history()
+        return link.crop if link is not None else None
+
+    def get_thumbnail_cropped_url(self) -> str | None:
+        """Public URL of the thumbnail's eager cropped derivative, if materialized."""
+        link = self._thumbnail_crop_link_from_history()
+        if link is None or link.cropped_image is None:
+            return None
+        return link.cropped_image.url
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -400,7 +413,7 @@ class PieceState(models.Model):
             return list(self._pending_images or [])
         links = getattr(self, "_prefetched_objects_cache", {}).get("image_links")
         if links is None:
-            links = self.image_links.select_related("image").order_by("order", "pk")
+            links = self.image_links.select_related("image", "cropped_image").order_by("order", "pk")
         return [captioned_image_to_dict(link) for link in links]
 
     @images.setter
@@ -606,6 +619,17 @@ class PieceStateImage(models.Model):
     )
     caption = models.CharField(max_length=1024, blank=True, default="")
     crop = models.JSONField(null=True, blank=True, default=None)
+    # FK to the eagerly generated cropped derivative Image row.
+    # Written exclusively by the generate_cropped_image task on completion;
+    # NULL while a crop is pending (the frontend shows the raw image until
+    # cropped_image is populated) and always NULL when crop is NULL.
+    cropped_image = models.ForeignKey(
+        Image,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="crop_links",
+    )
     created = models.DateTimeField(default=timezone.now)
     order = models.PositiveSmallIntegerField()
 

@@ -57,8 +57,6 @@ class TestPiecesList:
                     name=f"Piece {i}",
                     thumbnail={
                         "url": f"https://example.com/thumb-{i}.jpg",
-                        "cloudinary_public_id": None,
-                        "cloud_name": None,
                     },
                     current_location=location,
                 )
@@ -134,8 +132,6 @@ class TestPiecesList:
         image = Image.objects.create(
             user=user,
             url="https://example.com/thumbnail.jpg",
-            cloudinary_public_id="pieces/thumbnail",
-            cloud_name="demo",
         )
         crop = {"x": 0.1, "y": 0.2, "width": 0.6, "height": 0.5}
         PieceStateImage.objects.create(
@@ -281,4 +277,3 @@ class TestPiecesList:
         response = client.get("/api/pieces/", {"ordering": "nonexistent_field"})
         assert response.status_code == 200
         assert response.json()["count"] == 1
-

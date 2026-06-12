@@ -84,7 +84,7 @@ def test_preferred_root_for_falls_back_to_shared_worktree_file(tmp_path: Path) -
     workspace = tmp_path / "repo" / ".agent-worktrees" / "codex" / "issue-610"
     shared = tmp_path / "repo"
     workspace.mkdir(parents=True)
-    (shared / ".env.local").write_text("CLOUDINARY_CLOUD_NAME=demo\n", encoding="utf-8")
+    (shared / ".env.local").write_text("R2_BUCKET_NAME=demo\n", encoding="utf-8")
 
     root = launcher.preferred_root_for(
         launcher.Roots(workspace=workspace, shared=shared),

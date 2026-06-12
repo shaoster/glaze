@@ -3,7 +3,7 @@
 #
 # If .env.local does not exist, copies .env.example as a starting point.
 # Then pulls the subset of glaze-secrets that are useful for local development
-# (Cloudinary, Google OAuth) and writes them into a clearly-delimited managed
+# (R2, Google OAuth) and writes them into a clearly-delimited managed
 # block in .env.local. Existing values outside that block are preserved, and
 # the script is safe to re-run.
 #
@@ -24,9 +24,11 @@ SSH="ssh -o StrictHostKeyChecking=no"
 # CLOUDFLARE_API_TOKEN, TAILSCALE_*, GRAFANA_*, ALLOWED_HOST, APP_ORIGIN,
 # and DROPBOX_* (only used by the cluster backup job, not local dev).
 KEYS="
-CLOUDINARY_CLOUD_NAME
-CLOUDINARY_API_KEY
-CLOUDINARY_API_SECRET
+R2_ACCOUNT_ID
+R2_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY
+R2_BUCKET_NAME
+R2_PUBLIC_URL
 GOOGLE_OAUTH_CLIENT_ID
 GOOGLE_OAUTH_CLIENT_SECRET
 "

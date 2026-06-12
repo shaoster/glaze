@@ -9,7 +9,6 @@ from django.core.management.base import CommandError
 from django.db import connection
 
 from api.management.commands import load_public_library as load_public_library_command
-from api.management.commands.load_public_library import _extract_cloud_name
 from api.models import (
     COMPOSITE_NAME_SEPARATOR,
     ClayBody,
@@ -17,26 +16,6 @@ from api.models import (
     GlazeType,
 )
 from api.utils import bootstrap_dev_user
-
-
-class TestExtractCloudName:
-    def test_valid_url(self):
-        url = "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg"
-        assert _extract_cloud_name(url) == "demo"
-
-    def test_invalid_hostname(self):
-        url = "https://example.com/demo/image/upload/v1/glaze/celadon.jpg"
-        assert _extract_cloud_name(url) is None
-
-    def test_malformed_path(self):
-        url = "https://res.cloudinary.com/demo/image/"
-        assert _extract_cloud_name(url) is None
-
-    def test_not_a_url(self):
-        assert _extract_cloud_name("not_a_url") is None
-
-    def test_empty_string(self):
-        assert _extract_cloud_name("") is None
 
 
 @pytest.mark.django_db
@@ -149,12 +128,8 @@ class TestDumpPublicLibrary:
 
         assert nested.exists()
 
-    def test_exports_image_field_as_dict_with_cloud_name(self, tmp_path):
-        image = {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg",
-            "cloudinary_public_id": "v1/glaze/celadon",
-            "cloud_name": "demo",
-        }
+    def test_exports_image_field_as_dict(self, tmp_path):
+        image = {"url": "https://media.example.com/images/public/celadon.jpg"}
         GlazeType.objects.create(user=None, name="Celadon", test_tile_image=image)
         output = tmp_path / "out.json"
 
@@ -164,8 +139,6 @@ class TestDumpPublicLibrary:
         glaze_record = next(r for r in records if r["model"] == "api.glazetype")
         exported_image = glaze_record["fields"]["test_tile_image"]
         assert exported_image["url"] == image["url"]
-        assert exported_image["cloudinary_public_id"] == image["cloudinary_public_id"]
-        assert exported_image["cloud_name"] == image["cloud_name"]
 
     def test_exports_null_image_as_none(self, tmp_path):
         GlazeType.objects.create(user=None, name="Celadon", test_tile_image=None)
@@ -443,13 +416,9 @@ class TestLoadPublicLibrary:
         combo = GlazeCombination.objects.get(user=None)
         assert combo.layers.count() == 2
 
-    def test_loads_image_field_dict_with_cloud_name(self, tmp_path):
-        """Full {url, cloudinary_public_id, cloud_name} image dict round-trips correctly."""
-        image = {
-            "url": "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg",
-            "cloudinary_public_id": "v1/glaze/celadon",
-            "cloud_name": "demo",
-        }
+    def test_loads_image_field_dict(self, tmp_path):
+        """A {url} image dict round-trips correctly."""
+        image = {"url": "https://media.example.com/images/public/celadon.jpg"}
         fixture = self._write_fixture(
             tmp_path,
             [
@@ -474,9 +443,10 @@ class TestLoadPublicLibrary:
         obj = GlazeType.objects.get(user=None, name="Celadon")
         assert obj.test_tile_image == image
 
-    def test_loads_image_field_backfills_cloud_name_from_url(self, tmp_path):
-        """Older fixtures without cloud_name have it backfilled from the delivery URL."""
-        url = "https://res.cloudinary.com/demo/image/upload/v1/glaze/celadon.jpg"
+    def test_loads_image_field_derives_r2_key_from_url(self, tmp_path, monkeypatch):
+        """Image URLs under the configured R2 public domain get r2_key derived."""
+        monkeypatch.setenv("R2_PUBLIC_URL", "https://media.example.com")
+        url = "https://media.example.com/images/public/celadon.jpg"
         fixture = self._write_fixture(
             tmp_path,
             [
@@ -485,10 +455,7 @@ class TestLoadPublicLibrary:
                     "fields": {
                         "name": "Celadon",
                         "short_description": "",
-                        "test_tile_image": {
-                            "url": url,
-                            "cloudinary_public_id": "v1/glaze/celadon",
-                        },
+                        "test_tile_image": {"url": url},
                         "is_food_safe": None,
                         "runs": None,
                         "highlights_grooves": None,
@@ -502,7 +469,7 @@ class TestLoadPublicLibrary:
         call_command("load_public_library", fixture=str(fixture))
 
         obj = GlazeType.objects.get(user=None, name="Celadon")
-        assert obj.test_tile_image["cloud_name"] == "demo"
+        assert obj.test_tile_image["r2_key"] == "images/public/celadon.jpg"
         assert obj.test_tile_image["url"] == url
 
     def test_loads_null_image_field(self, tmp_path):

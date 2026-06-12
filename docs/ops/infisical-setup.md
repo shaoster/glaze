@@ -24,8 +24,8 @@ Navigate to the project's **prod** environment and add each key:
 |---|---|
 | `POSTGRES_PASSWORD` | Current k8s secret or `.env.production` |
 | `SECRET_KEY` | Current k8s secret |
-| `CLOUDINARY_API_KEY` | Cloudinary dashboard |
-| `CLOUDINARY_API_SECRET` | Cloudinary dashboard |
+| `R2_ACCESS_KEY_ID` | Cloudflare Dashboard → R2 → Manage API Tokens |
+| `R2_SECRET_ACCESS_KEY` | Cloudflare Dashboard → R2 → Manage API Tokens |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google Cloud Console |
 | `EMAIL_HOST_PASSWORD` | Resend dashboard |
 | `GRAFANA_CLOUD_INSTANCE_ID` | Grafana Cloud stack → OpenTelemetry / OTLP setup (stack user / instance ID used by the collector) |
@@ -68,6 +68,9 @@ KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n external-secrets
 ## 3. Update GitHub Secrets and Variables
 
 ### Remove (no longer needed after migration is verified)
+
+These are the historical one-time cleanup commands from the original migration off
+GitHub environment secrets; the Cloudinary entries predate the move to Cloudflare R2.
 
 ```bash
 # App secrets — now managed by Infisical

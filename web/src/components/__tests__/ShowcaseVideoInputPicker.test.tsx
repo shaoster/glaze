@@ -52,8 +52,6 @@ function makePiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
           url: "/img/current.jpg",
           caption: "Finished view",
           created: new Date("2024-01-15T10:00:00Z"),
-          cloudinary_public_id: "current-image",
-          cloud_name: "demo",
         },
       ],
       custom_fields: {},
@@ -78,8 +76,6 @@ function makePiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
             url: "/img/throwing.jpg",
             caption: "Wet clay",
             created: new Date("2024-01-14T10:00:00Z"),
-            cloudinary_public_id: "throwing-image",
-            cloud_name: "demo",
           },
         ],
         custom_fields: {},
@@ -111,8 +107,6 @@ function makePiece(overrides: Partial<PieceDetail> = {}): PieceDetail {
             url: "/img/current.jpg",
             caption: "Finished view",
             created: new Date("2024-01-15T10:00:00Z"),
-            cloudinary_public_id: "current-image",
-            cloud_name: "demo",
           },
         ],
         custom_fields: {},
@@ -204,8 +198,7 @@ describe("ShowcaseVideoInputPicker", () => {
         piece={makePiece({
           thumbnail: {
             url: "/img/current.jpg",
-            cloudinary_public_id: "current-image",
-            cloud_name: "demo",
+            image_id: "current-image",
           },
         })}
         selection={makeSelection({

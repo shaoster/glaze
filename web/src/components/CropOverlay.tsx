@@ -1,26 +1,16 @@
-import { useReducer, useMemo } from "react";
+import { useReducer } from "react";
 import { Alert, Box, Button, CircularProgress } from "@mui/material";
-import { Cloudinary } from "@cloudinary/url-gen";
-import { format } from "@cloudinary/url-gen/actions/delivery";
-import { auto as autoFormat } from "@cloudinary/url-gen/qualifiers/format";
 import { Cropper, RectangleStencil, ImageRestriction } from "react-advanced-cropper";
 import type { CropperRef } from "react-advanced-cropper";
 import "react-advanced-cropper/dist/style.css";
 import type { ImageCrop } from "../util/types";
 
 interface CropOverlayProps {
-  cloudinaryPublicId: string;
-  cloudName: string;
+  /** Original (uncropped) image URL — the stored URL is already untransformed. */
+  url: string;
   initialCrop: ImageCrop | null;
   onSave: (crop: ImageCrop) => Promise<void>;
   onCancel: () => void;
-}
-
-function buildUncroppedUrl(publicId: string, cloudName: string): string {
-  const cld = new Cloudinary({ cloud: { cloudName } });
-  const img = cld.image(publicId);
-  img.delivery(format(autoFormat()));
-  return img.toURL();
 }
 
 const DEFAULT_IMAGE_CROP: ImageCrop = { x: 0, y: 0, width: 1, height: 1 };
@@ -72,8 +62,7 @@ function reducer(state: State, action: Action): State {
 }
 
 export default function CropOverlay({
-  cloudinaryPublicId,
-  cloudName,
+  url,
   initialCrop,
   onSave,
   onCancel,
@@ -84,11 +73,6 @@ export default function CropOverlay({
     saving: false,
     saveError: null,
   });
-
-  const url = useMemo(
-    () => buildUncroppedUrl(cloudinaryPublicId, cloudName),
-    [cloudinaryPublicId, cloudName],
-  );
 
   function handleChange(cropper: CropperRef) {
     const coords = cropper.getCoordinates();

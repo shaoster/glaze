@@ -1,0 +1,193 @@
+/**
+ * Direct-to-R2 upload integration for Django admin image fields.
+ *
+ * Wires up every button rendered by R2ImageWidget. Clicking "Upload Image"
+ * opens a hidden file input; on selection the script requests a presigned PUT
+ * URL from /api/uploads/r2/presigned-url/ (session cookie + CSRF token),
+ * uploads the file straight to R2, and writes the resulting public URL into
+ * the associated text input. The field value is a bare URL string.
+ *
+ * Clicking a preview thumbnail opens a viewport-constrained lightbox with the
+ * full-size original.
+ */
+(function () {
+  'use strict';
+
+  function getCsrfToken() {
+    return (document.cookie.split(';')
+      .map(function (c) { return c.trim(); })
+      .filter(function (c) { return c.startsWith('potterdoc_csrftoken='); })
+      .map(function (c) { return c.substring('potterdoc_csrftoken='.length); })[0] || '');
+  }
+
+  /** Open a full-screen lightbox showing the given image URL. */
+  function openLightbox(url) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = (
+      'position:fixed;top:0;left:0;width:100%;height:100%;' +
+      'background:rgba(0,0,0,0.85);z-index:999999;' +
+      'display:flex;align-items:center;justify-content:center;cursor:zoom-out;'
+    );
+    var img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = 'max-width:90vw;max-height:80vh;object-fit:contain;border-radius:4px;';
+    overlay.appendChild(img);
+    overlay.addEventListener('click', function () { document.body.removeChild(overlay); });
+    document.addEventListener('keydown', function onKey(e) {
+      if (e.key === 'Escape') {
+        document.body.removeChild(overlay);
+        document.removeEventListener('keydown', onKey);
+      }
+    });
+    document.body.appendChild(overlay);
+  }
+
+  function fetchPresignedUrl(contentType) {
+    return fetch('/api/uploads/r2/presigned-url/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken(),
+      },
+      body: JSON.stringify({ content_type: contentType, resource_type: 'image' }),
+    }).then(function (r) {
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (body) {
+          throw new Error(body.detail || ('Presign failed with status ' + r.status));
+        });
+      }
+      return r.json();
+    });
+  }
+
+  var EXTENSION_MIME = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    webp: 'image/webp', gif: 'image/gif',
+    heic: 'image/heic', heif: 'image/heif', avif: 'image/avif',
+  };
+  function inferMimeType(file) {
+    if (file.type) { return file.type; }
+    var ext = file.name.split('.').pop().toLowerCase();
+    return EXTENSION_MIME[ext] || 'application/octet-stream';
+  }
+
+  var NON_BROWSER_TYPES = ['image/heic', 'image/heif', 'image/avif'];
+  var CONVERT_POLL_INTERVAL = 2000;
+  var CONVERT_POLL_TIMEOUT = 120000;
+
+  function triggerConversion(key) {
+    return fetch('/api/uploads/r2/convert-image/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify({ key: key }),
+    }).then(function (r) { return r.json(); });
+  }
+
+  function pollConversion(taskId) {
+    var deadline = Date.now() + CONVERT_POLL_TIMEOUT;
+    function check() {
+      return fetch('/api/uploads/r2/convert-image/' + taskId + '/', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (body) {
+          if (body.status === 'success' && body.result) { return body.result.url; }
+          if (body.status === 'failure') { throw new Error('Conversion failed: ' + (body.error || 'unknown')); }
+          if (Date.now() >= deadline) { throw new Error('Conversion timed out'); }
+          return new Promise(function (res) { setTimeout(res, CONVERT_POLL_INTERVAL); }).then(check);
+        });
+    }
+    return check();
+  }
+
+  function uploadFile(file, inp, preview, clearBtn, btn) {
+    var originalLabel = btn.textContent;
+    var mimeType = inferMimeType(file);
+    btn.disabled = true;
+    btn.textContent = 'Uploading…';
+
+    fetchPresignedUrl(mimeType)
+      .then(function (presign) {
+        // Multipart POST so R2 enforces the server-signed content-length-range.
+        var form = new FormData();
+        Object.entries(presign.fields || {}).forEach(function (entry) {
+          form.append(entry[0], entry[1]);
+        });
+        form.append('file', file);
+        return fetch(presign.upload_url, {
+          method: 'POST',
+          body: form,
+        }).then(function (r) {
+          if (!r.ok) { throw new Error('Upload failed with status ' + r.status); }
+          // For non-browser-renderable formats (HEIC/HEIF/AVIF), trigger
+          // server-side JPEG conversion and wait for the JPEG URL.
+          if (NON_BROWSER_TYPES.indexOf(mimeType) !== -1) {
+            btn.textContent = 'Converting…';
+            return triggerConversion(presign.key).then(function (body) {
+              if (!body.needs_conversion || !body.task_id) { return presign.public_url; }
+              return pollConversion(body.task_id);
+            });
+          }
+          return presign.public_url;
+        });
+      })
+      .then(function (publicUrl) {
+        inp.value = publicUrl;
+        if (preview) {
+          preview.src = publicUrl;
+          preview.dataset.fullUrl = publicUrl;
+          preview.style.display = 'block';
+        }
+        if (clearBtn) { clearBtn.style.display = 'inline-block'; }
+      })
+      .catch(function (err) {
+        alert('Image upload failed: ' + err.message);
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      });
+  }
+
+  function initUploadBtn(btn) {
+    var inp = document.getElementById(btn.dataset.inputId);
+    var preview = document.getElementById(btn.dataset.previewId);
+    var fileInput = document.getElementById(btn.dataset.fileId);
+    if (!inp || !fileInput) { return; }
+
+    var clearBtn = document.querySelector(
+      '.r2-clear-btn[data-input-id="' + btn.dataset.inputId + '"]'
+    );
+
+    btn.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) { return; }
+      uploadFile(file, inp, preview, clearBtn, btn);
+      fileInput.value = '';
+    });
+  }
+
+  function initClearBtn(btn) {
+    btn.addEventListener('click', function () {
+      if (!confirm('Are you sure you want to remove the attached image?')) { return; }
+      var inp = document.getElementById(btn.dataset.inputId);
+      var preview = document.getElementById(btn.dataset.previewId);
+      if (inp) { inp.value = ''; }
+      if (preview) { preview.style.display = 'none'; }
+      btn.style.display = 'none';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.r2-image-preview').forEach(function (img) {
+      img.addEventListener('click', function () {
+        var url = this.dataset.fullUrl;
+        if (url) { openLightbox(url); }
+      });
+    });
+
+    document.querySelectorAll('.r2-upload-btn').forEach(initUploadBtn);
+    document.querySelectorAll('.r2-clear-btn').forEach(initClearBtn);
+  });
+})();

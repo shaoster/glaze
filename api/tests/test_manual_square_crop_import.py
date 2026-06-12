@@ -12,6 +12,14 @@ from api.models import GlazeCombination, GlazeType
 URL = "/api/admin/manual-square-crop-import/"
 
 
+def _set_r2_env(monkeypatch):
+    monkeypatch.setenv("R2_ACCOUNT_ID", "acct")
+    monkeypatch.setenv("R2_ACCESS_KEY_ID", "key")
+    monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.setenv("R2_BUCKET_NAME", "bucket")
+    monkeypatch.setenv("R2_PUBLIC_URL", "https://media.example.com")
+
+
 def _png_upload(name: str = "crop.png") -> SimpleUploadedFile:
     buf = io.BytesIO()
     Image.new("RGBA", (16, 16), (255, 0, 0, 0)).save(buf, format="PNG")
@@ -40,19 +48,12 @@ class TestManualSquareCropImport:
 
         upload_calls = []
 
-        def fake_upload(file_obj, **kwargs):
-            upload_calls.append(kwargs)
-            return {
-                "secure_url": "https://example.com/manual-square-crop/type.png",
-                "public_id": "manual-square-crop/type",
-            }
+        def fake_upload(key, data, content_type):
+            upload_calls.append({"key": key, "content_type": content_type})
+            return f"https://media.example.com/{key}"
 
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "demo-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "demo-secret")
-        monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload", fake_upload
-        )
+        _set_r2_env(monkeypatch)
+        monkeypatch.setattr("api.manual_tile_imports.r2.upload_bytes", fake_upload)
 
         payload = {
             "records": [
@@ -91,13 +92,8 @@ class TestManualSquareCropImport:
         }
         assert body["results"][0]["status"] == "created"
         glaze_type = GlazeType.objects.get(user=None, name="Dragon Green")
-        assert (
-            glaze_type.test_tile_image["url"]
-            == "https://example.com/manual-square-crop/type.png"
-        )
-        assert (
-            glaze_type.test_tile_image["cloudinary_public_id"]
-            == "manual-square-crop/type"
+        assert glaze_type.test_tile_image["url"].startswith(
+            "https://media.example.com/manual-square-crop-imports/"
         )
         assert glaze_type.runs is None
         assert glaze_type.is_food_safe is None
@@ -114,15 +110,10 @@ class TestManualSquareCropImport:
         client = APIClient()
         client.force_authenticate(user=admin)
 
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "demo-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "demo-secret")
+        _set_r2_env(monkeypatch)
         monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload",
-            lambda *a, **kw: {
-                "secure_url": "https://example.com/caution.png",
-                "public_id": "caution",
-            },
+            "api.manual_tile_imports.r2.upload_bytes",
+            lambda key, data, content_type: f"https://media.example.com/{key}",
         )
 
         payload = {
@@ -164,11 +155,7 @@ class TestManualSquareCropImport:
         existing = GlazeType.objects.create(
             user=None,
             name="Celadon",
-            test_tile_image={
-                "url": "https://example.com/existing.png",
-                "cloudinary_public_id": "existing",
-                "cloud_name": None,
-            },
+            test_tile_image={"url": "https://example.com/existing.png"},
         )
         client = APIClient()
         client.force_authenticate(user=admin)
@@ -176,12 +163,8 @@ class TestManualSquareCropImport:
         def fail_upload(*args, **kwargs):
             raise AssertionError("upload should not be called for duplicates")
 
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo-cloud")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "demo-key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "demo-secret")
-        monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload", fail_upload
-        )
+        _set_r2_env(monkeypatch)
+        monkeypatch.setattr("api.manual_tile_imports.r2.upload_bytes", fail_upload)
 
         payload = {
             "records": [
@@ -390,10 +373,8 @@ class TestImportGlazeCombination:
         c.force_authenticate(user=admin)
         return c
 
-    def _patch_cloudinary(self, monkeypatch):
-        monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "demo")
-        monkeypatch.setenv("CLOUDINARY_API_KEY", "key")
-        monkeypatch.setenv("CLOUDINARY_API_SECRET", "secret")
+    def _patch_r2(self, monkeypatch):
+        _set_r2_env(monkeypatch)
 
     def _png(self, name: str = "c.png") -> SimpleUploadedFile:
         buf = io.BytesIO()
@@ -401,10 +382,10 @@ class TestImportGlazeCombination:
         return SimpleUploadedFile(name, buf.getvalue(), content_type="image/png")
 
     def test_error_when_combination_missing_name_and_components(self, monkeypatch):
-        self._patch_cloudinary(monkeypatch)
+        self._patch_r2(monkeypatch)
         monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload",
-            lambda *a, **kw: {"secure_url": "https://x.com/img.png", "public_id": "x"},
+            "api.manual_tile_imports.r2.upload_bytes",
+            lambda key, data, content_type: f"https://media.example.com/{key}",
         )
         payload = {
             "records": [
@@ -432,10 +413,10 @@ class TestImportGlazeCombination:
         assert "Missing parsed glaze combination name" in result["reason"]
 
     def test_error_when_missing_second_glaze_name(self, monkeypatch):
-        self._patch_cloudinary(monkeypatch)
+        self._patch_r2(monkeypatch)
         monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload",
-            lambda *a, **kw: {"secure_url": "https://x.com/img.png", "public_id": "x"},
+            "api.manual_tile_imports.r2.upload_bytes",
+            lambda key, data, content_type: f"https://media.example.com/{key}",
         )
         payload = {
             "records": [
@@ -463,10 +444,10 @@ class TestImportGlazeCombination:
         assert "first and second glaze" in result["reason"]
 
     def test_error_when_referenced_glaze_type_does_not_exist(self, monkeypatch):
-        self._patch_cloudinary(monkeypatch)
+        self._patch_r2(monkeypatch)
         monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload",
-            lambda *a, **kw: {"secure_url": "https://x.com/img.png", "public_id": "x"},
+            "api.manual_tile_imports.r2.upload_bytes",
+            lambda key, data, content_type: f"https://media.example.com/{key}",
         )
         payload = {
             "records": [
@@ -494,13 +475,10 @@ class TestImportGlazeCombination:
         assert "Missing referenced public glaze type" in result["reason"]
 
     def test_creates_combination_with_layers_and_flags(self, monkeypatch):
-        self._patch_cloudinary(monkeypatch)
+        self._patch_r2(monkeypatch)
         monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload",
-            lambda *a, **kw: {
-                "secure_url": "https://x.com/combo.png",
-                "public_id": "combo",
-            },
+            "api.manual_tile_imports.r2.upload_bytes",
+            lambda key, data, content_type: f"https://media.example.com/{key}",
         )
         GlazeType.objects.create(user=None, name="Alpha")
         GlazeType.objects.create(user=None, name="Beta")
@@ -536,19 +514,17 @@ class TestImportGlazeCombination:
         ) == ["Alpha", "Beta"]
 
     def test_skips_duplicate_combination_without_uploading(self, monkeypatch):
-        self._patch_cloudinary(monkeypatch)
+        self._patch_r2(monkeypatch)
         existing = GlazeCombination.objects.create(
             user=None,
             name="X!Y",
-            test_tile_image={
-                "url": "https://x.com/old.png",
-                "cloudinary_public_id": "old",
-                "cloud_name": None,
-            },
+            test_tile_image={"url": "https://x.com/old.png"},
         )
         monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload",
-            lambda *a, **kw: (_ for _ in ()).throw(AssertionError("should not upload")),
+            "api.manual_tile_imports.r2.upload_bytes",
+            lambda key, data, content_type: (_ for _ in ()).throw(
+                AssertionError("should not upload")
+            ),
         )
         payload = {
             "records": [
@@ -576,10 +552,10 @@ class TestImportGlazeCombination:
         assert result["object_id"] == str(existing.pk)
 
     def test_error_when_glaze_type_missing_crop_image(self, monkeypatch):
-        self._patch_cloudinary(monkeypatch)
+        self._patch_r2(monkeypatch)
         monkeypatch.setattr(
-            "api.manual_tile_imports.cloudinary.uploader.upload",
-            lambda *a, **kw: {"secure_url": "https://x.com/img.png", "public_id": "x"},
+            "api.manual_tile_imports.r2.upload_bytes",
+            lambda key, data, content_type: f"https://media.example.com/{key}",
         )
         payload = {
             "records": [

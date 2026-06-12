@@ -91,7 +91,7 @@ This initializes your local `.env.local` with production service credentials pul
 
 ### Contributing to the open source project
 
-If you want to contribute code, documentation, or agent workflows to the Glaze codebase — bug fixes, new features, workflow improvements — you do not need Tailscale access or production credentials. Clone the repo, follow the [Getting started](#getting-started) steps, and open a PR. The local SQLite dev environment is sufficient for most development work. Cloudinary and Google OAuth degrade gracefully when absent (see `.env.example` comments). This is the path if you want to improve the software itself regardless of who hosts it.
+If you want to contribute code, documentation, or agent workflows to the Glaze codebase — bug fixes, new features, workflow improvements — you do not need Tailscale access or production credentials. Clone the repo, follow the [Getting started](#getting-started) steps, and open a PR. The local SQLite dev environment is sufficient for most development work. Cloudflare R2 and Google OAuth credentials degrade gracefully when absent (see `.env.example` comments). This is the path if you want to improve the software itself regardless of who hosts it.
 
 ### Self-hosting
 
@@ -151,7 +151,7 @@ Keep local-only settings in `.env.local` files; they are gitignored by default:
 - `.env.local` (repo-wide defaults)
 - `web/.env.local` (web-only overrides)
 
-`source env.sh` automatically loads both (in that order) so you can inject Cloudinary/API config without committing secrets.
+`source env.sh` automatically loads both (in that order) so you can inject R2/API config without committing secrets.
 Use the checked-in root template, and create `web/.env.local` manually if you
 need web-only overrides:
 

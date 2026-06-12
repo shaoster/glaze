@@ -62,8 +62,10 @@ const wireImage = {
   url: "https://example.com/img.jpg",
   caption: "a caption",
   created: "2024-01-01T00:00:00Z",
-  cloudinary_public_id: "pub123",
-  cloud_name: "demo-cloud",
+  cropped_url: "https://example.com/img__crop.jpg",
+  image_id: "11111111-2222-3333-4444-555555555555",
+  width: 800,
+  height: 600,
 };
 
 const wirePieceState = {
@@ -84,8 +86,6 @@ const wirePieceSummary = {
   last_modified: "2024-01-02T00:00:00Z",
   thumbnail: {
     url: "/thumbnails/vase.svg",
-    cloudinary_public_id: null,
-    cloud_name: null,
     crop: null,
   },
   photo_count: 2,
@@ -280,7 +280,7 @@ describe("piece endpoints", () => {
           ...wirePieceState,
           previous_state: "designed",
           next_state: "trimmed",
-          images: [{ ...wireImage, cloudinary_public_id: null }],
+          images: [{ ...wireImage, cropped_url: null }],
           custom_fields: undefined,
         },
       },
@@ -290,7 +290,7 @@ describe("piece endpoints", () => {
 
     expect(mockClient.get).toHaveBeenCalledWith("pieces/piece-1/");
     expect(result.current_state.images[0].created).toBeInstanceOf(Date);
-    expect(result.current_state.images[0].cloudinary_public_id).toBeNull();
+    expect(result.current_state.images[0].cropped_url).toBeNull();
     expect(result.current_state.custom_fields).toEqual({});
     expect(result.current_state.previous_state).toBe("designed");
     expect(result.current_state.next_state).toBe("trimmed");
@@ -808,35 +808,42 @@ describe("glaze analysis endpoints", () => {
 });
 
 describe("upload endpoints", () => {
-  it("fetchCloudinaryWidgetConfig returns the config unchanged", async () => {
-    const { fetchCloudinaryWidgetConfig } = await loadApiModule();
-    mockClient.get.mockResolvedValue({
-      data: { cloud_name: "demo", api_key: "abc123", folder: "glaze" },
-    });
+  it("fetchR2PresignedUrl posts the content type with the default image resource type", async () => {
+    const { fetchR2PresignedUrl } = await loadApiModule();
+    const presigned = {
+      upload_url: "https://r2.example.com/bucket/key?signature=abc",
+      key: "images/key.jpg",
+      public_url: "https://cdn.example.com/images/key.jpg",
+      expires_in: 600,
+    };
+    mockClient.post.mockResolvedValue({ data: presigned });
 
-    await expect(fetchCloudinaryWidgetConfig()).resolves.toEqual({
-      cloud_name: "demo",
-      api_key: "abc123",
-      folder: "glaze",
+    await expect(fetchR2PresignedUrl("image/jpeg")).resolves.toEqual(
+      presigned,
+    );
+    expect(mockClient.post).toHaveBeenCalledWith("uploads/r2/presigned-url/", {
+      content_type: "image/jpeg",
+      resource_type: "image",
     });
   });
 
-  it("signCloudinaryWidgetParams posts wrapped params and returns the signature", async () => {
-    const { signCloudinaryWidgetParams } = await loadApiModule();
-    mockClient.post.mockResolvedValue({ data: { signature: "signed-value" } });
-
-    const signature = await signCloudinaryWidgetParams({
-      folder: "glaze",
-      timestamp: 123,
+  it("fetchR2PresignedUrl forwards an explicit resource type", async () => {
+    const { fetchR2PresignedUrl } = await loadApiModule();
+    mockClient.post.mockResolvedValue({
+      data: {
+        upload_url: "https://r2.example.com/bucket/key?signature=abc",
+        key: "videos/key.mp4",
+        public_url: "https://cdn.example.com/videos/key.mp4",
+        expires_in: 600,
+      },
     });
 
-    expect(mockClient.post).toHaveBeenCalledWith(
-      "uploads/cloudinary/widget-signature/",
-      {
-        params_to_sign: { folder: "glaze", timestamp: 123 },
-      },
-    );
-    expect(signature).toBe("signed-value");
+    await fetchR2PresignedUrl("video/mp4", "video");
+
+    expect(mockClient.post).toHaveBeenCalledWith("uploads/r2/presigned-url/", {
+      content_type: "video/mp4",
+      resource_type: "video",
+    });
   });
 
   it("importManualSquareCropRecords posts multipart data with payload and matching files", async () => {
@@ -893,53 +900,6 @@ describe("upload endpoints", () => {
     expect(uploadedFile).toBeInstanceOf(File);
     expect((uploadedFile as File).name).toBe(file.name);
     expect(form.get("crop_image__two")).toBeNull();
-  });
-
-  it("scanCloudinaryCleanupAssets returns the admin cleanup payload", async () => {
-    const { scanCloudinaryCleanupAssets } = await loadApiModule();
-    const payload = {
-      assets: [
-        {
-          public_id: "piece/orphan",
-          cloud_name: "demo",
-          path_prefix: "glaze_dev",
-          url: "https://example.com/orphan.jpg",
-          thumbnail_url: "https://example.com/orphan-thumb.jpg",
-          bytes: 2048,
-          created_at: "2026-05-06T12:00:00Z",
-        },
-      ],
-      summary: {
-        total: 1,
-        referenced: 0,
-        unused: 1,
-        referenced_breakdown: [
-          { key: "piece_list", label: "PieceList", count: 0 },
-        ],
-        reference_warnings: [],
-      },
-    };
-    mockClient.get.mockResolvedValue({ data: payload });
-
-    await expect(scanCloudinaryCleanupAssets()).resolves.toEqual(payload);
-    expect(mockClient.get).toHaveBeenCalledWith("admin/cloudinary-cleanup/");
-  });
-
-  it("deleteCloudinaryCleanupAssets sends public ids in the delete body", async () => {
-    const { deleteCloudinaryCleanupAssets } = await loadApiModule();
-    mockClient.delete.mockResolvedValue({
-      data: { deleted: { "piece/orphan": "deleted" } },
-    });
-
-    await expect(
-      deleteCloudinaryCleanupAssets(["piece/orphan"]),
-    ).resolves.toEqual({ "piece/orphan": "deleted" });
-    expect(mockClient.delete).toHaveBeenCalledWith(
-      "admin/cloudinary-cleanup/",
-      {
-        data: { public_ids: ["piece/orphan"] },
-      },
-    );
   });
 });
 

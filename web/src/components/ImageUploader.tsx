@@ -6,13 +6,12 @@ import {
   Fab,
   Portal,
   Typography,
-  useTheme,
 } from "@mui/material";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import type { Dispatch } from "react";
 import type { PieceDetail } from "../util/types";
 import { updateCurrentState, type UpdateStatePayload } from "../util/api";
-import { openCloudinaryUploadWidget } from "../util/cloudinaryUpload";
+import { uploadImageToR2 } from "../util/r2Upload";
 import type { DraftAction, ImageEntry } from "./workflowStateDraft";
 
 export type ImageUploaderProps = {
@@ -29,7 +28,7 @@ export type ImageUploaderProps = {
 };
 
 /**
- * Upload trigger button that owns the full Cloudinary upload lifecycle and
+ * Upload trigger button that owns the direct-to-R2 upload lifecycle and
  * sequential image-save queue. Renders as a mobile FAB (via Portal) or a
  * desktop inline button (portaled into #piece-upload-trigger). Manages its
  * own loading and error state so callers only provide configuration.
@@ -46,13 +45,13 @@ export default function ImageUploader({
   mobile,
   hidden = false,
 }: ImageUploaderProps) {
-  const theme = useTheme();
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [widgetLoading, setWidgetLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const latestImagesRef = useRef<ImageEntry[]>(images);
   const imageSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     latestImagesRef.current = images;
@@ -93,105 +92,65 @@ export default function ImageUploader({
     [dispatch, initialStateId, normalizedCustomFields, notes, onSaved, pieceId, saveStateFn],
   );
 
-  const handleUploadClick = useCallback(async () => {
+  const handleFilesSelected = useCallback(
+    async (fileList: FileList | null) => {
+      if (!fileList || fileList.length === 0) return;
+      setUploadError(null);
+      setUploading(true);
+      try {
+        for (const file of Array.from(fileList)) {
+          const uploaded = await uploadImageToR2(file);
+          saveUploadedImage({
+            url: uploaded.url,
+            caption: "",
+            crop: null,
+            cropped_url: null,
+            width: uploaded.width,
+            height: uploaded.height,
+          });
+        }
+      } catch {
+        setUploadError("Upload failed. Please try again.");
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    },
+    [saveUploadedImage],
+  );
+
+  const handleUploadClick = useCallback(() => {
     if (hidden) return;
     setUploadError(null);
-    setWidgetLoading(true);
-    const hideStyle = document.createElement("style");
-    hideStyle.textContent = 'iframe[title="Upload Widget"] { opacity: 0; }';
-    document.head.appendChild(hideStyle);
-    // On iOS PWA with viewport-fit=cover the status bar overlays the page.
-    const safeAreaStyle = document.createElement("style");
-    safeAreaStyle.textContent =
-      'iframe[title="Upload Widget"] { top: env(safe-area-inset-top) !important; height: calc(100dvh - env(safe-area-inset-top)) !important; }';
-    document.head.appendChild(safeAreaStyle);
+    fileInputRef.current?.click();
+  }, [hidden]);
 
-    const cleanupWidgetStyles = () => {
-      hideStyle.remove();
-      safeAreaStyle.remove();
-    };
-    const uploadWidget = await openCloudinaryUploadWidget({
-      messages: {
-        configError: "Failed to load upload configuration. Please try again.",
-        unavailableError:
-          "Upload widget is not available in this browser. Please try again.",
-        signatureError: "Failed to sign upload. Please try again.",
-        uploadError: "Upload failed. Please try again.",
-      },
-      widgetOptions: {
-        sources: ["local", "camera"],
-        multiple: true,
-        resourceType: "image",
-        styles: {
-          palette: {
-            window: theme.palette.background.paper,
-            windowBorder: theme.palette.divider,
-            tabIcon: theme.palette.primary.main,
-            menuIcons: theme.palette.text.secondary,
-            textDark: theme.palette.text.primary,
-            textLight: theme.palette.text.secondary,
-            link: theme.palette.primary.main,
-            action: theme.palette.primary.dark,
-            inactiveTabIcon: theme.palette.text.disabled,
-            error: theme.palette.error.main,
-            inProgress: theme.palette.primary.main,
-            complete: theme.palette.success.main,
-            sourceBg: theme.palette.background.default,
-          },
-          frame: { background: "#00000000" },
-        } as { palette: Record<string, string> },
-      },
-      callbacks: {
-        onError: (message) => {
-          setWidgetLoading(false);
-          cleanupWidgetStyles();
-          setUploadError(message);
-        },
-        onDisplayChange: (state) => {
-          if (state === "shown") {
-            setWidgetLoading(false);
-            hideStyle.remove();
-            const iframe = document.querySelector(
-              'iframe[title="Upload Widget"]',
-            );
-            if (iframe instanceof HTMLElement) {
-              iframe.style.transition = "opacity 0.15s ease-in";
-              iframe.style.opacity = "1";
-            }
-          } else if (state === "hidden" || state === "destroyed") {
-            safeAreaStyle.remove();
-          }
-        },
-        onSuccess: (result, config) => {
-          saveUploadedImage({
-            url: result.info.secure_url,
-            caption: "",
-            cloudinary_public_id: result.info.public_id,
-            cloud_name: config.cloud_name,
-            crop: null,
-            width: result.info.width ?? null,
-            height: result.info.height ?? null,
-          });
-        },
-      },
-    });
-    if (!uploadWidget) {
-      setWidgetLoading(false);
-      cleanupWidgetStyles();
-    }
-  }, [hidden, saveUploadedImage, theme]);
-
-  const buttonDisabled = saving || widgetLoading;
-  const statusMessage = saving ? "Saving…" : "Upload Image";
+  const buttonDisabled = saving || uploading;
+  const statusMessage = uploading
+    ? "Uploading…"
+    : saving
+      ? "Saving…"
+      : "Upload Image";
 
   return (
     <Box sx={hidden ? { display: "none" } : undefined}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        data-testid="image-upload-input"
+        onChange={(event) => void handleFilesSelected(event.target.files)}
+      />
       {mobile ? (
         <Portal>
           <Fab
             color="primary"
             aria-label="Upload Image"
-            onClick={() => void handleUploadClick()}
+            onClick={handleUploadClick}
             disabled={buttonDisabled}
             sx={{
               display: hidden ? "none" : undefined,
@@ -202,7 +161,7 @@ export default function ImageUploader({
               boxShadow: (theme) => theme.shadows[8],
             }}
           >
-            {widgetLoading ? (
+            {uploading ? (
               <CircularProgress aria-hidden size={20} color="inherit" />
             ) : (
               <PhotoCameraOutlinedIcon />
@@ -236,24 +195,16 @@ export default function ImageUploader({
           <Button
             variant="outlined"
             size="small"
-            onClick={() => void handleUploadClick()}
+            onClick={handleUploadClick}
             disabled={buttonDisabled}
             startIcon={
-              saving ? (
+              saving || uploading ? (
                 <CircularProgress size={14} color="inherit" />
               ) : undefined
             }
             sx={{ display: hidden ? "none" : undefined, position: "relative" }}
           >
-            <Box sx={{ opacity: widgetLoading ? 0 : 1 }}>{statusMessage}</Box>
-            {widgetLoading && (
-              <CircularProgress
-                aria-hidden
-                size={14}
-                color="inherit"
-                sx={{ position: "absolute" }}
-              />
-            )}
+            {statusMessage}
           </Button>
         </Portal>
       )}

@@ -3,9 +3,7 @@
 # Prints to stdout; caller redirects to a file.
 #
 # Required env: IMAGE_TAG, INFISICAL_PROJECT_SLUG, ALLOWED_HOST, APP_ORIGIN,
-#   GOOGLE_OAUTH_CLIENT_ID, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_FOLDER,
-#   CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_PUBLIC_UPLOAD_FOLDER
-# Optional env: CLOUDINARY_VIDEO_UPLOAD_PRESET, CLOUDINARY_VIDEO_UPLOAD_FOLDER
+#   GOOGLE_OAUTH_CLIENT_ID, R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_PUBLIC_URL
 set -euo pipefail
 
 : "${IMAGE_TAG:?IMAGE_TAG must be set}"
@@ -13,10 +11,9 @@ set -euo pipefail
 : "${ALLOWED_HOST:?ALLOWED_HOST must be set}"
 : "${APP_ORIGIN:?APP_ORIGIN must be set}"
 : "${GOOGLE_OAUTH_CLIENT_ID:?GOOGLE_OAUTH_CLIENT_ID must be set}"
-: "${CLOUDINARY_CLOUD_NAME:?CLOUDINARY_CLOUD_NAME must be set}"
-: "${CLOUDINARY_UPLOAD_FOLDER:?CLOUDINARY_UPLOAD_FOLDER must be set}"
-: "${CLOUDINARY_UPLOAD_PRESET:?CLOUDINARY_UPLOAD_PRESET must be set}"
-: "${CLOUDINARY_PUBLIC_UPLOAD_FOLDER:?CLOUDINARY_PUBLIC_UPLOAD_FOLDER must be set}"
+: "${R2_ACCOUNT_ID:?R2_ACCOUNT_ID must be set}"
+: "${R2_BUCKET_NAME:?R2_BUCKET_NAME must be set}"
+: "${R2_PUBLIC_URL:?R2_PUBLIC_URL must be set}"
 
 cat << EOF
 image:
@@ -27,12 +24,9 @@ appConfig:
   allowedHost: "${ALLOWED_HOST}"
   appOrigin: "${APP_ORIGIN}"
   googleOauthClientId: "${GOOGLE_OAUTH_CLIENT_ID}"
-  cloudinaryCloudName: "${CLOUDINARY_CLOUD_NAME}"
-  cloudinaryUploadFolder: "${CLOUDINARY_UPLOAD_FOLDER}"
-  cloudinaryUploadPreset: "${CLOUDINARY_UPLOAD_PRESET}"
-  cloudinaryPublicUploadFolder: "${CLOUDINARY_PUBLIC_UPLOAD_FOLDER}"
-$([ -n "${CLOUDINARY_VIDEO_UPLOAD_PRESET:-}" ] && echo "  cloudinaryVideoUploadPreset: \"${CLOUDINARY_VIDEO_UPLOAD_PRESET}\"")
-$([ -n "${CLOUDINARY_VIDEO_UPLOAD_FOLDER:-}" ] && echo "  cloudinaryVideoUploadFolder: \"${CLOUDINARY_VIDEO_UPLOAD_FOLDER}\"")
+  r2AccountId: "${R2_ACCOUNT_ID}"
+  r2BucketName: "${R2_BUCKET_NAME}"
+  r2PublicUrl: "${R2_PUBLIC_URL}"
 ingress:
   hosts:
     - host: "${ALLOWED_HOST}"

@@ -16,7 +16,7 @@ Go directly to the relevant dashboard and invalidate the exposed credential befo
 | `TAILSCALE_OAUTH_CLIENT_SECRET` | Revoke in Tailscale admin → Settings → OAuth Clients |
 | `POSTGRES_PASSWORD` | `ALTER USER glaze WITH PASSWORD '<new>'` (see rotation runbook) |
 | `SECRET_KEY` | Generate new key, update Infisical, restart pods (all sessions invalidated) |
-| Any Cloudinary / Resend / Grafana / Modal key | Revoke in the provider dashboard |
+| Any R2 (Cloudflare) / Resend / Grafana / Modal key | Revoke in the provider dashboard (R2: Cloudflare Dashboard → R2 → Manage API Tokens) |
 
 ### 2. Force an immediate ESO sync
 
@@ -61,7 +61,7 @@ If one secret was exposed, assume any secret stored in the same location may be 
 
 ### Check for data exfiltration indicators
 
-- Unusual Cloudinary upload activity (Cloudinary Usage dashboard)
+- Unusual R2 activity — object writes, storage growth, or egress spikes (Cloudflare Dashboard → R2 → bucket metrics)
 - Unexpected Postgres queries (check `pg_stat_activity` or OTel slow query logs)
 - Unexpected outbound requests from pods (OTel traces + k8s network policy logs)
 

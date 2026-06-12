@@ -137,13 +137,12 @@ class TestRunTaskErrorPaths:
 class TestDetectSubjectCropTask:
     """Covers the detect_subject_crop task registered in api/tasks.py."""
 
-    def _make_cloudinary_image(self, user, *, suffix: str = ""):
+    def _make_hosted_image(self, user, *, suffix: str = ""):
         from api.models import Image
 
         return Image.objects.create(
-            url=f"https://res.cloudinary.com/demo/image/upload/v1/pieces/mug{suffix}.jpg",
-            cloud_name="demo",
-            cloudinary_public_id=f"pieces/mug{suffix}",
+            url=f"https://media.example.com/images/1/mug{suffix}.jpg",
+            r2_key=f"images/1/mug{suffix}.jpg",
         )
 
     def _make_piece_state_image(self, user, image):
@@ -171,21 +170,17 @@ class TestDetectSubjectCropTask:
         assert task.status == AsyncTask.Status.FAILURE
         assert "Missing image_id" in task.error
 
-    def test_non_cloudinary_image_is_skipped(self, user, monkeypatch):
+    def test_image_without_url_is_skipped(self, user, monkeypatch):
         from api.models import Image
 
-        image = Image.objects.create(
-            url="https://example.com/photo.jpg",
-            cloud_name=None,
-            cloudinary_public_id=None,
-        )
+        image = Image.objects.create(url="")
         piece_state_image = self._make_piece_state_image(user, image)
         task = self._make_task(user, {"image_id": str(image.id)})
         self._run_sync(task.id)
         task.refresh_from_db()
         assert task.status == AsyncTask.Status.SUCCESS
         assert task.result["status"] == "skipped"
-        assert "Not a Cloudinary image" in task.result["reason"]
+        assert "Image has no URL" in task.result["reason"]
         assert piece_state_image.image_id == image.id
 
     def _mock_crop_run(self, piece_state_image, status, crop=None, error=None):
@@ -210,7 +205,7 @@ class TestDetectSubjectCropTask:
     def test_no_subject_detected_is_skipped(self, user, monkeypatch):
         from api.models import CropRun
 
-        image = self._make_cloudinary_image(user)
+        image = self._make_hosted_image(user)
         piece_state_image = self._make_piece_state_image(user, image)
         crop_run = self._mock_crop_run(piece_state_image, CropRun.Status.NO_SUBJECT)
         monkeypatch.setattr(
@@ -225,7 +220,7 @@ class TestDetectSubjectCropTask:
     def test_writes_crop_for_thumbnail_image_via_piece_id(self, user, monkeypatch):
         from api.models import CropRun
 
-        image = self._make_cloudinary_image(user)
+        image = self._make_hosted_image(user)
         piece_state_image = self._make_piece_state_image(user, image)
         crop = {"x": 0.1, "y": 0.2, "width": 0.5, "height": 0.5}
         crop_run = self._mock_crop_run(
@@ -253,7 +248,7 @@ class TestDetectSubjectCropTask:
     ):
         from api.models import CropRun, Piece, PieceState, PieceStateImage
 
-        image = self._make_cloudinary_image(user)
+        image = self._make_hosted_image(user)
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
         state = PieceState.objects.create(piece=piece, user=user, state="designed")
         piece_state_image = PieceStateImage.objects.create(
@@ -288,7 +283,7 @@ class TestDetectSubjectCropTask:
     def test_writes_crop_for_piece_state_image(self, user, monkeypatch):
         from api.models import ENTRY_STATE, CropRun, Piece, PieceState, PieceStateImage
 
-        image = self._make_cloudinary_image(user)
+        image = self._make_hosted_image(user)
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
         ps = PieceState.objects.create(piece=piece, user=user, state=ENTRY_STATE)
         psi = PieceStateImage.objects.create(
@@ -310,7 +305,7 @@ class TestDetectSubjectCropTask:
     def test_skips_piece_state_image_that_already_has_crop(self, user, monkeypatch):
         from api.models import ENTRY_STATE, CropRun, Piece, PieceState, PieceStateImage
 
-        image = self._make_cloudinary_image(user)
+        image = self._make_hosted_image(user)
         existing = {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0}
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
         ps = PieceState.objects.create(piece=piece, user=user, state=ENTRY_STATE)
@@ -343,7 +338,7 @@ class TestDetectSubjectCropTask:
     def test_piece_state_image_not_found_is_skipped(self, user, monkeypatch):
         from api.models import CropRun
 
-        image = self._make_cloudinary_image(user)
+        image = self._make_hosted_image(user)
         piece_state_image = self._make_piece_state_image(user, image)
         crop_run = self._mock_crop_run(
             piece_state_image,
@@ -367,8 +362,8 @@ class TestDetectSubjectCropTask:
     def test_piece_state_image_image_mismatch_is_skipped(self, user):
         from api.models import Piece, PieceState, PieceStateImage
 
-        image = self._make_cloudinary_image(user)
-        other_image = self._make_cloudinary_image(user, suffix="-alt")
+        image = self._make_hosted_image(user)
+        other_image = self._make_hosted_image(user, suffix="-alt")
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
         state = PieceState.objects.create(piece=piece, user=user, state="designed")
         psi = PieceStateImage.objects.create(
@@ -400,9 +395,8 @@ class TestRemoteDetectSubjectCrop:
         from api.models import CropRun, Image, Piece, PieceState, PieceStateImage
 
         image = Image.objects.create(
-            url="https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg",
-            cloud_name="demo",
-            cloudinary_public_id="pieces/mug",
+            url="https://media.example.com/images/1/mug.jpg",
+            r2_key="images/1/mug.jpg",
             user=user,
         )
         piece = Piece.objects.create(user=user, name="Mug", thumbnail=image)
@@ -445,9 +439,9 @@ class TestRemoteDetectSubjectCrop:
 
         monkeypatch.setattr("requests.post", mock_post)
 
-        # Suppress Cloudinary upload in this test
+        # Suppress the mask upload to R2 in this test
         monkeypatch.setattr(
-            "api.utils.upload_mask_to_cloudinary",
+            "api.utils.upload_mask_to_r2",
             lambda mask_bytes, img: None,
         )
 
@@ -467,7 +461,7 @@ class TestRemoteDetectSubjectCrop:
         # It should send image.url directly
         assert (
             posted_calls[0]["json"]["url"]
-            == "https://res.cloudinary.com/demo/image/upload/v1/pieces/mug.jpg"
+            == "https://media.example.com/images/1/mug.jpg"
         )
         assert posted_calls[0]["data"] is None
 
