@@ -43,6 +43,8 @@ def _dedup_image_urls(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
+
     dependencies = [
         ("api", "0006_cascade_on_delete"),
     ]
