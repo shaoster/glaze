@@ -51,6 +51,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     1: {
         "title": "Total Requests (1h)",
         "type": "stat",
+        "gridPos": {"h": 4, "w": 3, "x": 0, "y": 0},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -65,6 +66,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     2: {
         "title": "HTTP Error Rate (5xx)",
         "type": "stat",
+        "gridPos": {"h": 4, "w": 3, "x": 3, "y": 0},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -79,6 +81,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     3: {
         "title": "p95 Latency",
         "type": "stat",
+        "gridPos": {"h": 4, "w": 3, "x": 0, "y": 4},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -93,6 +96,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     4: {
         "title": "Active Requests",
         "type": "stat",
+        "gridPos": {"h": 4, "w": 3, "x": 3, "y": 4},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -107,6 +111,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     5: {
         "title": "Request Rate by Status Code",
         "type": "timeseries",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -120,6 +125,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     7: {
         "title": "Error & Warning Logs",
         "type": "logs",
+        "gridPos": {"h": 7, "w": 12, "x": 0, "y": 8},
         "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
         "targets": [
             {
@@ -133,6 +139,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     8: {
         "title": "Backend Anomalous Traces (Slow >500ms or Errored)",
         "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 15},
         "datasource": {"type": "tempo", "uid": "grafanacloud-traces"},
         "targets": [
             {
@@ -150,6 +157,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     9: {
         "title": "Metrics Series Quota",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 12, "y": 0},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-usage"},
         "targets": [
             {
@@ -171,6 +179,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     10: {
         "title": "Logs Quota (Monthly)",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 17, "y": 0},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-usage"},
         "targets": [
             {
@@ -192,6 +201,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     14: {
         "title": "Frontend Anomalous Traces (glaze-web, Slow >2s or Errored)",
         "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 23},
         "datasource": {"type": "tempo", "uid": "grafanacloud-traces"},
         "targets": [
             {
@@ -209,6 +219,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     15: {
         "title": "CPU Utilization",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 12, "y": 10},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -230,6 +241,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     16: {
         "title": "RAM Utilization",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 17, "y": 5},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -251,6 +263,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     17: {
         "title": "Swap Utilization",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 17, "y": 10},
         "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
         "targets": [
             {
@@ -272,6 +285,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     18: {
         "title": "R2 Storage",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 12, "y": 15},
         "datasource": {
             "type": "yesoreyeram-infinity-datasource",
             "uid": "cloudflare-r2-infinity",
@@ -313,6 +327,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     19: {
         "title": "R2 Class A Operations",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 17, "y": 15},
         "datasource": {
             "type": "yesoreyeram-infinity-datasource",
             "uid": "cloudflare-r2-infinity",
@@ -354,6 +369,7 @@ EXPECTED_PANELS: dict[int, dict[str, Any]] = {
     20: {
         "title": "R2 Class B Operations",
         "type": "piechart",
+        "gridPos": {"h": 5, "w": 5, "x": 12, "y": 20},
         "datasource": {
             "type": "yesoreyeram-infinity-datasource",
             "uid": "cloudflare-r2-infinity",
