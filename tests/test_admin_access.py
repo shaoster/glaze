@@ -59,9 +59,10 @@ def test_security_headers_allow_r2_image_and_video_media():
         "media-src 'self' {{ .Values.appConfig.r2PublicUrl }}"
         " https://res.cloudinary.com;" in security_headers
     )
-    # Presigned PUT uploads go straight to the R2 storage endpoint.
+    # Presigned POST uploads go to R2 storage; crop tool fetches images from CDN.
     assert (
         "connect-src 'self'"
-        " https://{{ .Values.appConfig.r2AccountId }}.r2.cloudflarestorage.com;"
+        " https://{{ .Values.appConfig.r2AccountId }}.r2.cloudflarestorage.com"
+        " {{ .Values.appConfig.r2PublicUrl }};"
         in security_headers
     )
