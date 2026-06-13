@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createTheme } from "@mui/material";
 
 import SmallTutorialInlay from "../SmallTutorialInlay";
 import {
@@ -130,7 +131,9 @@ describe("SmallTutorialInlay", () => {
     });
 
     expect(popper).toHaveAttribute("data-popper-placement", placement);
-    expect(window.getComputedStyle(popper ?? button).zIndex).toBe("auto");
+    expect(window.getComputedStyle(popper ?? button).zIndex).toBe(
+      String(createTheme().zIndex.modal + 1),
+    );
     expect(window.getComputedStyle(button).paddingTop).toBe("4px");
     expect(window.getComputedStyle(button).paddingBottom).toBe("4px");
     expect(window.getComputedStyle(button).paddingRight).toBe("7px");

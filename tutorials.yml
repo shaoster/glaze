@@ -2,6 +2,23 @@
 # Declarative tutorials for in-app guidance and attachment rules.
 # See `tutorials.schema.yml` for the validation contract.
 #
+# CSS Selector Patterns for `attachment.selector`
+# ─────────────────────────────────────────────────
+# The full CSS selector language is supported. Common patterns:
+#
+#   #element-id                      — presence-based: show when element is in the DOM
+#   #btn:not([disabled])             — only when the element is enabled
+#   #btn[disabled]                   — only when the element is disabled
+#   [aria-expanded="true"] #child    — contextual state via ancestor attribute
+#   #parent #child                   — elements inside containers (including open dialogs)
+#
+# The MutationObserver fires on DOM insertion AND on attribute changes, so:
+#   - Modal-hosted elements become selectable once their dialog opens.
+#   - Attribute-conditional selectors (e.g. :not([disabled])) react automatically
+#     when the attribute is added or removed.
+#
+# Choose `placement` relative to the element's position in the viewport.
+#
 version: "1.0"
 tutorials:
   summary_customize_popover:
