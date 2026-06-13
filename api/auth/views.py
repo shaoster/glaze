@@ -11,7 +11,12 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -28,6 +33,7 @@ from .invite_views import (
     staff_invite_batch,
     staff_invite_code,
 )
+from .jwt_auth import JWTCookieAuthentication
 from .mock_idp_views import mock_idp_authorize, mock_idp_complete
 from .preferences_views import auth_preferences
 from .token_views import (
@@ -96,6 +102,7 @@ def auth_logout(request: Request) -> Response:
     description="Delete the current user account and all owned content.",
 )
 @api_view(["DELETE"])
+@authentication_classes([SessionAuthentication, JWTCookieAuthentication])
 @permission_classes([IsAuthenticated])
 @traced
 def auth_delete_account(request: Request) -> HttpResponse:

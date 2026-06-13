@@ -1,8 +1,9 @@
 """CRUD endpoints for AgentToken management.
 
-These endpoints are intentionally restricted to SessionAuthentication only.
-An agent token holder must not be able to create or revoke tokens — that action
-requires an interactive browser session.
+Token management endpoints accept only browser auth (session or JWT cookie).
+AgentTokenAuthentication is explicitly excluded so token holders cannot
+self-manage — creating or revoking tokens requires an interactive browser
+session.
 """
 
 from __future__ import annotations
@@ -24,9 +25,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from api.auth.jwt_auth import JWTCookieAuthentication
 from api.models import AgentToken
 
 _TOKEN_PREFIX = "pdagent_"
+_BROWSER_AUTH = [SessionAuthentication, JWTCookieAuthentication]
 
 
 def _generate_token() -> str:
@@ -79,7 +82,7 @@ class AgentTokenCreatedSerializer(serializers.ModelSerializer):
     ],
 )
 @api_view(["GET", "POST"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(_BROWSER_AUTH)
 @permission_classes([IsAuthenticated])
 def agent_tokens(request: Request) -> Response:
     user = cast(User, request.user)
@@ -87,7 +90,12 @@ def agent_tokens(request: Request) -> Response:
         tokens = AgentToken.objects.filter(user=user)
         return Response(AgentTokenSerializer(tokens, many=True).data)
 
-    name = (request.data.get("name") or "").strip()
+    raw_name = request.data.get("name")
+    if not isinstance(raw_name, str):
+        return Response(
+            {"name": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST
+        )
+    name = raw_name.strip()
     if not name:
         return Response(
             {"name": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST
@@ -116,7 +124,7 @@ def agent_tokens(request: Request) -> Response:
     responses={204: None, 404: OpenApiResponse(description="Token not found.")},
 )
 @api_view(["DELETE"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(_BROWSER_AUTH)
 @permission_classes([IsAuthenticated])
 def agent_token_detail(request: Request, token_id: str) -> Response:
     user = cast(User, request.user)

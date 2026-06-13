@@ -12,25 +12,37 @@ from django.contrib.auth.models import AbstractBaseUser, AnonymousUser
 from api.auth.agent_auth import AgentTokenAuthentication
 from api.auth.jwt_auth import JWTCookieAuthentication
 
-_AUTH_BACKENDS = [AgentTokenAuthentication(), JWTCookieAuthentication()]
+_AGENT_AUTH = AgentTokenAuthentication()
+_JWT_AUTH = JWTCookieAuthentication()
+
+_AGENT_PREFIX = "Bearer pdagent_"
 
 
 def get_request_user(request) -> AbstractBaseUser | AnonymousUser:
     """Resolve the authenticated user for a GraphQL request.
 
-    Session auth is already applied by Django middleware (``request.user``).
-    If that user is anonymous, try each token-based backend in order:
-    agent bearer tokens first, then JWT cookies.
+    If the request carries an agent bearer token (``pdagent_`` prefix), run
+    agent auth first — this enforces the is_staff/is_superuser downgrade even
+    when a session cookie is also present (e.g. a developer testing via
+    GraphiQL while logged in).  For all other requests, the session user set
+    by Django middleware takes priority, with JWT as the final fallback.
     """
-    user = getattr(request, "user", None)
-    if user is not None and user.is_authenticated:
-        return user
-
-    for backend in _AUTH_BACKENDS:
-        result = backend.authenticate(request)
+    auth_header: str = request.META.get("HTTP_AUTHORIZATION", "")
+    if auth_header.startswith(_AGENT_PREFIX):
+        result = _AGENT_AUTH.authenticate(request)
         if result is not None:
             authenticated_user, _token = result
             request.user = authenticated_user
             return authenticated_user
+
+    user = getattr(request, "user", None)
+    if user is not None and user.is_authenticated:
+        return user
+
+    result = _JWT_AUTH.authenticate(request)
+    if result is not None:
+        authenticated_user, _token = result
+        request.user = authenticated_user
+        return authenticated_user
 
     return user if user is not None else AnonymousUser()

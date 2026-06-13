@@ -962,7 +962,8 @@ class TestAuthDeleteAccount:
         factory = APIRequestFactory()
         request = factory.delete("/api/auth/account/")
         response = auth_delete_account(request)
-        assert response.status_code == 401
+        # SessionAuthentication emits no WWW-Authenticate header, so DRF returns 403
+        assert response.status_code == 403
 
     def test_delete_account_removes_user_and_returns_204(self, user):
         from api.auth.account_views import delete_account_impl

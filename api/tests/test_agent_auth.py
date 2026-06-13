@@ -178,7 +178,7 @@ class TestAgentTokenManagement:
         assert response.status_code == 404
 
     def test_management_rejects_agent_token_auth_on_list(self, user):
-        """Agent token auth is not in the view's auth classes — DRF yields anonymous, IsAuthenticated → 403."""
+        """AgentTokenAuthentication is excluded from auth classes — DRF yields anonymous, IsAuthenticated → 403."""
         _, plain = _create_token(user, "self-managing")
         c = APIClient()
         c.credentials(HTTP_AUTHORIZATION=_bearer(plain))
@@ -202,4 +202,18 @@ class TestAgentTokenManagement:
     def test_unauthenticated_returns_403(self):
         c = APIClient()
         response = c.get(_MANAGEMENT_URL)
+        assert response.status_code == 403
+
+    def test_create_token_non_string_name_returns_400(self, user):
+        c = APIClient()
+        c.force_login(user)
+        response = c.post(_MANAGEMENT_URL, {"name": 12345}, format="json")
+        assert response.status_code == 400
+
+    def test_agent_token_cannot_delete_account(self, user):
+        """Agent token must not satisfy auth on account-deletion endpoint."""
+        _, plain = _create_token(user, "destructive")
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=_bearer(plain))
+        response = c.delete("/api/auth/account/")
         assert response.status_code == 403
