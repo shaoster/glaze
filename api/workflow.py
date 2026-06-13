@@ -259,6 +259,41 @@ def get_global_config(global_name: str) -> dict:
     return dict(_GLOBALS_MAP.get(global_name, {}))
 
 
+def build_workflow_schema() -> dict:
+    """Return the full workflow schema for LLM/MCP discovery.
+
+    Aggregates version, entry state, all states (with their ui schemas), and all
+    globals (with their capabilities and field definitions) into a single dict.
+    Parsed once at import time via cached constants; build_ui_schema is lru_cached.
+    """
+    return {
+        "version": WORKFLOW_VERSION,
+        "entry_state": ENTRY_STATE,
+        "states": {
+            state_id: {
+                "friendly_name": state.get("friendly_name", state_id),
+                "description": state.get("description", ""),
+                "terminal": state_id in TERMINAL_STATES,
+                "successors": SUCCESSORS.get(state_id, []),
+                "schema": build_ui_schema(state_id),
+            }
+            for state_id, state in _STATE_MAP.items()
+        },
+        "globals": {
+            name: {
+                "model": get_global_config(name).get("model"),
+                "description": get_global_config(name).get("description", ""),
+                "public": is_public_global(name),
+                "private": is_private_global(name),
+                "favoritable": is_favoritable_global(name),
+                "taggable": is_taggable_global(name),
+                "fields": get_global_config(name).get("fields", {}),
+            }
+            for name in get_global_names()
+        },
+    }
+
+
 def get_filterable_ref_fields(global_name: str) -> dict[str, dict]:
     """Return FK filter metadata for global ref fields declared with filterable: true.
 

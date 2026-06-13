@@ -110,6 +110,7 @@ urlpatterns = [
         views.r2_convert_image_status,
         name="r2-convert-image-status",
     ),
+    path("workflow/", views.workflow_schema, name="workflow-schema"),
     path(
         "workflow/schema/<str:state_id>/",
         views.workflow_state_schema,

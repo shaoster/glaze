@@ -6,7 +6,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .workflow import build_ui_schema
+from .workflow import build_ui_schema, build_workflow_schema
+
+
+@extend_schema(responses={200: Any})
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def workflow_schema(request: Request) -> Response:
+    """Return the full workflow schema: states, successors, field schemas, and globals."""
+    return Response(build_workflow_schema())
 
 
 @extend_schema(responses={200: Any})

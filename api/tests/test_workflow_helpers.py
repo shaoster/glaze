@@ -682,3 +682,73 @@ def test_build_custom_fields_schema_covers_required_fields(monkeypatch):
     assert "required" in schema
     assert "required_field" in schema["required"]
     assert "optional_field" not in schema["required"]
+
+
+# ---------------------------------------------------------------------------
+# workflow_schema view + build_workflow_schema
+# ---------------------------------------------------------------------------
+
+
+def test_workflow_schema_authenticated_returns_200(monkeypatch):
+    from api.workflow_views import workflow_schema
+
+    monkeypatch.setattr(
+        "api.workflow_views.build_workflow_schema",
+        lambda: {
+            "version": "test",
+            "entry_state": "designed",
+            "states": {},
+            "globals": {},
+        },
+    )
+
+    request = APIRequestFactory().get("/api/workflow/")
+    request.user = SimpleNamespace(is_authenticated=True, is_active=True)
+
+    response = workflow_schema(request)
+
+    assert response.status_code == 200
+    assert response.data["version"] == "test"
+
+
+def test_workflow_schema_anonymous_returns_401():
+    from django.contrib.auth.models import AnonymousUser
+
+    from api.workflow_views import workflow_schema
+
+    request = APIRequestFactory().get("/api/workflow/")
+    request.user = AnonymousUser()
+
+    response = workflow_schema(request)
+
+    assert response.status_code == 401
+
+
+def test_build_workflow_schema_structure():
+    from api.workflow import (
+        VALID_STATES,
+        WORKFLOW_VERSION,
+        build_workflow_schema,
+        get_global_names,
+    )
+
+    result = build_workflow_schema()
+
+    assert result["version"] == WORKFLOW_VERSION
+    assert result["entry_state"] == "designed"
+    assert set(result["states"].keys()) == VALID_STATES
+    assert set(result["globals"].keys()) == set(get_global_names())
+
+    for state_id, state_data in result["states"].items():
+        assert "friendly_name" in state_data
+        assert "terminal" in state_data
+        assert "successors" in state_data
+        assert "schema" in state_data
+
+    for global_name, global_data in result["globals"].items():
+        assert "model" in global_data
+        assert "public" in global_data
+        assert "private" in global_data
+        assert "favoritable" in global_data
+        assert "taggable" in global_data
+        assert "fields" in global_data
