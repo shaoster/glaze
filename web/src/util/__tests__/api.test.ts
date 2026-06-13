@@ -846,7 +846,7 @@ describe("upload endpoints", () => {
     });
   });
 
-  it("importManualSquareCropRecords posts multipart data with payload and matching files", async () => {
+  it("importManualSquareCropRecords posts JSON with r2_key per record", async () => {
     const { importManualSquareCropRecords } = await loadApiModule();
     mockClient.post.mockResolvedValue({
       data: {
@@ -860,12 +860,12 @@ describe("upload endpoints", () => {
       },
     });
 
-    const file = new File(["image"], "crop.jpg", { type: "image/jpeg" });
     const records = [
       {
         client_id: "one",
         filename: "crop.jpg",
         reviewed: true,
+        r2_key: "images/user1/abc.webp",
         parsed_fields: {
           name: "Tenmoku",
           kind: "glaze_type" as const,
@@ -875,31 +875,13 @@ describe("upload endpoints", () => {
           is_food_safe: false,
         },
       },
-      {
-        client_id: "two",
-        filename: "skip.jpg",
-        reviewed: false,
-        parsed_fields: {
-          name: "Clear / Iron",
-          kind: "glaze_combination" as const,
-          first_glaze: "Clear",
-          second_glaze: "Iron",
-          runs: null,
-          is_food_safe: null,
-        },
-      },
     ];
 
-    await importManualSquareCropRecords(records, { one: file });
+    await importManualSquareCropRecords(records);
 
-    const [path, form] = mockClient.post.mock.calls[0] as [string, FormData];
+    const [path, body] = mockClient.post.mock.calls[0] as [string, unknown];
     expect(path).toBe("admin/manual-square-crop-import/");
-    expect(form).toBeInstanceOf(FormData);
-    expect(form.get("payload")).toBe(JSON.stringify({ records }));
-    const uploadedFile = form.get("crop_image__one");
-    expect(uploadedFile).toBeInstanceOf(File);
-    expect((uploadedFile as File).name).toBe(file.name);
-    expect(form.get("crop_image__two")).toBeNull();
+    expect(body).toEqual({ records });
   });
 });
 

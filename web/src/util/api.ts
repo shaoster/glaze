@@ -957,6 +957,7 @@ export type ManualSquareCropImportRecordPayload = {
   client_id: string;
   filename: string;
   reviewed: boolean;
+  r2_key: string;
   parsed_fields: {
     name: string;
     kind: "glaze_type" | "glaze_combination";
@@ -988,19 +989,10 @@ export type ManualSquareCropImportResponse = {
 
 export async function importManualSquareCropRecords(
   records: ManualSquareCropImportRecordPayload[],
-  cropFiles: Record<string, File>,
 ): Promise<ManualSquareCropImportResponse> {
-  const form = new FormData();
-  form.append("payload", JSON.stringify({ records }));
-  for (const record of records) {
-    const file = cropFiles[record.client_id];
-    if (file) {
-      form.append(`crop_image__${record.client_id}`, file, file.name);
-    }
-  }
   const { data } = await client.post<ManualSquareCropImportResponse>(
     "admin/manual-square-crop-import/",
-    form,
+    { records },
   );
   return data;
 }

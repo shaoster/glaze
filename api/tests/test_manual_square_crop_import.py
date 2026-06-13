@@ -1,15 +1,12 @@
-import io
-import json
-
 import pytest
 from django.contrib.auth.models import User
-from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
 from rest_framework.test import APIClient
 
 from api.models import GlazeCombination, GlazeType
 
 URL = "/api/admin/manual-square-crop-import/"
+
+R2_KEY = "images/test/tile.webp"
 
 
 def _set_r2_env(monkeypatch):
@@ -18,12 +15,6 @@ def _set_r2_env(monkeypatch):
     monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "secret")
     monkeypatch.setenv("R2_BUCKET_NAME", "bucket")
     monkeypatch.setenv("R2_PUBLIC_URL", "https://media.example.com")
-
-
-def _png_upload(name: str = "crop.png") -> SimpleUploadedFile:
-    buf = io.BytesIO()
-    Image.new("RGBA", (16, 16), (255, 0, 0, 0)).save(buf, format="PNG")
-    return SimpleUploadedFile(name, buf.getvalue(), content_type="image/png")
 
 
 @pytest.mark.django_db
@@ -35,7 +26,7 @@ class TestManualSquareCropImport:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.post(URL, {"payload": json.dumps({"records": []})})
+        response = client.post(URL, {"records": []}, format="json")
 
         assert response.status_code == 403
 
@@ -46,14 +37,7 @@ class TestManualSquareCropImport:
         client = APIClient()
         client.force_authenticate(user=admin)
 
-        upload_calls = []
-
-        def fake_upload(key, data, content_type):
-            upload_calls.append({"key": key, "content_type": content_type})
-            return f"https://media.example.com/{key}"
-
         _set_r2_env(monkeypatch)
-        monkeypatch.setattr("api.manual_tile_imports.r2.upload_bytes", fake_upload)
 
         payload = {
             "records": [
@@ -61,6 +45,7 @@ class TestManualSquareCropImport:
                     "client_id": "rec-1",
                     "filename": "dragon-green.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "name": "Dragon Green",
                         "kind": "glaze_type",
@@ -73,14 +58,7 @@ class TestManualSquareCropImport:
             ],
         }
 
-        response = client.post(
-            URL,
-            {
-                "payload": json.dumps(payload),
-                "crop_image__rec-1": _png_upload(),
-            },
-            format="multipart",
-        )
+        response = client.post(URL, payload, format="json")
 
         assert response.status_code == 200
         body = response.json()
@@ -92,8 +70,8 @@ class TestManualSquareCropImport:
         }
         assert body["results"][0]["status"] == "created"
         glaze_type = GlazeType.objects.get(user=None, name="Dragon Green")
-        assert glaze_type.test_tile_image["url"].startswith(
-            "https://media.example.com/manual-square-crop-imports/"
+        assert (
+            glaze_type.test_tile_image["url"] == f"https://media.example.com/{R2_KEY}"
         )
         assert glaze_type.runs is None
         assert glaze_type.is_food_safe is None
@@ -101,7 +79,6 @@ class TestManualSquareCropImport:
         assert list(
             combo.layers.order_by("order").values_list("glaze_type__name", flat=True)
         ) == ["Dragon Green"]
-        assert len(upload_calls) == 1
 
     def test_runs_and_food_safe_written_to_created_glaze_type(self, monkeypatch):
         admin = User.objects.create(
@@ -111,10 +88,6 @@ class TestManualSquareCropImport:
         client.force_authenticate(user=admin)
 
         _set_r2_env(monkeypatch)
-        monkeypatch.setattr(
-            "api.manual_tile_imports.r2.upload_bytes",
-            lambda key, data, content_type: f"https://media.example.com/{key}",
-        )
 
         payload = {
             "records": [
@@ -122,6 +95,7 @@ class TestManualSquareCropImport:
                     "client_id": "rec-runs",
                     "filename": "caution.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "name": "Caution Drip",
                         "kind": "glaze_type",
@@ -134,21 +108,14 @@ class TestManualSquareCropImport:
             ],
         }
 
-        response = client.post(
-            URL,
-            {
-                "payload": json.dumps(payload),
-                "crop_image__rec-runs": _png_upload("caution.png"),
-            },
-            format="multipart",
-        )
+        response = client.post(URL, payload, format="json")
 
         assert response.status_code == 200
         glaze_type = GlazeType.objects.get(user=None, name="Caution Drip")
         assert glaze_type.runs is True
         assert glaze_type.is_food_safe is False
 
-    def test_skips_duplicate_public_glaze_type_without_uploading(self, monkeypatch):
+    def test_skips_duplicate_public_glaze_type(self, monkeypatch):
         admin = User.objects.create(
             username="admin2@example.com", email="admin2@example.com", is_staff=True
         )
@@ -160,11 +127,7 @@ class TestManualSquareCropImport:
         client = APIClient()
         client.force_authenticate(user=admin)
 
-        def fail_upload(*args, **kwargs):
-            raise AssertionError("upload should not be called for duplicates")
-
         _set_r2_env(monkeypatch)
-        monkeypatch.setattr("api.manual_tile_imports.r2.upload_bytes", fail_upload)
 
         payload = {
             "records": [
@@ -172,6 +135,7 @@ class TestManualSquareCropImport:
                     "client_id": "rec-dup",
                     "filename": "celadon.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "name": "Celadon",
                         "kind": "glaze_type",
@@ -182,14 +146,7 @@ class TestManualSquareCropImport:
             ],
         }
 
-        response = client.post(
-            URL,
-            {
-                "payload": json.dumps(payload),
-                "crop_image__rec-dup": _png_upload("celadon.png"),
-            },
-            format="multipart",
-        )
+        response = client.post(URL, payload, format="json")
 
         assert response.status_code == 200
         body = response.json()
@@ -197,31 +154,7 @@ class TestManualSquareCropImport:
         assert body["results"][0]["status"] == "skipped_duplicate"
         assert body["results"][0]["object_id"] == str(existing.pk)
 
-    def test_rejects_missing_payload(self):
-        admin = User.objects.create(
-            username="admin4@example.com", email="admin4@example.com", is_staff=True
-        )
-        client = APIClient()
-        client.force_authenticate(user=admin)
-
-        response = client.post(URL, {}, format="multipart")
-
-        assert response.status_code == 400
-        assert response.json() == {"detail": "payload is required."}
-
-    def test_rejects_invalid_json_payload(self):
-        admin = User.objects.create(
-            username="admin5@example.com", email="admin5@example.com", is_staff=True
-        )
-        client = APIClient()
-        client.force_authenticate(user=admin)
-
-        response = client.post(URL, {"payload": "{not-json"}, format="multipart")
-
-        assert response.status_code == 400
-        assert response.json() == {"detail": "payload must be valid JSON."}
-
-    def test_rejects_empty_records_payload(self):
+    def test_rejects_empty_records(self):
         admin = User.objects.create(
             username="admin-empty@example.com",
             email="admin-empty@example.com",
@@ -230,9 +163,21 @@ class TestManualSquareCropImport:
         client = APIClient()
         client.force_authenticate(user=admin)
 
-        response = client.post(
-            URL, {"payload": json.dumps({"records": []})}, format="multipart"
+        response = client.post(URL, {"records": []}, format="json")
+
+        assert response.status_code == 400
+        assert response.json() == {
+            "detail": "payload.records must be a non-empty list."
+        }
+
+    def test_rejects_missing_records_key(self):
+        admin = User.objects.create(
+            username="admin4@example.com", email="admin4@example.com", is_staff=True
         )
+        client = APIClient()
+        client.force_authenticate(user=admin)
+
+        response = client.post(URL, {}, format="json")
 
         assert response.status_code == 400
         assert response.json() == {
@@ -256,12 +201,8 @@ class TestManualSquareCropImport:
 
         response = client.post(
             URL,
-            {
-                "payload": json.dumps(
-                    {"records": [{"client_id": "rec-1", "reviewed": True}]}
-                )
-            },
-            format="multipart",
+            {"records": [{"client_id": "rec-1", "reviewed": True, "r2_key": R2_KEY}]},
+            format="json",
         )
 
         assert response.status_code == 400
@@ -276,12 +217,8 @@ class TestManualSquareCropImport:
 
         response = client.post(
             URL,
-            {
-                "payload": json.dumps(
-                    {"records": [{"client_id": "rec-1", "reviewed": False}]}
-                )
-            },
-            format="multipart",
+            {"records": [{"client_id": "rec-1", "reviewed": False, "r2_key": R2_KEY}]},
+            format="json",
         )
 
         assert response.status_code == 400
@@ -298,8 +235,8 @@ class TestManualSquareCropImport:
 
         response = client.post(
             URL,
-            {"payload": json.dumps({"records": [{"reviewed": True}]})},
-            format="multipart",
+            {"records": [{"reviewed": True, "r2_key": R2_KEY}]},
+            format="json",
         )
 
         assert response.status_code == 400
@@ -376,23 +313,15 @@ class TestImportGlazeCombination:
     def _patch_r2(self, monkeypatch):
         _set_r2_env(monkeypatch)
 
-    def _png(self, name: str = "c.png") -> SimpleUploadedFile:
-        buf = io.BytesIO()
-        Image.new("RGBA", (4, 4)).save(buf, format="PNG")
-        return SimpleUploadedFile(name, buf.getvalue(), content_type="image/png")
-
     def test_error_when_combination_missing_name_and_components(self, monkeypatch):
         self._patch_r2(monkeypatch)
-        monkeypatch.setattr(
-            "api.manual_tile_imports.r2.upload_bytes",
-            lambda key, data, content_type: f"https://media.example.com/{key}",
-        )
         payload = {
             "records": [
                 {
                     "client_id": "c1",
                     "filename": "c.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "kind": "glaze_combination",
                         "name": "",
@@ -402,11 +331,7 @@ class TestImportGlazeCombination:
                 }
             ]
         }
-        resp = self._admin_client().post(
-            URL,
-            {"payload": json.dumps(payload), "crop_image__c1": self._png()},
-            format="multipart",
-        )
+        resp = self._admin_client().post(URL, payload, format="json")
         assert resp.status_code == 200
         result = resp.json()["results"][0]
         assert result["status"] == "error"
@@ -414,16 +339,13 @@ class TestImportGlazeCombination:
 
     def test_error_when_missing_second_glaze_name(self, monkeypatch):
         self._patch_r2(monkeypatch)
-        monkeypatch.setattr(
-            "api.manual_tile_imports.r2.upload_bytes",
-            lambda key, data, content_type: f"https://media.example.com/{key}",
-        )
         payload = {
             "records": [
                 {
                     "client_id": "c2",
                     "filename": "c.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "kind": "glaze_combination",
                         "name": "A!B",
@@ -433,11 +355,7 @@ class TestImportGlazeCombination:
                 }
             ]
         }
-        resp = self._admin_client().post(
-            URL,
-            {"payload": json.dumps(payload), "crop_image__c2": self._png()},
-            format="multipart",
-        )
+        resp = self._admin_client().post(URL, payload, format="json")
         assert resp.status_code == 200
         result = resp.json()["results"][0]
         assert result["status"] == "error"
@@ -445,16 +363,13 @@ class TestImportGlazeCombination:
 
     def test_error_when_referenced_glaze_type_does_not_exist(self, monkeypatch):
         self._patch_r2(monkeypatch)
-        monkeypatch.setattr(
-            "api.manual_tile_imports.r2.upload_bytes",
-            lambda key, data, content_type: f"https://media.example.com/{key}",
-        )
         payload = {
             "records": [
                 {
                     "client_id": "c3",
                     "filename": "c.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "kind": "glaze_combination",
                         "name": "Ghost!Void",
@@ -464,11 +379,7 @@ class TestImportGlazeCombination:
                 }
             ]
         }
-        resp = self._admin_client().post(
-            URL,
-            {"payload": json.dumps(payload), "crop_image__c3": self._png()},
-            format="multipart",
-        )
+        resp = self._admin_client().post(URL, payload, format="json")
         assert resp.status_code == 200
         result = resp.json()["results"][0]
         assert result["status"] == "error"
@@ -476,10 +387,6 @@ class TestImportGlazeCombination:
 
     def test_creates_combination_with_layers_and_flags(self, monkeypatch):
         self._patch_r2(monkeypatch)
-        monkeypatch.setattr(
-            "api.manual_tile_imports.r2.upload_bytes",
-            lambda key, data, content_type: f"https://media.example.com/{key}",
-        )
         GlazeType.objects.create(user=None, name="Alpha")
         GlazeType.objects.create(user=None, name="Beta")
         payload = {
@@ -488,6 +395,7 @@ class TestImportGlazeCombination:
                     "client_id": "c4",
                     "filename": "c.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "kind": "glaze_combination",
                         "name": "Alpha!Beta",
@@ -499,11 +407,7 @@ class TestImportGlazeCombination:
                 }
             ]
         }
-        resp = self._admin_client().post(
-            URL,
-            {"payload": json.dumps(payload), "crop_image__c4": self._png()},
-            format="multipart",
-        )
+        resp = self._admin_client().post(URL, payload, format="json")
         assert resp.status_code == 200
         assert resp.json()["results"][0]["status"] == "created"
         combo = GlazeCombination.objects.get(user=None, name="Alpha!Beta")
@@ -513,18 +417,12 @@ class TestImportGlazeCombination:
             combo.layers.order_by("order").values_list("glaze_type__name", flat=True)
         ) == ["Alpha", "Beta"]
 
-    def test_skips_duplicate_combination_without_uploading(self, monkeypatch):
+    def test_skips_duplicate_combination(self, monkeypatch):
         self._patch_r2(monkeypatch)
         existing = GlazeCombination.objects.create(
             user=None,
             name="X!Y",
             test_tile_image={"url": "https://x.com/old.png"},
-        )
-        monkeypatch.setattr(
-            "api.manual_tile_imports.r2.upload_bytes",
-            lambda key, data, content_type: (_ for _ in ()).throw(
-                AssertionError("should not upload")
-            ),
         )
         payload = {
             "records": [
@@ -532,6 +430,7 @@ class TestImportGlazeCombination:
                     "client_id": "c5",
                     "filename": "c.png",
                     "reviewed": True,
+                    "r2_key": R2_KEY,
                     "parsed_fields": {
                         "kind": "glaze_combination",
                         "name": "X!Y",
@@ -541,37 +440,26 @@ class TestImportGlazeCombination:
                 }
             ]
         }
-        resp = self._admin_client().post(
-            URL,
-            {"payload": json.dumps(payload), "crop_image__c5": self._png()},
-            format="multipart",
-        )
+        resp = self._admin_client().post(URL, payload, format="json")
         assert resp.status_code == 200
         result = resp.json()["results"][0]
         assert result["status"] == "skipped_duplicate"
         assert result["object_id"] == str(existing.pk)
 
-    def test_error_when_glaze_type_missing_crop_image(self, monkeypatch):
+    def test_error_when_glaze_type_missing_r2_key(self, monkeypatch):
         self._patch_r2(monkeypatch)
-        monkeypatch.setattr(
-            "api.manual_tile_imports.r2.upload_bytes",
-            lambda key, data, content_type: f"https://media.example.com/{key}",
-        )
         payload = {
             "records": [
                 {
                     "client_id": "c6",
                     "filename": "missing.png",
                     "reviewed": True,
+                    "r2_key": "",
                     "parsed_fields": {"kind": "glaze_type", "name": "SomeName"},
                 }
             ]
         }
-        resp = self._admin_client().post(
-            URL,
-            {"payload": json.dumps(payload)},
-            format="multipart",
-        )
+        resp = self._admin_client().post(URL, payload, format="json")
         assert resp.status_code == 200
         result = resp.json()["results"][0]
         assert result["status"] == "error"

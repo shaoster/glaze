@@ -12,6 +12,10 @@ import GlazeImportToolPage from "../GlazeImportToolPage";
 import { importManualSquareCropRecords } from "../../util/api";
 import { uploadImageToR2 } from "../../util/r2Upload";
 
+vi.mock("axios", () => ({
+  default: { post: vi.fn().mockResolvedValue({}) },
+}));
+
 vi.mock("../../util/api", () => ({
   extractErrorMessage: vi.fn((error: unknown, defaultMessage: string) => {
     const data = (error as { response?: { data?: unknown } }).response?.data;
@@ -23,6 +27,14 @@ vi.mock("../../util/api", () => ({
       }
     }
     return error instanceof Error ? error.message : defaultMessage;
+  }),
+  fetchR2PresignedUrl: vi.fn().mockResolvedValue({
+    upload_url: "https://r2.example.com/upload",
+    fields: {},
+    key: "images/test/crop.webp",
+    public_url: "https://media.example.com/images/test/crop.webp",
+    expires_in: 3600,
+    max_bytes: 10485760,
   }),
   importManualSquareCropRecords: vi.fn(),
 }));

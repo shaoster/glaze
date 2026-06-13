@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import uuid
 from collections import Counter
 
 from django.db import transaction
-from django.utils.text import slugify
 
 from . import r2
 from .models import GlazeCombination, GlazeCombinationLayer, GlazeType
@@ -18,25 +16,6 @@ from .utils import (
 def _require_r2() -> None:
     if not r2.is_r2_configured():
         raise ValueError("R2 object storage is not configured.")
-
-
-_DEFAULT_BATCH_FOLDER = "manual-square-crop-imports"
-
-
-def _default_batch_folder() -> str:
-    return _DEFAULT_BATCH_FOLDER
-
-
-def _upload_file(uploaded_file, *, kind: str, filename: str, folder: str) -> dict:
-    """Upload a tile image to R2 and return {"url": <public url>}.
-
-    Tile crops are produced by the import tool as WebP.
-    """
-    stem = slugify(filename.rsplit(".", 1)[0]) or "tile"
-    key = f"{folder}/{kind}-{stem}-{uuid.uuid4().hex[:8]}.webp"
-    data = uploaded_file.read() if hasattr(uploaded_file, "read") else uploaded_file
-    url = r2.upload_bytes(key, data, "image/webp")
-    return {"url": url}
 
 
 def _ensure_combination_layers(
@@ -88,12 +67,9 @@ def _result_payload(
 
 def import_manual_tile_records(
     records: list[dict],
-    uploaded_files: dict[str, object],
-    *,
-    batch_folder: str | None = None,
+    uploaded_files: dict[str, str],
 ) -> dict:
     _require_r2()
-    folder = (batch_folder or _default_batch_folder()).strip().strip("/")
     results: list[dict] = []
 
     def import_glaze_type(record: dict) -> dict:
@@ -105,7 +81,7 @@ def import_manual_tile_records(
             return _result_payload(
                 record, status="error", reason="Missing parsed glaze type name."
             )
-        if uploaded is None:
+        if not uploaded:
             return _result_payload(
                 record, status="error", reason="Missing cropped image upload."
             )
@@ -119,16 +95,11 @@ def import_manual_tile_records(
                 image_url=_image_url(existing.test_tile_image),
             )
 
-        upload = _upload_file(
-            uploaded,
-            kind="glaze-type",
-            filename=record.get("filename", name),
-            folder=f"{folder}/final/glaze-types",
-        )
+        image_url = r2.public_url_for_key(uploaded)
         glaze_type = GlazeType.objects.create(
             user=None,
             name=name,
-            test_tile_image=normalize_image_payload({"url": upload["url"]}),
+            test_tile_image=normalize_image_payload({"url": image_url}),
             runs=parsed.get("runs"),
             is_food_safe=parsed.get("is_food_safe"),
         )
@@ -162,7 +133,7 @@ def import_manual_tile_records(
                 status="error",
                 reason="Glaze combinations require first and second glaze names.",
             )
-        if uploaded is None:
+        if not uploaded:
             return _result_payload(
                 record, status="error", reason="Missing cropped image upload."
             )
@@ -186,16 +157,11 @@ def import_manual_tile_records(
                 reason=f"Missing referenced public glaze type: {missing}.",
             )
 
-        upload = _upload_file(
-            uploaded,
-            kind="glaze-combination",
-            filename=record.get("filename", name),
-            folder=f"{folder}/final/glaze-combinations",
-        )
+        image_url = r2.public_url_for_key(uploaded)
         combo = GlazeCombination.objects.create(
             user=None,
             name=name,
-            test_tile_image=normalize_image_payload({"url": upload["url"]}),
+            test_tile_image=normalize_image_payload({"url": image_url}),
             runs=parsed.get("runs"),
             is_food_safe=parsed.get("is_food_safe"),
         )
