@@ -92,12 +92,11 @@ $defs:
             properties:
               type:
                 type: string
-                enum: [open-preferences, dismiss-only, advance]
+                enum: [open-preferences, dismiss-only]
                 description: |
                   Action to perform when the tutorial is clicked.
                   "open-preferences" opens the preferences dialog (requires section).
                   "dismiss-only" dismisses the tutorial without any navigation.
-                  "advance" advances to the next step in a multi-step sequence.
               section:
                 type: string
                 description: The preference section ID to open when the tutorial is clicked.
