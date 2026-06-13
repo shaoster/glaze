@@ -2,6 +2,7 @@ load("//:python.bzl", "pytest_test")
 
 pytest_test(
     name = "test_glaze_compute_service",
+    cov_src = "services.glaze_compute_service",
     srcs = [
         "test_glaze_compute_service.py",
         "//tools:pytest_main.py",
