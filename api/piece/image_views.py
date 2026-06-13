@@ -57,9 +57,6 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
     request_serializer.is_valid(raise_exception=True)
     target_state_id = request_serializer.validated_data.get("piece_state_id")
 
-    from django.db import transaction
-    from django.db.models import Max
-
     with transaction.atomic():
         link = get_object_or_404(
             PieceStateImage.objects.select_for_update().select_related(
@@ -124,8 +121,12 @@ def _needs_jpeg_conversion(key: str) -> bool:
     )
 
 
-def _fetch_url_bytes(url: str) -> tuple[bytes, str] | Response:
-    """Download image bytes from a URL. Returns (data, content_type) or an error Response."""
+def _stream_url_to_r2(url: str, user_id) -> tuple[str, str] | Response:
+    """Fetch *url* and stream it directly to R2 via multipart upload.
+
+    Returns ``(public_url, key)`` on success, or an error ``Response``.
+    Enforces HTTPS-only and a 10 MB cap without buffering the full body.
+    """
     if not url.startswith("https://"):
         return Response(
             {"detail": "Only HTTPS URLs are supported."},
@@ -140,15 +141,16 @@ def _fetch_url_bytes(url: str) -> tuple[bytes, str] | Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
     content_type = resp.headers.get("Content-Type", "image/jpeg")
-    data = b""
-    for chunk in resp.iter_content(chunk_size=65536):
-        data += chunk
-        if len(data) > _MAX_UPLOAD_BYTES:
-            return Response(
-                {"detail": "Image exceeds 10 MB size limit."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-    return data, content_type
+    ext = _ext_for_content_type(content_type)
+    key = f"images/{user_id}/{uuid.uuid4()}.{ext}"
+    try:
+        public_url = r2.upload_stream(key, resp, content_type, _MAX_UPLOAD_BYTES)
+    except r2.UploadTooLargeError:
+        return Response(
+            {"detail": "Image exceeds 10 MB size limit."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return public_url, key
 
 
 def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
@@ -166,14 +168,10 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
     validated = serializer.validated_data
     caption = validated.get("caption", "")
 
-    result = _fetch_url_bytes(validated["url"])
+    result = _stream_url_to_r2(validated["url"], request.user.id)
     if isinstance(result, Response):
         return result
-    data, content_type = result
-
-    ext = _ext_for_content_type(content_type)
-    key = f"images/{request.user.id}/{uuid.uuid4()}.{ext}"
-    public_url = r2.upload_bytes(key, data, content_type)
+    public_url, key = result
 
     conversion_task_id = None
     if _needs_jpeg_conversion(key):

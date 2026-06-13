@@ -48,7 +48,7 @@ class TestUploadImageEndpoints:
         return f"/api/pieces/{piece_id}/states/{state_id}/upload-image/"
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
-    @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PUBLIC_URL)
+    @patch("api.piece.image_views.r2.upload_stream", return_value=_FAKE_PUBLIC_URL)
     @patch("api.piece.image_views._requests.get", side_effect=_mock_requests_get)
     def test_jpeg_upload_no_conversion_task(
         self, mock_get, mock_upload, mock_r2, auth_client, piece_with_state
@@ -69,7 +69,7 @@ class TestUploadImageEndpoints:
         assert not AsyncTask.objects.filter(task_type="convert_image_to_jpeg").exists()
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
-    @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PNG_URL)
+    @patch("api.piece.image_views.r2.upload_stream", return_value=_FAKE_PNG_URL)
     @patch("api.piece.image_views._requests.get", side_effect=_mock_requests_get)
     def test_png_upload_enqueues_conversion_task(
         self, mock_get, mock_upload, mock_r2, auth_client, piece_with_state
@@ -107,6 +107,24 @@ class TestUploadImageEndpoints:
             {"url": "http://example.com/img.jpg"},
             format="json",
         )
+        assert response.status_code == 400
+
+    @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
+    @patch("api.piece.image_views._requests.get", side_effect=_mock_requests_get)
+    def test_oversized_image_returns_400(
+        self, mock_get, mock_r2, auth_client, piece_with_state
+    ):
+        from api.r2 import UploadTooLargeError
+
+        piece, _ = piece_with_state
+        with patch(
+            "api.piece.image_views.r2.upload_stream", side_effect=UploadTooLargeError()
+        ):
+            response = auth_client.post(
+                self._current_url(piece.id),
+                {"url": "https://example.com/huge.jpg"},
+                format="json",
+            )
         assert response.status_code == 400
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
@@ -156,7 +174,7 @@ class TestUploadImageEndpoints:
         assert response.status_code == 404
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
-    @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PUBLIC_URL)
+    @patch("api.piece.image_views.r2.upload_stream", return_value=_FAKE_PUBLIC_URL)
     @patch("api.piece.image_views._requests.get", side_effect=_mock_requests_get)
     def test_past_state_editable_piece_succeeds(
         self, mock_get, mock_upload, mock_r2, auth_client, editable_piece_with_state
@@ -174,7 +192,7 @@ class TestUploadImageEndpoints:
         assert PieceStateImage.objects.filter(piece_state=state).count() == 1
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
-    @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PUBLIC_URL)
+    @patch("api.piece.image_views.r2.upload_stream", return_value=_FAKE_PUBLIC_URL)
     @patch("api.piece.image_views._requests.get", side_effect=_mock_requests_get)
     def test_caption_stored(
         self, mock_get, mock_upload, mock_r2, auth_client, piece_with_state
