@@ -106,6 +106,7 @@ _IMAGE_CONTENT_TYPE_TO_EXT = {
     "image/avif": "avif",
 }
 _JPEG_EXTENSIONS = {"jpg", "jpeg"}
+_NON_JPEG_IMAGE_EXTENSIONS = set(_IMAGE_CONTENT_TYPE_TO_EXT.values()) - _JPEG_EXTENSIONS
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
@@ -116,12 +117,10 @@ def _ext_for_content_type(content_type: str) -> str:
 
 def _needs_jpeg_conversion(key: str) -> bool:
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
-    return ext not in _JPEG_EXTENSIONS and ext in set(
-        _IMAGE_CONTENT_TYPE_TO_EXT.values()
-    )
+    return ext in _NON_JPEG_IMAGE_EXTENSIONS
 
 
-def _stream_url_to_r2(url: str, user_id) -> tuple[str, str] | Response:
+def _stream_url_to_r2(url: str, user_id: int | None) -> tuple[str, str] | Response:
     """Fetch *url* and stream it directly to R2 via multipart upload.
 
     Returns ``(public_url, key)`` on success, or an error ``Response``.
@@ -144,7 +143,8 @@ def _stream_url_to_r2(url: str, user_id) -> tuple[str, str] | Response:
     ext = _ext_for_content_type(content_type)
     key = f"images/{user_id}/{uuid.uuid4()}.{ext}"
     try:
-        public_url = r2.upload_stream(key, resp, content_type, _MAX_UPLOAD_BYTES)
+        with resp:
+            public_url = r2.upload_stream(key, resp, content_type, _MAX_UPLOAD_BYTES)
     except r2.UploadTooLargeError:
         return Response(
             {"detail": "Image exceeds 10 MB size limit."},
