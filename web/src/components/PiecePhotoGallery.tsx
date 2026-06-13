@@ -361,7 +361,7 @@ export default function PiecePhotoGallery({
         </DialogActions>
       </Dialog>
 
-      {atLightbox && lightboxIndex !== null && (
+      {atLightbox && lightboxIndex !== null && !historyLoading && images[lightboxIndex] && (
         <ImageLightbox
           key={lightboxIndex}
           images={images}

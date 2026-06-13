@@ -483,6 +483,8 @@ function PieceDetailContent({
               piece={piece}
               history={statesHistory}
               historyLoading={historyLoading}
+              historyError={historyError}
+              refetchHistory={refetchHistory}
               atVideo={videoRouting.atVideo}
               onVideoNavigate={videoRouting.onVideoNavigate}
             />
@@ -587,12 +589,16 @@ function ShowcaseVideoPanel({
   piece,
   history,
   historyLoading,
+  historyError,
+  refetchHistory,
   atVideo,
   onVideoNavigate,
 }: {
   piece: PieceDetailType;
   history?: PieceState[];
   historyLoading: boolean;
+  historyError?: unknown;
+  refetchHistory?: () => void;
   atVideo: boolean;
   onVideoNavigate: (open: boolean) => void;
 }) {
@@ -638,7 +644,8 @@ function ShowcaseVideoPanel({
     currentStatus !== "pending" &&
     currentStatus !== "running" &&
     (showcaseVideo?.eligible ?? true) &&
-    !historyLoading;
+    !historyLoading &&
+    !historyError;
   const statusLabel =
     currentStatus === "idle"
       ? "No render has been requested yet."
@@ -691,7 +698,18 @@ function ShowcaseVideoPanel({
     >
       <Collapse in={expanded} unmountOnExit>
       <Stack spacing={2}>
-        {historyLoading ? (
+        {historyError ? (
+          <Box sx={{ py: 2, textAlign: "center" }}>
+            <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+              Failed to load past photos and notes for the video.
+            </Typography>
+            {refetchHistory && (
+              <Button size="small" variant="outlined" onClick={refetchHistory}>
+                Retry
+              </Button>
+            )}
+          </Box>
+        ) : historyLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
             <CircularProgress size={24} />
           </Box>
