@@ -54,6 +54,12 @@ urlpatterns = [
     path("auth/mock-idp/complete/", views.mock_idp_complete, name="mock-idp-complete"),
     path("staff/invite-code/", views.staff_invite_code, name="staff-invite-code"),
     path("staff/invite-batch/", views.staff_invite_batch, name="staff-invite-batch"),
+    path("auth/agent-tokens/", views.agent_tokens, name="auth-agent-tokens"),
+    path(
+        "auth/agent-tokens/<uuid:token_id>/",
+        views.agent_token_detail,
+        name="auth-agent-token-detail",
+    ),
     path("auth/invite/send/", views.send_invite, name="auth-invite-send"),
     path("health/live/", views.health_live, name="health-live"),
     path("health/ready/", views.health_ready, name="health-ready"),

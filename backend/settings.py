@@ -117,6 +117,7 @@ HELPDESK_TEAMS_MODE_ENABLED = False
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "api.auth.agent_auth.AgentTokenAuthentication",
         "api.auth.jwt_auth.JWTCookieAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],

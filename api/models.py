@@ -784,6 +784,28 @@ if TYPE_CHECKING:
     Tag: Any
 
 
+class AgentToken(models.Model):
+    """Long-lived API token for external LLM agents (MCP servers, ChatGPT actions).
+
+    The plain-text token is presented to the user exactly once at creation time.
+    Only the SHA-256 hex digest is stored here.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="agent_tokens",
+    )
+    name = models.CharField(max_length=100)
+    token_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
 class PublicLibraryVersion(models.Model):
     """Tracks the hash of the last successfully imported public library fixture.
 
