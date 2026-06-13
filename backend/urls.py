@@ -6,6 +6,8 @@ from django.urls import include, path, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from meta.views import Meta  # type: ignore[import-untyped]
 
+from api.llm_schema import LLM_SPECTACULAR_SETTINGS
+
 _INDEX_HTML = settings.BASE_DIR / "web" / "dist" / "index.html"
 _SHARE_IMAGE_SIZE = 600
 
@@ -102,6 +104,11 @@ urlpatterns = [
     path("api/", include("api.urls")),
     path("support/", include("helpdesk.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/schema/llm/",
+        SpectacularAPIView.as_view(custom_settings=LLM_SPECTACULAR_SETTINGS),
+        name="schema-llm",
+    ),
     path(
         "api/schema/swagger/",
         SpectacularSwaggerView.as_view(url_name="schema"),

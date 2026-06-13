@@ -87,7 +87,12 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
     return Response(serialize_piece_detail(piece, request))
 
 
-@extend_schema(request=ImageCropSerializer, responses=PieceDetailSerializer)
+@extend_schema(
+    operation_id="images_crop_partial_update",
+    request=ImageCropSerializer,
+    responses=PieceDetailSerializer,
+    description="Update the crop bounds for an image. Returns the updated piece detail.",
+)
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 @traced

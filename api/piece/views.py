@@ -88,6 +88,7 @@ from .helpers import (
 )
 @extend_schema(
     methods=["POST"],
+    operation_id="pieces_create",
     request=PieceCreateSerializer,
     responses={201: PieceDetailSerializer},
     description="Create a new piece. The piece is initialized in the `designed` state.",
@@ -146,6 +147,7 @@ def pieces(request: Request) -> Response:
 )
 @extend_schema(
     methods=["PATCH"],
+    operation_id="pieces_partial_update",
     request=PieceUpdateSerializer,
     responses={200: PieceDetailSerializer},
     description="Update piece metadata (name, notes, thumbnail, shared flag). Requires authentication.",
@@ -176,6 +178,7 @@ def piece_detail(request: Request, piece_id: str) -> Response:
 
 
 @extend_schema(
+    operation_id="pieces_transition",
     request=PieceStateCreateSerializer,
     responses={201: PieceDetailSerializer},
     description=(
@@ -200,6 +203,7 @@ def piece_states(request: Request, piece_id: str) -> Response:
 
 @extend_schema(
     methods=["GET"],
+    operation_id="pieces_current_state_retrieve",
     responses={200: PieceStateSerializer},
     description="Return the current (most recent) state of the piece.",
 )
@@ -219,6 +223,7 @@ def piece_current_state_detail(request: Request, piece_id: str) -> Response:
 
 @extend_schema(
     methods=["PATCH"],
+    operation_id="pieces_current_state_partial_update",
     request=PieceStateUpdateSerializer,
     responses={200: PieceDetailSerializer},
     description="Update fields on the current (unsealed) state: notes, location, custom fields, images.",
