@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 
 from django.utils import timezone
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -18,6 +19,19 @@ from api.models import AgentToken
 
 _PREFIX = "Bearer pdagent_"
 _LAST_USED_DEBOUNCE_SECONDS = 60
+
+
+class AgentTokenAuthenticationExtension(OpenApiAuthenticationExtension):
+    target_class = "api.auth.agent_auth.AgentTokenAuthentication"
+    name = "agentTokenAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "pdagent_<token>",
+            "description": "Long-lived API token. Pass as Authorization: Bearer pdagent_<token>.",
+        }
 
 
 class AgentTokenAuthentication(BaseAuthentication):
