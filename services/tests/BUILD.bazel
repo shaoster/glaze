@@ -1,6 +1,20 @@
 load("//:python.bzl", "pytest_test")
 
 pytest_test(
+    name = "test_glaze_compute_service",
+    srcs = [
+        "test_glaze_compute_service.py",
+        "//tools:pytest_main.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = ["services/tests/test_glaze_compute_service.py"],
+    deps = [
+        "//services:glaze_compute_service",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+pytest_test(
     name = "test_piece_image_segment_service",
     cov_src = "services.piece_image_segment_service",
     srcs = [
