@@ -104,8 +104,12 @@ def _status_payload(
     disabled_reason = _video_disabled_reason()
     task_data = task.input_params if task is not None else {}
     stored_input_hash = None
+    stored_excluded_image_keys: list[str] = []
+    stored_excluded_note_keys: list[str] = []
     if isinstance(task_data, dict):
         stored_input_hash = task_data.get("input_hash")
+        stored_excluded_image_keys = task_data.get("excluded_image_keys") or []
+        stored_excluded_note_keys = task_data.get("excluded_note_keys") or []
 
     artifact = None
     task_status = None
@@ -159,6 +163,8 @@ def _status_payload(
         "is_stale": is_stale,
         "stale_reason": stale_reason,
         "music_track_id": music_track_id,
+        "excluded_image_keys": stored_excluded_image_keys,
+        "excluded_note_keys": stored_excluded_note_keys,
         "storyboard": storyboard,
         "artifact": artifact,
         "error": error,

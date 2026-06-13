@@ -458,6 +458,8 @@ describe("PieceDetail", () => {
       is_stale: false,
       stale_reason: null,
       music_track_id: null,
+      excluded_image_keys: [],
+      excluded_note_keys: [],
       storyboard: null,
       artifact: {
         url: "https://example.com/video.mp4",
@@ -501,6 +503,8 @@ describe("PieceDetail", () => {
       is_stale: false,
       stale_reason: null,
       music_track_id: null,
+      excluded_image_keys: [],
+      excluded_note_keys: [],
       storyboard: null,
       artifact: {
         url: "https://example.com/video.mp4",
@@ -517,8 +521,8 @@ describe("PieceDetail", () => {
       }),
     );
 
-    // Wait for data to load (panel collapses when artifact is present), then expand
-    fireEvent.click(await screen.findByRole("button", { name: "Expand showcase video" }));
+    // Panel always starts collapsed; expand it to reveal the button
+    fireEvent.click(screen.getByRole("button", { name: "Expand showcase video" }));
 
     // Button should be disabled — piece hasn't changed since last render
     await waitFor(() =>
