@@ -58,7 +58,7 @@ from .uploads.views import (
     r2_convert_image_status,
     r2_presigned_upload_url,
 )
-from .workflow_views import workflow_state_schema
+from .workflow_views import workflow_schema, workflow_state_schema
 
 __all__ = [
     "CropRunViewSet",
@@ -106,5 +106,6 @@ __all__ = [
     "submit_task",
     "task_detail",
     "browser_traces",
+    "workflow_schema",
     "workflow_state_schema",
 ]
