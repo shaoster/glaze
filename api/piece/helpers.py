@@ -139,7 +139,7 @@ def piece_read_queryset(request: Request):
 
 
 @traced
-def piece_state_ref_prefetches() -> list[Prefetch]:
+def piece_state_ref_prefetches(prefix: str = "states") -> list[Prefetch]:
     """Build Prefetch objects for workflow global refs on piece states."""
     prefetches: list[Prefetch] = []
     for global_name in get_state_global_ref_map():
@@ -151,7 +151,7 @@ def piece_state_ref_prefetches() -> list[Prefetch]:
         assert related_name is not None
         prefetches.append(
             Prefetch(
-                f"states__{related_name}",
+                f"{prefix}__{related_name}",
                 queryset=ref_model.objects.select_related(global_name),
             )
         )
@@ -199,10 +199,14 @@ def piece_detail_queryset(request: Request):
             .prefetch_related(None)
             .prefetch_related(
                 "tag_links__tag",
-                Prefetch("states", queryset=current_state_qs),
-                "states__image_links__image",
-                "states__image_links__cropped_image",
-                *piece_state_ref_prefetches(),
+                Prefetch(
+                    "states",
+                    queryset=current_state_qs,
+                    to_attr="prefetched_current_state",
+                ),
+                "prefetched_current_state__image_links__image",
+                "prefetched_current_state__image_links__cropped_image",
+                *piece_state_ref_prefetches(prefix="prefetched_current_state"),
             )
         )
 
@@ -216,7 +220,11 @@ def piece_detail_queryset(request: Request):
 @traced
 def serialize_piece_detail(piece: Piece, request: Request):
     """Serialize a single piece into the detail payload."""
-    return PieceDetailSerializer(piece, context={"request": request}).data
+    query_params = getattr(request, "query_params", getattr(request, "GET", {}))
+    exclude_history = query_params.get("exclude_history", "false").lower() == "true"
+    return PieceDetailSerializer(
+        piece, context={"request": request, "exclude_history": exclude_history}
+    ).data
 
 
 @traced

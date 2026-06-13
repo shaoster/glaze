@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
@@ -9,6 +10,7 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
+from ..models import PieceState
 from ..serializers import (
     PieceCreateSerializer,
     PieceDetailSerializer,
@@ -300,13 +302,22 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
 def piece_history(request: Request, piece_id: str) -> Response:
     """Retrieve the full state history of a single piece."""
     piece = get_object_or_404(
-        _piece_read_queryset(request).prefetch_related(None), pk=piece_id
+        _piece_read_queryset(request)
+        .prefetch_related(None)
+        .prefetch_related(
+            "tag_links__tag",
+            Prefetch(
+                "states",
+                queryset=PieceState.objects.prefetch_related(
+                    "image_links__image",
+                    "image_links__cropped_image",
+                    *_state_ref_prefetches(),
+                ),
+            ),
+        ),
+        pk=piece_id,
     )
-    states = piece.states.all().prefetch_related(
-        "image_links__image",
-        "image_links__cropped_image",
-        *_state_ref_prefetches(),
-    )
+    states = piece.states.all()
     serializer = PieceStateSerializer(
         states, many=True, context={"request": request, "piece": piece}
     )

@@ -577,6 +577,24 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         if photo_count is not None:
             return int(photo_count)
 
+        exclude_history = self.context.get("exclude_history")
+        if exclude_history is None:
+            request = self.context.get("request")
+            if request is not None:
+                query_params = getattr(
+                    request, "query_params", getattr(request, "GET", {})
+                )
+                exclude_history = (
+                    query_params.get("exclude_history", "false").lower() == "true"
+                )
+            else:
+                exclude_history = False
+
+        if exclude_history:
+            from .models import PieceStateImage
+
+            return PieceStateImage.objects.filter(piece_state__piece=obj).count()
+
         states = getattr(obj, "_prefetched_objects_cache", {}).get("states")
         if states is None:
             states = obj.states.all()

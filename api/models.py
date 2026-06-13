@@ -303,6 +303,9 @@ class Piece(models.Model):
                 return None
             # Python mirror of CURRENT_STATE_ORDERING
             return max(states, key=self._state_sort_key)
+        pcs = getattr(self, "prefetched_current_state", None)
+        if pcs is not None:
+            return pcs[0] if pcs else None
         return self.states.order_by(*CURRENT_STATE_ORDERING).first()
 
     @property

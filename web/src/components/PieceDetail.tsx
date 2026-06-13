@@ -1,6 +1,7 @@
 import {
   type ComponentProps,
   useCallback,
+  useMemo,
   useState,
 } from "react";
 import {
@@ -109,8 +110,15 @@ function PieceDetailContent({
   const canEdit = piece.can_edit;
   const hasWorkflowContent =
     canEdit || getCustomFieldDefinitions(currentState.state).length > 0;
-  const statesHistory: PieceState[] =
-    history ?? (piece.history && piece.history.length > 0 ? piece.history : [currentState]);
+  const statesHistory: PieceState[] = useMemo(() => {
+    if (!history) {
+      return piece.history && piece.history.length > 0 ? piece.history : [currentState];
+    }
+    // Replace the current state in history with the fresh currentState from piece
+    return history.map((state) =>
+      state.id === currentState.id ? currentState : state
+    );
+  }, [history, piece.history, currentState]);
   const pastHistory = statesHistory.slice(0, -1);
 
   const historyRouting = usePieceHistoryRouting(piece.id);
@@ -218,6 +226,9 @@ function PieceDetailContent({
       ? statesHistory.map((s) => ({ id: s.id, label: formatState(s.state) }))
       : [{ id: currentState.id, label: formatState(currentState.state) }],
     moveImageFn: piece.is_editable ? moveImage : undefined,
+    historyLoading,
+    historyError,
+    refetchHistory,
   } satisfies ComponentProps<typeof PiecePhotoGallery>;
 
   return (
