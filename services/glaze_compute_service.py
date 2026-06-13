@@ -27,15 +27,12 @@ logger = logging.getLogger(__name__)
 try:
     import modal
 
-    _pil_image = (
-        modal.Image.debian_slim()
-        .pip_install(
-            # Versions must stay in sync with pyproject.toml — enforced by
-            # tools/check_modal_deps.py in CI.
-            "pillow==12.2.0",
-            "pillow-heif==1.3.0",
-            "requests==2.33.1",
-        )
+    _pil_image = modal.Image.debian_slim().pip_install(
+        # Versions must stay in sync with pyproject.toml — enforced by
+        # tools/check_modal_deps.py in CI.
+        "pillow==12.2.0",
+        "pillow-heif==1.3.0",
+        "requests==2.33.1",
     )
 
     _video_image = (
@@ -177,7 +174,9 @@ def _convert_to_jpeg_bytes(original_bytes: bytes) -> tuple[bytes, int, int]:
 # ── Showcase video helpers (mirrors api/showcase/render.py) ──────────────────
 
 
-def _slide_start_times(durations: list[float], transition_seconds: float) -> list[float]:
+def _slide_start_times(
+    durations: list[float], transition_seconds: float
+) -> list[float]:
     starts = []
     t = 0.0
     for i, d in enumerate(durations):
@@ -210,8 +209,9 @@ def _load_font(path: str, size: int) -> Any:
         return ImageFont.load_default()
 
 
-def _draw_text_centered(draw: Any, text: str, font: Any, canvas_w: int, y: int, color: tuple) -> None:
-    from PIL import ImageDraw
+def _draw_text_centered(
+    draw: Any, text: str, font: Any, canvas_w: int, y: int, color: tuple
+) -> None:
 
     bbox = draw.textbbox((0, 0), text, font=font)
     text_w = bbox[2] - bbox[0]
@@ -250,10 +250,10 @@ def _draw_text_wrapped(
 
 def _render_slide_canvas(slide: dict) -> Any:
     """Render a single slide dict (cover/image/note) to a PIL image at canvas size."""
+    import requests
     from PIL import Image as PILImage
     from PIL import ImageDraw, ImageOps
     from pillow_heif import register_heif_opener
-    import requests
 
     register_heif_opener()
 
@@ -292,26 +292,67 @@ def _render_slide_canvas(slide: dict) -> Any:
         font_title = _load_font(_FONT_BOLD, 56)
         font_sub = _load_font(_FONT_REGULAR, 28)
         if heading:
-            _draw_text_centered(draw, heading, font_title, canvas_w, canvas_h // 2 - 40, _TEXT_COLOR_PRIMARY)
+            _draw_text_centered(
+                draw,
+                heading,
+                font_title,
+                canvas_w,
+                canvas_h // 2 - 40,
+                _TEXT_COLOR_PRIMARY,
+            )
         if state_label:
-            _draw_text_centered(draw, state_label, font_sub, canvas_w, canvas_h // 2 + 30, _TEXT_COLOR_SECONDARY)
+            _draw_text_centered(
+                draw,
+                state_label,
+                font_sub,
+                canvas_w,
+                canvas_h // 2 + 30,
+                _TEXT_COLOR_SECONDARY,
+            )
 
     elif kind == "note":
         font_label = _load_font(_FONT_REGULAR, 22)
         font_body = _load_font(_FONT_REGULAR, 30)
         margin = 80
         if state_label:
-            _draw_text_centered(draw, state_label.upper(), font_label, canvas_w, 40, _TEXT_COLOR_SECONDARY)
+            _draw_text_centered(
+                draw,
+                state_label.upper(),
+                font_label,
+                canvas_w,
+                40,
+                _TEXT_COLOR_SECONDARY,
+            )
         if text:
-            _draw_text_wrapped(draw, text, font_body, canvas_w - margin * 2, margin, 100, _TEXT_COLOR_PRIMARY)
+            _draw_text_wrapped(
+                draw,
+                text,
+                font_body,
+                canvas_w - margin * 2,
+                margin,
+                100,
+                _TEXT_COLOR_PRIMARY,
+            )
 
     else:  # "image"
         font_caption = _load_font(_FONT_REGULAR, 24)
         font_label = _load_font(_FONT_REGULAR, 20)
         if caption:
-            _draw_text_centered(draw, caption, font_caption, canvas_w, canvas_h - 52, _TEXT_COLOR_SECONDARY)
+            _draw_text_centered(
+                draw,
+                caption,
+                font_caption,
+                canvas_w,
+                canvas_h - 52,
+                _TEXT_COLOR_SECONDARY,
+            )
         if state_label:
-            draw.text((22, canvas_h - 52), state_label, font=font_label, fill=_TEXT_COLOR_SECONDARY)
+            draw.text(
+                (22, canvas_h - 52),
+                state_label,
+                font=font_label,
+                fill=_TEXT_COLOR_SECONDARY,
+            )
 
     return canvas
 
@@ -326,8 +367,17 @@ def _render_closing_canvas() -> Any:
     draw = ImageDraw.Draw(canvas)
     font = _load_font(_FONT_BOLD, 64)
     font_sub = _load_font(_FONT_REGULAR, 28)
-    _draw_text_centered(draw, "PotterDoc", font, canvas_w, canvas_h // 2 - 48, _TEXT_COLOR_PRIMARY)
-    _draw_text_centered(draw, "potterdoc.com", font_sub, canvas_w, canvas_h // 2 + 28, _TEXT_COLOR_SECONDARY)
+    _draw_text_centered(
+        draw, "PotterDoc", font, canvas_w, canvas_h // 2 - 48, _TEXT_COLOR_PRIMARY
+    )
+    _draw_text_centered(
+        draw,
+        "potterdoc.com",
+        font_sub,
+        canvas_w,
+        canvas_h // 2 + 28,
+        _TEXT_COLOR_SECONDARY,
+    )
     return canvas
 
 
@@ -401,6 +451,7 @@ def _render_to_file(
             total_frames = max(1, math.ceil(effective_duration * _SHOWCASE_VIDEO_FPS))
 
         import time as _time
+
         last_reported = _time.monotonic()
         frame_count = 0
         video_packets: list[Any] = []
@@ -448,10 +499,14 @@ def _render_to_file(
                         resampled = audio_resampler.resample(frame)
                         if resampled is None:
                             continue
-                        for rf in resampled if isinstance(resampled, list) else [resampled]:
+                        for rf in (
+                            resampled if isinstance(resampled, list) else [resampled]
+                        ):
                             samples = np.array(rf.to_ndarray(), dtype=np.float32)
                             if samples_written + samples.shape[-1] > target_samples:
-                                samples = samples[..., : target_samples - samples_written]
+                                samples = samples[
+                                    ..., : target_samples - samples_written
+                                ]
                             audio_frame = av.AudioFrame.from_ndarray(
                                 samples, format="fltp", layout=layout
                             )
@@ -571,10 +626,7 @@ def _iter_video_frames(
         current = slide_canvases[active_idx]
 
         # Transition blend with next slide
-        if (
-            active_idx < n - 1
-            and slide_t >= durations[active_idx] - transition_seconds
-        ):
+        if active_idx < n - 1 and slide_t >= durations[active_idx] - transition_seconds:
             blend_t = (slide_t - (durations[active_idx] - transition_seconds)) / max(
                 transition_seconds, 1e-9
             )
@@ -584,8 +636,8 @@ def _iter_video_frames(
             frame = current.copy()
 
         # Fade out at end
-        global_fade_start = effective_duration - durations[-1] + (
-            durations[-1] - fade_seconds
+        global_fade_start = (
+            effective_duration - durations[-1] + (durations[-1] - fade_seconds)
         )
         alpha = _fade_alpha(t, global_fade_start, fade_seconds)
         if alpha < 1.0:
@@ -654,7 +706,9 @@ if app is not None:
             output_path = Path(tf.name)
 
         try:
-            _render_to_file(storyboard, output_path, music_url=music_url, on_progress=on_progress)
+            _render_to_file(
+                storyboard, output_path, music_url=music_url, on_progress=on_progress
+            )
             mp4_bytes = output_path.read_bytes()
             _put_bytes(presigned_put_url, mp4_bytes, "video/mp4")
         finally:

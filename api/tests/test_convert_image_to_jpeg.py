@@ -65,7 +65,8 @@ class TestConvertImageToJpegTask:
             fn_mock.remote = MagicMock()
             fn_mock.remote.aio = AsyncMock(
                 return_value={"width": width, "height": height},
-                side_effect=lambda *a, **kw: modal_calls.append(a) or {"width": width, "height": height},
+                side_effect=lambda *a, **kw: modal_calls.append(a)
+                or {"width": width, "height": height},
             )
             return fn_mock
 

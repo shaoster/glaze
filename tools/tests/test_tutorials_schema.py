@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import pathlib
 
 import jsonschema
@@ -33,7 +32,5 @@ def test_tutorials_yml_is_valid_against_schema() -> None:
 
     errors = list(validator.iter_errors(data))
     if errors:
-        messages = "\n".join(
-            f"  {e.json_path}: {e.message}" for e in errors
-        )
+        messages = "\n".join(f"  {e.json_path}: {e.message}" for e in errors)
         pytest.fail(f"tutorials.yml failed schema validation:\n{messages}")

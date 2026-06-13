@@ -402,7 +402,11 @@ def generate_cropped_image(task: AsyncTask) -> dict:
 
     presigned_put = r2.generate_presigned_put(key, "image/jpeg")
     crop_image_fn = _modal_function("glaze-compute", "crop_image")
-    asyncio.run(crop_image_fn.remote.aio(r2.public_url_for_key(image.r2_key), crop, presigned_put))
+    asyncio.run(
+        crop_image_fn.remote.aio(
+            r2.public_url_for_key(image.r2_key), crop, presigned_put
+        )
+    )
     updated = set_cropped_fields(image, crop, r2_key=key, url=url)
     return {
         "status": "success",
@@ -507,6 +511,7 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     """
     from django.conf import settings
 
+    from . import r2
     from .showcase import (
         SHOWCASE_VIDEO_RENDER_VERSION,
         compute_storyboard_hash,
@@ -515,7 +520,6 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     )
     from .showcase.music import get_track
     from .showcase.render import showcase_video_key
-    from . import r2
     from .task_views import _make_progress_token
 
     params = task.input_params or {}
@@ -562,7 +566,11 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     music_url = track.audio.url if track else None
 
     render_fn = _modal_function("glaze-compute", "render_showcase_video")
-    asyncio.run(render_fn.remote.aio(storyboard, presigned_put, progress_webhook_url, progress_token, music_url))
+    asyncio.run(
+        render_fn.remote.aio(
+            storyboard, presigned_put, progress_webhook_url, progress_token, music_url
+        )
+    )
 
     return {
         "status": "success",
