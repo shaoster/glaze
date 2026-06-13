@@ -95,6 +95,12 @@ def import_manual_tile_records(
                 image_url=_image_url(existing.test_tile_image),
             )
 
+        if not r2.object_exists(uploaded):
+            return _result_payload(
+                record,
+                status="error",
+                reason="Cropped image upload not found in storage.",
+            )
         image_url = r2.public_url_for_key(uploaded)
         glaze_type = GlazeType.objects.create(
             user=None,
@@ -157,6 +163,12 @@ def import_manual_tile_records(
                 reason=f"Missing referenced public glaze type: {missing}.",
             )
 
+        if not r2.object_exists(uploaded):
+            return _result_payload(
+                record,
+                status="error",
+                reason="Cropped image upload not found in storage.",
+            )
         image_url = r2.public_url_for_key(uploaded)
         combo = GlazeCombination.objects.create(
             user=None,

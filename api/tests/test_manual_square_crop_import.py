@@ -38,6 +38,7 @@ class TestManualSquareCropImport:
         client.force_authenticate(user=admin)
 
         _set_r2_env(monkeypatch)
+        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: True)
 
         payload = {
             "records": [
@@ -88,6 +89,7 @@ class TestManualSquareCropImport:
         client.force_authenticate(user=admin)
 
         _set_r2_env(monkeypatch)
+        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: True)
 
         payload = {
             "records": [
@@ -153,6 +155,42 @@ class TestManualSquareCropImport:
         assert body["summary"]["skipped_duplicates"] == 1
         assert body["results"][0]["status"] == "skipped_duplicate"
         assert body["results"][0]["object_id"] == str(existing.pk)
+
+    def test_errors_when_r2_key_does_not_exist_in_storage(self, monkeypatch):
+        admin = User.objects.create(
+            username="admin-bad-key@example.com",
+            email="admin-bad-key@example.com",
+            is_staff=True,
+        )
+        client = APIClient()
+        client.force_authenticate(user=admin)
+
+        _set_r2_env(monkeypatch)
+        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: False)
+
+        payload = {
+            "records": [
+                {
+                    "client_id": "rec-missing",
+                    "filename": "missing.png",
+                    "reviewed": True,
+                    "r2_key": "images/does-not-exist.webp",
+                    "parsed_fields": {
+                        "name": "Phantom Blue",
+                        "kind": "glaze_type",
+                        "first_glaze": "",
+                        "second_glaze": "",
+                    },
+                }
+            ]
+        }
+
+        response = client.post(URL, payload, format="json")
+
+        assert response.status_code == 200
+        result = response.json()["results"][0]
+        assert result["status"] == "error"
+        assert "not found in storage" in result["reason"]
 
     def test_rejects_empty_records(self):
         admin = User.objects.create(
@@ -312,6 +350,7 @@ class TestImportGlazeCombination:
 
     def _patch_r2(self, monkeypatch):
         _set_r2_env(monkeypatch)
+        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: True)
 
     def test_error_when_combination_missing_name_and_components(self, monkeypatch):
         self._patch_r2(monkeypatch)
