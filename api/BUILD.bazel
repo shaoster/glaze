@@ -386,6 +386,7 @@ pytest_test(
         "tests/test_images.py",
         "tests/test_issue_337.py",
         "tests/test_patch_image_crop.py",
+        "tests/test_upload_image.py",
     ],
     args = [
         "api/tests/test_pieces_create.py",
@@ -405,6 +406,7 @@ pytest_test(
         "api/tests/test_images.py",
         "api/tests/test_issue_337.py",
         "api/tests/test_patch_image_crop.py",
+        "api/tests/test_upload_image.py",
     ],
     data = _TEST_DATA + [":api_dev_commands"],
     env = _TEST_ENV,
@@ -412,6 +414,7 @@ pytest_test(
     deps = [":api_schema_lib", ":api_admin_lib"] + _PYTEST_DEPS,
     expected_coverage = [
         "api/piece/views.py",
+        "api/piece/image_views.py",
         "api/piece/showcase_views.py",
         "api/analysis_views.py",
         "api/workflow_views.py",

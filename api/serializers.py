@@ -1242,6 +1242,21 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
         fields = ["piece_state_image_id", "crop", "notes"]
 
 
+class UploadImageSerializer(serializers.Serializer):
+    url = serializers.CharField(required=False, allow_null=True, default=None)
+    base64 = serializers.CharField(required=False, allow_null=True, default=None)
+    caption = serializers.CharField(required=False, default="", allow_blank=True)
+
+    def validate(self, data):
+        has_url = bool(data.get("url"))
+        has_b64 = bool(data.get("base64"))
+        if has_url == has_b64:
+            raise serializers.ValidationError(
+                "Exactly one of 'url' or 'base64' must be provided."
+            )
+        return data
+
+
 class TaskSubmissionSerializer(serializers.Serializer):
     task_type = serializers.CharField(max_length=255)
     input_params = serializers.JSONField(required=False, default=dict)
