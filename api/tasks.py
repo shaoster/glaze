@@ -513,6 +513,7 @@ def generate_showcase_video(task: AsyncTask) -> dict:
         is_showcase_video_storage_enabled,
         validate_storyboard,
     )
+    from .showcase.music import get_track
     from .showcase.render import showcase_video_key
     from . import r2
     from .task_views import _make_progress_token
@@ -557,8 +558,11 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     app_origin = getattr(settings, "_APP_ORIGIN", "")
     progress_webhook_url = f"{app_origin}/api/tasks/{task.id}/progress/"
 
+    track = get_track(storyboard.get("music_track_id"))
+    music_url = track.audio.url if track else None
+
     render_fn = _modal_function("glaze-compute", "render_showcase_video")
-    asyncio.run(render_fn.remote.aio(storyboard, presigned_put, progress_webhook_url, progress_token))
+    asyncio.run(render_fn.remote.aio(storyboard, presigned_put, progress_webhook_url, progress_token, music_url))
 
     return {
         "status": "success",
