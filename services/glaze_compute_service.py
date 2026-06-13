@@ -40,14 +40,16 @@ try:
 
     _video_image = (
         modal.Image.debian_slim()
-        .apt_install("ffmpeg")
+        .apt_install("ffmpeg", "fonts-dejavu-core")
         .pip_install(
             "av>=17.0.1",
             "numpy",
             "pillow==12.2.0",
             "pillow-heif==1.3.0",
+            "pyyaml",
             "requests==2.33.1",
         )
+        .copy_local_file("music_catalog.yml", "/root/music_catalog.yml")
     )
 
     app = modal.App("glaze-compute")
@@ -194,25 +196,83 @@ def _fade_alpha(t: float, fade_start: float, fade_seconds: float) -> float:
     return min(1.0, max(0.0, 1.0 - (t - fade_start) / fade_seconds))
 
 
+_FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+_FONT_REGULAR = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+_TEXT_COLOR_PRIMARY = (255, 255, 255)
+_TEXT_COLOR_SECONDARY = (180, 180, 180)
+_TEXT_SHADOW = (0, 0, 0)
+
+
+def _load_font(path: str, size: int) -> Any:
+    from PIL import ImageFont
+
+    try:
+        return ImageFont.truetype(path, size)
+    except Exception:
+        return ImageFont.load_default()
+
+
+def _draw_text_centered(draw: Any, text: str, font: Any, canvas_w: int, y: int, color: tuple) -> None:
+    from PIL import ImageDraw
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    x = max(0, (canvas_w - text_w) // 2)
+    # Drop shadow for legibility over any background
+    draw.text((x + 2, y + 2), text, font=font, fill=_TEXT_SHADOW)
+    draw.text((x, y), text, font=font, fill=color)
+
+
+def _draw_text_wrapped(
+    draw: Any, text: str, font: Any, max_width: int, x: int, y: int, color: tuple
+) -> int:
+    """Draw wrapped text, return the y position after the last line."""
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip() if current else word
+        bbox = draw.textbbox((0, 0), candidate, font=font)
+        if bbox[2] - bbox[0] <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+
+    line_height = draw.textbbox((0, 0), "A", font=font)[3] + 8
+    for line in lines:
+        draw.text((x + 2, y + 2), line, font=font, fill=_TEXT_SHADOW)
+        draw.text((x, y), line, font=font, fill=color)
+        y += line_height
+    return y
+
+
 def _render_slide_canvas(slide: dict) -> Any:
-    """Render a single slide dict to a PIL image at canvas size."""
+    """Render a single slide dict (cover/image/note) to a PIL image at canvas size."""
     from PIL import Image as PILImage
-    from PIL import ImageDraw, ImageFont, ImageOps
+    from PIL import ImageDraw, ImageOps
     from pillow_heif import register_heif_opener
     import requests
 
     register_heif_opener()
 
-    scale = _SLIDE_RENDER_SCALE
     canvas_w, canvas_h = _SHOWCASE_VIDEO_CANVAS_SIZE
-    render_w, render_h = canvas_w * scale, canvas_h * scale
+    canvas = PILImage.new("RGB", (canvas_w, canvas_h), _BACKGROUND)
+    draw = ImageDraw.Draw(canvas)
 
-    canvas = PILImage.new("RGB", (render_w, render_h), _BACKGROUND)
+    kind = slide.get("kind", "image")
+    image_data = slide.get("image")
+    heading = slide.get("heading") or ""
+    caption = slide.get("caption") or ""
+    text = slide.get("text") or ""
+    state_label = slide.get("state_label") or ""
 
-    image_url = (slide.get("cropped_image") or {}).get("url") or (
-        slide.get("image") or {}
-    ).get("url")
-    if image_url:
+    # Render photo if present (cover and image slides may have one)
+    if image_data and image_data.get("url"):
+        image_url = image_data["url"]
         try:
             img_bytes = requests.get(image_url, timeout=30).content
             with PILImage.open(io.BytesIO(img_bytes)) as raw:
@@ -220,19 +280,56 @@ def _render_slide_canvas(slide: dict) -> Any:
                 assert img is not None
                 img = img.convert("RGB")
                 img_w, img_h = img.size
-                scale_factor = min(render_w / img_w, render_h / img_h)
+                scale_factor = min(canvas_w / img_w, canvas_h / img_h)
                 new_w = max(1, round(img_w * scale_factor))
                 new_h = max(1, round(img_h * scale_factor))
                 img = img.resize((new_w, new_h), PILImage.Resampling.LANCZOS)
-                x = (render_w - new_w) // 2
-                y = (render_h - new_h) // 2
+                x = (canvas_w - new_w) // 2
+                y = (canvas_h - new_h) // 2
                 canvas.paste(img, (x, y))
         except Exception:
             logger.warning("Failed to fetch slide image: %s", image_url)
 
-    canvas = canvas.resize(
-        _SHOWCASE_VIDEO_CANVAS_SIZE, PILImage.Resampling.LANCZOS
-    )
+    if kind == "cover":
+        font_title = _load_font(_FONT_BOLD, 56)
+        font_sub = _load_font(_FONT_REGULAR, 28)
+        if heading:
+            _draw_text_centered(draw, heading, font_title, canvas_w, canvas_h // 2 - 40, _TEXT_COLOR_PRIMARY)
+        if state_label:
+            _draw_text_centered(draw, state_label, font_sub, canvas_w, canvas_h // 2 + 30, _TEXT_COLOR_SECONDARY)
+
+    elif kind == "note":
+        font_label = _load_font(_FONT_REGULAR, 22)
+        font_body = _load_font(_FONT_REGULAR, 30)
+        margin = 80
+        if state_label:
+            _draw_text_centered(draw, state_label.upper(), font_label, canvas_w, 40, _TEXT_COLOR_SECONDARY)
+        if text:
+            _draw_text_wrapped(draw, text, font_body, canvas_w - margin * 2, margin, 100, _TEXT_COLOR_PRIMARY)
+
+    else:  # "image"
+        font_caption = _load_font(_FONT_REGULAR, 24)
+        font_label = _load_font(_FONT_REGULAR, 20)
+        if caption:
+            _draw_text_centered(draw, caption, font_caption, canvas_w, canvas_h - 52, _TEXT_COLOR_SECONDARY)
+        if state_label:
+            draw.text((22, canvas_h - 52), state_label, font=font_label, fill=_TEXT_COLOR_SECONDARY)
+
+    return canvas
+
+
+def _render_closing_canvas() -> Any:
+    """Render a branded closing frame (black background, 'PotterDoc' wordmark)."""
+    from PIL import Image as PILImage
+    from PIL import ImageDraw
+
+    canvas_w, canvas_h = _SHOWCASE_VIDEO_CANVAS_SIZE
+    canvas = PILImage.new("RGB", (canvas_w, canvas_h), _BACKGROUND)
+    draw = ImageDraw.Draw(canvas)
+    font = _load_font(_FONT_BOLD, 64)
+    font_sub = _load_font(_FONT_REGULAR, 28)
+    _draw_text_centered(draw, "PotterDoc", font, canvas_w, canvas_h // 2 - 48, _TEXT_COLOR_PRIMARY)
+    _draw_text_centered(draw, "potterdoc.com", font_sub, canvas_w, canvas_h // 2 + 28, _TEXT_COLOR_SECONDARY)
     return canvas
 
 
@@ -255,6 +352,22 @@ def _make_progress_callback(
     return callback
 
 
+def _resolve_music_url(track_id: str | None) -> str | None:
+    """Resolve a music_track_id to its audio URL via the bundled catalog."""
+    if not track_id:
+        return None
+    try:
+        import yaml
+
+        with open("/root/music_catalog.yml") as f:
+            catalog = yaml.safe_load(f)
+        track = catalog.get("tracks", {}).get(track_id, {})
+        return (track.get("audio") or {}).get("url")
+    except Exception:
+        logger.warning("Failed to resolve music track %s from catalog", track_id)
+    return None
+
+
 def _render_to_file(
     storyboard: dict,
     output_path: Path,
@@ -271,7 +384,7 @@ def _render_to_file(
     from av.audio.resampler import AudioResampler
 
     slides = list(storyboard.get("slides", []))
-    durations = [float(s.get("duration_seconds", 3.0)) for s in slides]
+    durations = [float(s.get("duration_ms", 3000)) / 1000.0 for s in slides]
     durations.append(_SHOWCASE_VIDEO_CLOSING_SECONDS)
 
     transition_seconds = min(
@@ -281,8 +394,7 @@ def _render_to_file(
     fade_seconds = min(_SHOWCASE_VIDEO_FADE_SECONDS, durations[-1] / 2)
 
     slide_canvases = [_render_slide_canvas(s) for s in slides]
-    closing_canvas = PILImage.new("RGB", _SHOWCASE_VIDEO_CANVAS_SIZE, _BACKGROUND)
-    slide_canvases.append(closing_canvas)
+    slide_canvases.append(_render_closing_canvas())
 
     with av.open(
         str(output_path),
@@ -334,7 +446,7 @@ def _render_to_file(
         audio_stream.layout = "stereo"
         audio_resampler = AudioResampler(format="fltp", layout="stereo", rate=44100)
 
-        music_url = (storyboard.get("music") or {}).get("url")
+        music_url = _resolve_music_url(storyboard.get("music_track_id"))
         audio_packets: list[Any] = []
         sample_rate = 44100
         target_samples = round(video_duration_seconds * sample_rate)
@@ -503,13 +615,6 @@ def _iter_video_frames(
         yield frame
 
 
-# Import at module level for _render_to_file reference
-try:
-    from PIL import Image as PILImage
-except ImportError:
-    PILImage = None  # type: ignore[assignment]
-
-
 # ── Modal functions ───────────────────────────────────────────────────────────
 
 if app is not None:
@@ -543,7 +648,7 @@ if app is not None:
         _put_bytes(presigned_put_url, jpeg_bytes, "image/jpeg")
         return {"width": width, "height": height}
 
-    @app.function(image=_video_image, ephemeral_disk=2048)
+    @app.function(image=_video_image, ephemeral_disk=2048, timeout=900)
     def render_showcase_video(
         storyboard: dict,
         presigned_put_url: str,

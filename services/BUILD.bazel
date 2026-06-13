@@ -10,6 +10,7 @@ py_binary(
     srcs = ["glaze_compute_service.py"],
     deps = [
         "@pypi//modal",
+        "@pypi//pyyaml",
         "@pypi//requests",
         "@pypi//pillow",
         "@pypi//pillow_heif",

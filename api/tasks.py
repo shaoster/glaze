@@ -221,10 +221,10 @@ def handle_task_failure(
 
 # Global interface instance.
 def _modal_function(app_name: str, fn_name: str) -> Any:
-    """Thin wrapper around modal.Function.lookup — mock this in tests."""
+    """Thin wrapper around modal.Function.from_name — mock this in tests."""
     import modal  # noqa: PLC0415
 
-    return modal.Function.lookup(app_name, fn_name)  # type: ignore[attr-defined]
+    return modal.Function.from_name(app_name, fn_name)
 
 
 def get_task_interface() -> TaskInterface:
