@@ -4,6 +4,11 @@ This module owns the image move/crop flows so ``piece_views.py`` can stay focuse
 on piece list/detail/state behavior.
 """
 
+import uuid
+
+import requests as _requests
+from django.db import transaction
+from django.db.models import Max
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
@@ -15,12 +20,19 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
+from .. import r2
 from ..crops import apply_crop
-from ..models import Image, PieceStateImage
-from ..serializers import ImageCropSerializer, PieceDetailSerializer
+from ..models import AsyncTask, Image, PieceStateImage
+from ..serializers import (
+    ImageCropSerializer,
+    PieceDetailSerializer,
+    UploadImageSerializer,
+)
+from ..utils import captioned_image_to_dict, normalize_image_payload
 from .helpers import (
     PieceImageMoveSerializer,
     piece_detail_queryset,
+    piece_queryset,
     serialize_piece_detail,
 )
 
@@ -44,9 +56,6 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
     request_serializer = PieceImageMoveSerializer(data=request.data)
     request_serializer.is_valid(raise_exception=True)
     target_state_id = request_serializer.validated_data.get("piece_state_id")
-
-    from django.db import transaction
-    from django.db.models import Max
 
     with transaction.atomic():
         link = get_object_or_404(
@@ -85,6 +94,204 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
 
     piece = get_object_or_404(piece_detail_queryset(request), pk=piece.pk)
     return Response(serialize_piece_detail(piece, request))
+
+
+_IMAGE_CONTENT_TYPE_TO_EXT = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/heic": "heic",
+    "image/heif": "heif",
+    "image/avif": "avif",
+}
+_JPEG_EXTENSIONS = {"jpg", "jpeg"}
+_NON_JPEG_IMAGE_EXTENSIONS = set(_IMAGE_CONTENT_TYPE_TO_EXT.values()) - _JPEG_EXTENSIONS
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _ext_for_content_type(content_type: str) -> str:
+    base = content_type.split(";")[0].strip().lower()
+    return _IMAGE_CONTENT_TYPE_TO_EXT.get(base, "jpg")
+
+
+def _needs_jpeg_conversion(key: str) -> bool:
+    ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
+    return ext in _NON_JPEG_IMAGE_EXTENSIONS
+
+
+def _stream_url_to_r2(url: str, user_id: int | None) -> tuple[str, str] | Response:
+    """Fetch *url* and stream it directly to R2 via multipart upload.
+
+    Returns ``(public_url, key)`` on success, or an error ``Response``.
+    Enforces HTTPS-only and a 10 MB cap without buffering the full body.
+    """
+    if not url.startswith("https://"):
+        return Response(
+            {"detail": "Only HTTPS URLs are supported."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        resp = _requests.get(url, timeout=10, stream=True)
+        resp.raise_for_status()
+    except Exception:
+        return Response(
+            {"detail": "Failed to fetch image from URL."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    content_type = resp.headers.get("Content-Type", "image/jpeg")
+    ext = _ext_for_content_type(content_type)
+    key = f"images/{user_id}/{uuid.uuid4()}.{ext}"
+    try:
+        with resp:
+            public_url = r2.upload_stream(key, resp, content_type, _MAX_UPLOAD_BYTES)
+    except r2.UploadTooLargeError:
+        return Response(
+            {"detail": "Image exceeds 10 MB size limit."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return public_url, key
+
+
+def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
+    """Shared implementation for server-side image upload to a piece state."""
+    from ..tasks import get_task_interface
+
+    serializer = UploadImageSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    if not r2.is_r2_configured():
+        return Response(
+            {"detail": "Object storage is not configured on the server."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    validated = serializer.validated_data
+    caption = validated.get("caption", "")
+
+    result = _stream_url_to_r2(validated["url"], request.user.id)
+    if isinstance(result, Response):
+        return result
+    public_url, key = result
+
+    conversion_task_id = None
+    if _needs_jpeg_conversion(key):
+        task = AsyncTask.objects.create(  # type: ignore[misc]
+            user=request.user,
+            task_type="convert_image_to_jpeg",
+            input_params={"key": key, "image_id": None},
+        )
+        get_task_interface().submit(task)
+        conversion_task_id = str(task.id)
+
+    image = normalize_image_payload(public_url, user=request.user)
+    next_order = (piece_state.image_links.aggregate(m=Max("order"))["m"] or -1) + 1
+    link = PieceStateImage.objects.create(
+        piece_state=piece_state,
+        image=image,
+        caption=caption,
+        order=next_order,
+    )
+
+    return Response(
+        {
+            "piece_state_image": captioned_image_to_dict(link),
+            "background_tasks": {"conversion_task_id": conversion_task_id},
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@extend_schema(
+    operation_id="pieces_past_state_upload_image",
+    request=UploadImageSerializer,
+    responses={
+        201: {
+            "type": "object",
+            "properties": {
+                "piece_state_image": {"type": "object"},
+                "background_tasks": {
+                    "type": "object",
+                    "properties": {
+                        "conversion_task_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": True,
+                        }
+                    },
+                },
+            },
+        },
+        400: {"type": "object"},
+        403: {"type": "object"},
+        404: {"type": "object"},
+        503: {"type": "object"},
+    },
+    description=(
+        "Upload an image (via URL or base64) to a specific past state. "
+        "Requires the piece to be in editable mode. "
+        "Exactly one of `url` or `base64` must be provided. "
+        "Returns the created `PieceStateImage` and background task IDs."
+    ),
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@traced
+def upload_image_to_past_state(request: Request, piece_id, state_id) -> Response:
+    """Upload an image to a specific (possibly past) piece state."""
+    piece = get_object_or_404(piece_queryset(request), pk=piece_id)
+    if not piece.is_editable:
+        return Response(
+            {"detail": "Piece is not in editable mode."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    piece_state = get_object_or_404(piece.states, pk=state_id)
+    return _upload_image_to_piece_state(request, piece_state)
+
+
+@extend_schema(
+    operation_id="pieces_current_state_upload_image",
+    request=UploadImageSerializer,
+    responses={
+        201: {
+            "type": "object",
+            "properties": {
+                "piece_state_image": {"type": "object"},
+                "background_tasks": {
+                    "type": "object",
+                    "properties": {
+                        "conversion_task_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": True,
+                        }
+                    },
+                },
+            },
+        },
+        400: {"type": "object"},
+        403: {"type": "object"},
+        404: {"type": "object"},
+        503: {"type": "object"},
+    },
+    description=(
+        "Upload an image (via URL or base64) to the current unsealed state. "
+        "Exactly one of `url` or `base64` must be provided. "
+        "Returns the created `PieceStateImage` and background task IDs."
+    ),
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@traced
+def upload_image_to_current_state(request: Request, piece_id) -> Response:
+    """Upload an image to the piece's current (unsealed) state."""
+    piece = get_object_or_404(piece_queryset(request), pk=piece_id)
+    piece_state = piece.current_state
+    if piece_state is None:
+        return Response(
+            {"detail": "Piece has no current state."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    return _upload_image_to_piece_state(request, piece_state)
 
 
 @extend_schema(

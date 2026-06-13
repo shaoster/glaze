@@ -166,6 +166,86 @@ def get_object_bytes(key: str) -> bytes:
     return response["Body"].read()
 
 
+class UploadTooLargeError(Exception):
+    """Raised by upload_stream when the source exceeds the max_bytes cap."""
+
+
+# Minimum part size for S3/R2 multipart upload (5 MiB), except for the last part.
+_MULTIPART_PART_SIZE = 5 * 1024 * 1024
+
+
+def upload_stream(
+    key: str,
+    response: Any,
+    content_type: str,
+    max_bytes: int,
+) -> str:
+    """Stream *response* (a requests.Response) to R2 via multipart upload.
+
+    Buffers at most one 5 MiB part in memory at a time.  Raises
+    ``UploadTooLargeError`` if the source exceeds *max_bytes* and aborts the
+    in-progress multipart upload before raising.  Any other exception is also
+    propagated after aborting.
+
+    Returns the public CDN URL for the uploaded object.
+    """
+    client = get_r2_client()
+    bucket = get_bucket_name()
+
+    mpu = client.create_multipart_upload(
+        Bucket=bucket, Key=key, ContentType=content_type
+    )
+    upload_id = mpu["UploadId"]
+    parts: list[dict] = []
+
+    try:
+        buf = bytearray()
+        total = 0
+        for chunk in response.iter_content(chunk_size=65536):
+            total += len(chunk)
+            if total > max_bytes:
+                raise UploadTooLargeError(f"upload exceeds {max_bytes} bytes")
+            buf += chunk
+            if len(buf) >= _MULTIPART_PART_SIZE:
+                part_number = len(parts) + 1
+                part = client.upload_part(
+                    Bucket=bucket,
+                    Key=key,
+                    UploadId=upload_id,
+                    PartNumber=part_number,
+                    Body=bytes(buf),
+                )
+                parts.append({"PartNumber": part_number, "ETag": part["ETag"]})
+                buf = bytearray()
+
+        # Upload the final (possibly only) part — may be smaller than 5 MiB.
+        if buf:
+            part_number = len(parts) + 1
+            part = client.upload_part(
+                Bucket=bucket,
+                Key=key,
+                UploadId=upload_id,
+                PartNumber=part_number,
+                Body=bytes(buf),
+            )
+            parts.append({"PartNumber": part_number, "ETag": part["ETag"]})
+
+        if not parts:
+            raise ValueError("stream was empty")
+
+        client.complete_multipart_upload(
+            Bucket=bucket,
+            Key=key,
+            UploadId=upload_id,
+            MultipartUpload={"Parts": parts},
+        )
+    except Exception:
+        client.abort_multipart_upload(Bucket=bucket, Key=key, UploadId=upload_id)
+        raise
+
+    return public_url_for_key(key)
+
+
 def upload_bytes(key: str, data: bytes, content_type: str) -> str:
     """Upload raw bytes to *key* and return its public URL."""
     client = get_r2_client()

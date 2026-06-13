@@ -1242,6 +1242,11 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
         fields = ["piece_state_image_id", "crop", "notes"]
 
 
+class UploadImageSerializer(serializers.Serializer):
+    url = serializers.CharField()
+    caption = serializers.CharField(required=False, default="", allow_blank=True)
+
+
 class TaskSubmissionSerializer(serializers.Serializer):
     task_type = serializers.CharField(max_length=255)
     input_params = serializers.JSONField(required=False, default=dict)
