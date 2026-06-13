@@ -683,7 +683,7 @@ if app is not None:
         _put_bytes(presigned_put_url, jpeg_bytes, "image/jpeg")
         return {"width": width, "height": height}
 
-    @app.function(image=_video_image, ephemeral_disk=2048, timeout=900)
+    @app.function(image=_video_image, timeout=900)
     def render_showcase_video(
         storyboard: dict,
         presigned_put_url: str,
