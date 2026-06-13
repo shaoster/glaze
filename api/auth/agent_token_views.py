@@ -90,6 +90,10 @@ def agent_tokens(request: Request) -> Response:
         tokens = AgentToken.objects.filter(user=user)
         return Response(AgentTokenSerializer(tokens, many=True).data)
 
+    if not isinstance(request.data, dict):
+        return Response(
+            {"detail": "Invalid payload."}, status=status.HTTP_400_BAD_REQUEST
+        )
     raw_name = request.data.get("name")
     if not isinstance(raw_name, str):
         return Response(

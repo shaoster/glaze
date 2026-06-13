@@ -204,6 +204,16 @@ class TestAgentTokenManagement:
         response = c.get(_MANAGEMENT_URL)
         assert response.status_code == 403
 
+    def test_create_token_non_object_payload_returns_400(self, user):
+        c = APIClient()
+        c.force_login(user)
+        response = c.post(
+            _MANAGEMENT_URL,
+            data='"just a string"',
+            content_type="application/json",
+        )
+        assert response.status_code == 400
+
     def test_create_token_non_string_name_returns_400(self, user):
         c = APIClient()
         c.force_login(user)
