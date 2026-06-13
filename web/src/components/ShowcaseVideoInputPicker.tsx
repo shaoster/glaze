@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import type { PieceDetail } from "../util/types";
+import type { PieceDetail, PieceState } from "../util/types";
 import { formatState } from "../util/workflow";
 import { DEFAULT_TRACK_ID, MUSIC_CATALOG, getTrack } from "../util/music";
 import SelectablePhotoMasonry, {
@@ -27,6 +27,7 @@ export type ShowcaseVideoInputSelection = {
 
 type ShowcaseVideoInputPickerProps = {
   piece: PieceDetail;
+  history?: PieceState[];
   selection: ShowcaseVideoInputSelection;
   onSelectionChange: (selection: ShowcaseVideoInputSelection) => void;
   disabled?: boolean;
@@ -59,8 +60,8 @@ function normalizeKey(...parts: Array<string | null | undefined>): string {
   return parts.filter(Boolean).join(":");
 }
 
-function buildImageItems(piece: PieceDetail): ShowcaseImageItem[] {
-  const states = [...piece.history, piece.current_state];
+function buildImageItems(piece: PieceDetail, history?: PieceState[]): ShowcaseImageItem[] {
+  const states = history && history.length > 0 ? history : [...piece.history, piece.current_state];
   const seen = new Set<string>();
   const thumbnailImageId = piece.thumbnail?.image_id ?? null;
   const thumbnailUrl = piece.thumbnail?.url?.trim() || null;
@@ -86,8 +87,8 @@ function buildImageItems(piece: PieceDetail): ShowcaseImageItem[] {
   });
 }
 
-function buildNoteItems(piece: PieceDetail): ShowcaseNoteItem[] {
-  const states = [...piece.history, piece.current_state];
+function buildNoteItems(piece: PieceDetail, history?: PieceState[]): ShowcaseNoteItem[] {
+  const states = history && history.length > 0 ? history : [...piece.history, piece.current_state];
   const seen = new Set<string>();
   return states
     .map((state) => {
@@ -104,12 +105,13 @@ function buildNoteItems(piece: PieceDetail): ShowcaseNoteItem[] {
 
 export default function ShowcaseVideoInputPicker({
   piece,
+  history,
   selection,
   onSelectionChange,
   disabled = false,
 }: ShowcaseVideoInputPickerProps) {
-  const imageItems = useMemo(() => buildImageItems(piece), [piece]);
-  const noteItems = useMemo(() => buildNoteItems(piece), [piece]);
+  const imageItems = useMemo(() => buildImageItems(piece, history), [piece, history]);
+  const noteItems = useMemo(() => buildNoteItems(piece, history), [piece, history]);
 
   const includedImages = imageItems.filter(
     (item) => item.required || !selection.excludedImageKeys.includes(item.key),

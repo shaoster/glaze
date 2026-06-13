@@ -66,6 +66,8 @@ type PieceDetailProps = {
   piece: PieceDetailType;
   history?: PieceState[];
   historyLoading?: boolean;
+  historyError?: unknown;
+  refetchHistory?: () => void;
   onPieceUpdated: (updated: PieceDetailType) => void;
 };
 
@@ -73,6 +75,8 @@ export default function PieceDetail({
   piece,
   history,
   historyLoading = false,
+  historyError = null,
+  refetchHistory,
   onPieceUpdated,
 }: PieceDetailProps) {
   return (
@@ -81,6 +85,8 @@ export default function PieceDetail({
         piece={piece}
         history={history}
         historyLoading={historyLoading}
+        historyError={historyError}
+        refetchHistory={refetchHistory}
         onPieceUpdated={onPieceUpdated}
       />
     </PieceDetailSaveStatusProvider>
@@ -91,6 +97,8 @@ function PieceDetailContent({
   piece,
   history,
   historyLoading,
+  historyError,
+  refetchHistory,
   onPieceUpdated,
 }: PieceDetailProps) {
   const [isDirty, setIsDirty] = useState(false);
@@ -101,7 +109,8 @@ function PieceDetailContent({
   const canEdit = piece.can_edit;
   const hasWorkflowContent =
     canEdit || getCustomFieldDefinitions(currentState.state).length > 0;
-  const statesHistory: PieceState[] = history ?? piece.history ?? [];
+  const statesHistory: PieceState[] =
+    history ?? (piece.history && piece.history.length > 0 ? piece.history : [currentState]);
   const pastHistory = statesHistory.slice(0, -1);
 
   const historyRouting = usePieceHistoryRouting(piece.id);
@@ -205,10 +214,9 @@ function PieceDetailContent({
     updatePieceFn: canEdit ? updatePiece : undefined,
     updateCurrentStateFn: canEdit ? updateCurrentState : undefined,
     updatePastStateFn: piece.is_editable ? updatePastState : undefined,
-    pieceStates: [
-      { id: currentState.id, label: formatState(currentState.state) },
-      ...piece.history.map((s) => ({ id: s.id, label: formatState(s.state) })),
-    ],
+    pieceStates: statesHistory.length > 0
+      ? statesHistory.map((s) => ({ id: s.id, label: formatState(s.state) }))
+      : [{ id: currentState.id, label: formatState(currentState.state) }],
     moveImageFn: piece.is_editable ? moveImage : undefined,
   } satisfies ComponentProps<typeof PiecePhotoGallery>;
 
@@ -461,10 +469,11 @@ function PieceDetailContent({
         {canEdit && isTerminal && (
           <Box sx={{ mb: 2.5 }}>
             <ShowcaseVideoPanel
-            piece={piece}
-            atVideo={videoRouting.atVideo}
-            onVideoNavigate={videoRouting.onVideoNavigate}
-          />
+              piece={piece}
+              history={statesHistory}
+              atVideo={videoRouting.atVideo}
+              onVideoNavigate={videoRouting.onVideoNavigate}
+            />
           </Box>
         )}
 
@@ -473,7 +482,16 @@ function PieceDetailContent({
             title="Process Summary"
             titleId="process-summary-title"
           >
-            {historyLoading ? (
+            {historyError ? (
+              <Box sx={{ py: 1, textAlign: "center" }}>
+                <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                  Failed to load process summary.
+                </Typography>
+                <Button size="small" variant="outlined" onClick={refetchHistory}>
+                  Retry
+                </Button>
+              </Box>
+            ) : historyLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
                 <CircularProgress size={24} />
               </Box>
@@ -486,12 +504,23 @@ function PieceDetailContent({
         <SectionCard
           title="Timeline"
           subtitle={
-            historyLoading
+            historyError
+              ? "Error loading history"
+              : historyLoading
               ? "Loading history..."
               : `${pastHistory.length} completed state${pastHistory.length === 1 ? "" : "s"}`
           }
         >
-          {historyLoading ? (
+          {historyError ? (
+            <Box sx={{ py: 2, textAlign: "center" }}>
+              <Typography variant="body2" color="error" sx={{ mb: 1.5 }}>
+                Failed to load timeline.
+              </Typography>
+              <Button size="small" variant="outlined" onClick={refetchHistory}>
+                Retry
+              </Button>
+            </Box>
+          ) : historyLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
               <CircularProgress size={24} />
             </Box>
@@ -499,6 +528,7 @@ function PieceDetailContent({
             <PieceHistory
               pastHistory={pastHistory}
               piece={piece}
+              history={statesHistory}
               onPieceUpdated={onPieceUpdated}
               rewindedStateId={rewindedStateId}
               onRewind={(id) =>
@@ -543,10 +573,12 @@ function ArtifactActions({ artifact }: ArtifactActionsProps) {
 
 function ShowcaseVideoPanel({
   piece,
+  history,
   atVideo,
   onVideoNavigate,
 }: {
   piece: PieceDetailType;
+  history?: PieceState[];
   atVideo: boolean;
   onVideoNavigate: (open: boolean) => void;
 }) {
@@ -646,6 +678,7 @@ function ShowcaseVideoPanel({
       <Stack spacing={2}>
         <ShowcaseVideoInputPicker
           piece={piece}
+          history={history}
           selection={selection}
           onSelectionChange={setSelection}
           disabled={generating || currentStatus === "pending" || currentStatus === "running"}

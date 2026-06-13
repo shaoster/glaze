@@ -299,7 +299,9 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
 @traced
 def piece_history(request: Request, piece_id: str) -> Response:
     """Retrieve the full state history of a single piece."""
-    piece = get_object_or_404(_piece_read_queryset(request), pk=piece_id)
+    piece = get_object_or_404(
+        _piece_read_queryset(request).prefetch_related(None), pk=piece_id
+    )
     states = piece.states.all().prefetch_related(
         "image_links__image",
         "image_links__cropped_image",

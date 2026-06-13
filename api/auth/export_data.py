@@ -34,7 +34,7 @@ def collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Ima
         )
     )
     pieces_data = PieceDetailSerializer(
-        pieces, many=True, context={"request": request}
+        pieces, many=True, context={"request": request, "exclude_history": False}
     ).data
 
     profile = UserProfile.objects.filter(user=user).first()

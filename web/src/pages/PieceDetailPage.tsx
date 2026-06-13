@@ -62,7 +62,12 @@ export default function PieceDetailPage({
       query.state.data && hasPendingCrops(query.state.data) ? 3000 : false,
   });
 
-  const { data: history, isLoading: historyLoading } = useQuery({
+  const {
+    data: history,
+    isLoading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useQuery({
     queryKey: historyQueryKey,
     queryFn: () => fetchPieceHistory(id!),
     enabled: piece !== undefined,
@@ -101,6 +106,8 @@ export default function PieceDetailPage({
           piece={piece}
           history={history}
           historyLoading={historyLoading}
+          historyError={historyError}
+          refetchHistory={refetchHistory}
           onPieceUpdated={(updated) => {
             queryClient.setQueryData(pieceQueryKey, updated);
             if (updated.history) {
