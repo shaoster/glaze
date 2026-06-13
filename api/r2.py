@@ -176,7 +176,7 @@ _MULTIPART_PART_SIZE = 5 * 1024 * 1024
 
 def upload_stream(
     key: str,
-    response: object,
+    response: Any,
     content_type: str,
     max_bytes: int,
 ) -> str:
