@@ -59,7 +59,10 @@ vi.mock("../../../../tutorials.yml", () => ({
   },
 }));
 
-vi.mock("react-router-dom", () => ({ matchPath: vi.fn() }));
+vi.mock("react-router-dom", () => ({
+  matchPath: vi.fn(),
+  useLocation: vi.fn(() => ({ pathname: "/" })),
+}));
 
 const mockContext = vi.hoisted(() => ({
   currentUser: null as {

@@ -27,7 +27,6 @@ function renderHarness(
   render(
     <QueryClientProvider client={queryClient}>
       <LargeTutorialInlay
-        tutorialKey="welcome"
         pages={THREE_PAGES}
         onComplete={onComplete}
         onClose={onClose}

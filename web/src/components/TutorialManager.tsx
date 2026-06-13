@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { matchPath } from "react-router-dom";
+import { matchPath, useLocation } from "react-router-dom";
 import tutorialsConfig from "../../../tutorials.yml";
 import {
   useCurrentUser,
@@ -59,6 +59,7 @@ export default function TutorialManager() {
   const currentUser = useCurrentUser();
   const openPreferencesDialog = useOpenPreferencesDialog();
   const saveUserPreferences = useSaveUserPreferences();
+  const location = useLocation();
   const [elements, setElements] = useState<Record<string, HTMLElement | null>>(
     {},
   );
@@ -110,7 +111,7 @@ export default function TutorialManager() {
         if (isModal) {
           const routeMatch = matchPath(
             (tutorial as ModalTutorial).route,
-            window.location.pathname,
+            location.pathname,
           );
           if (!routeMatch) return null;
           const inlay = tutorial.inlay as ModalInlay;
@@ -125,7 +126,6 @@ export default function TutorialManager() {
           return (
             <LargeTutorialInlay
               key={key}
-              tutorialKey={key}
               eyebrow={inlay.eyebrow}
               completeLabel={inlay.complete_label}
               pages={inlay.pages}

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, IconButton, Modal, Typography } from "@mui/material";
 
@@ -9,7 +9,6 @@ export interface LargePage {
 }
 
 export interface LargeTutorialInlayProps {
-  tutorialKey: string;
   eyebrow?: string;
   completeLabel?: string;
   pages: LargePage[];
@@ -20,6 +19,7 @@ export interface LargeTutorialInlayProps {
 function renderTitle(title: string): ReactNode {
   const parts = title.split(/(<em>.*?<\/em>)/g);
   return parts.map((part, i) => {
+    if (!part) return null;
     const match = /^<em>(.*?)<\/em>$/.exec(part);
     if (match) {
       return (
@@ -43,6 +43,7 @@ export default function LargeTutorialInlay({
   onComplete,
   onClose,
 }: LargeTutorialInlayProps) {
+  const titleId = useId();
   const [page, setPage] = useState(0);
   const [dontShow, setDontShow] = useState(false);
 
@@ -51,7 +52,7 @@ export default function LargeTutorialInlay({
   const isLastPage = page === total - 1;
 
   return (
-    <Modal open disableAutoFocus>
+    <Modal open disableAutoFocus aria-labelledby={titleId}>
       {/* Backdrop Box */}
       <Box
         sx={{
@@ -196,6 +197,7 @@ export default function LargeTutorialInlay({
 
               {/* Title */}
               <Typography
+                id={titleId}
                 variant="h2"
                 sx={{
                   fontFamily: "'Instrument Serif', serif",
