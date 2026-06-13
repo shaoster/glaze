@@ -121,9 +121,11 @@ def pieces(request: Request) -> Response:
         photo_counts = _piece_photo_counts([piece.id for piece in page_qs])
         for piece in page_qs:
             piece.photo_count = photo_counts.get(piece.id, 0)
-        return Response(
+        response = Response(
             {"count": count, "results": _serialize_piece_summary(page_qs, request)}
         )
+        response["X-GraphQL-Endpoint"] = "/api/graphql/"
+        return response
 
     serializer = PieceCreateSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)

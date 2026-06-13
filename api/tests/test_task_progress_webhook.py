@@ -1,6 +1,5 @@
 """Tests for the Modal→Django progress webhook endpoint."""
 
-import time
 import uuid
 
 import pytest
@@ -72,9 +71,7 @@ class TestReportTaskProgressEndpoint:
         assert task.progress == 42
 
     def test_missing_token_returns_403(self, client, task):
-        resp = client.post(
-            self._url(task.id), {"progress": 10}, format="json"
-        )
+        resp = client.post(self._url(task.id), {"progress": 10}, format="json")
         assert resp.status_code == 403
 
     def test_wrong_task_id_in_token_returns_403(self, client, task):

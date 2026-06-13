@@ -9,6 +9,7 @@ session via ``force_login`` rather than DRF's ``force_authenticate``.
 """
 
 import pytest
+from django.test import Client
 from rest_framework.test import APIClient
 
 from api.models import ENTRY_STATE, Piece, PieceState, Tag
@@ -188,3 +189,40 @@ class TestGraphQLPieces:
         body = response.json()
         assert not body.get("errors"), body
         assert body["data"]["pieces"]["count"] == 1
+
+    def test_schema_sdl_query_returns_valid_sdl(self, gql_client):
+        """The schemaSdl field lets an LLM agent fetch the full SDL in one call."""
+        response = gql_client.post(
+            "/api/graphql/",
+            {"query": "{ schemaSdl }"},
+            format="json",
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert not body.get("errors"), body
+        sdl = body["data"]["schemaSdl"]
+        assert "type PieceType" in sdl
+        assert "pieces(" in sdl
+        assert "schemaSdl" in sdl
+
+    def test_sparse_fields_graphql(self, gql_client, user):
+        """Clients can request only the fields they need — GraphQL sparse selection."""
+        _make_piece(user, "Teapot")
+        response = gql_client.post(
+            "/api/graphql/",
+            {"query": "{ pieces { count results { id name } } }"},
+            format="json",
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert not body.get("errors"), body
+        result = body["data"]["pieces"]["results"][0]
+        assert set(result.keys()) == {"id", "name"}
+
+    def test_rest_list_includes_graphql_endpoint_header(self, user):
+        """GET /api/pieces/ advertises the GraphQL endpoint via a response header."""
+        client = Client()
+        client.force_login(user)
+        response = client.get("/api/pieces/")
+        assert response.status_code == 200
+        assert response["X-GraphQL-Endpoint"] == "/api/graphql/"

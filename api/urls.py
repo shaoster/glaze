@@ -59,7 +59,11 @@ urlpatterns = [
     path("health/ready/", views.health_ready, name="health-ready"),
     path("tasks/", views.submit_task, name="tasks-submit"),
     path("tasks/<uuid:task_id>/", views.task_detail, name="tasks-detail"),
-    path("tasks/<uuid:task_id>/progress/", views.report_task_progress, name="tasks-progress"),
+    path(
+        "tasks/<uuid:task_id>/progress/",
+        views.report_task_progress,
+        name="tasks-progress",
+    ),
     path("telemetry/traces/", views.browser_traces, name="telemetry-traces"),
     path("pieces/", views.pieces, name="pieces"),
     path("pieces/<uuid:piece_id>/", views.piece_detail, name="piece-detail"),

@@ -114,5 +114,15 @@ class Query:
     ) -> PiecePage:
         return _resolve_pieces(info, filter, ordering, limit, offset)
 
+    @strawberry.field(
+        description=(
+            "Return the full GraphQL SDL (Schema Definition Language) as a string. "
+            "LLM agents can call this query to discover all available types, fields, "
+            "and descriptions in a single request without running multi-step introspection queries."
+        )
+    )
+    def schema_sdl(self) -> str:
+        return str(schema)
+
 
 schema = strawberry.Schema(query=Query)
