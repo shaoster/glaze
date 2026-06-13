@@ -1,7 +1,9 @@
 import {
   type ComponentProps,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -610,6 +612,17 @@ function ShowcaseVideoPanel({
     musicTrackId: DEFAULT_TRACK_ID,
   });
 
+  // Piece edits change the render hash server-side; invalidate so the fresh
+  // current_input_hash is fetched and the stale-needs-regeneration status
+  // (or re-enabled button) reflects the updated piece content.
+  const prevPieceRef = useRef(piece);
+  useEffect(() => {
+    if (prevPieceRef.current !== piece) {
+      prevPieceRef.current = piece;
+      queryClient.invalidateQueries({ queryKey: ["showcase-video", piece.id] });
+    }
+  }, [piece, queryClient]);
+
   const {
     data: showcaseVideo,
     error: rawStatusError,
@@ -638,7 +651,15 @@ function ShowcaseVideoPanel({
   });
 
   const currentStatus = showcaseVideo?.status ?? "idle";
+  // True when music track and exclusions match the stored task's defaults
+  // (API doesn't expose stored exclusions, so we treat any non-empty exclusion
+  // as a divergence). Music track is compared exactly against the stored value.
+  const selectionMatchesStoredTask =
+    selection.musicTrackId === (showcaseVideo?.music_track_id ?? DEFAULT_TRACK_ID) &&
+    selection.excludedImageKeys.length === 0 &&
+    selection.excludedNoteKeys.length === 0;
   const hashUnchanged =
+    selectionMatchesStoredTask &&
     currentStatus === "succeeded" &&
     showcaseVideo?.current_input_hash != null &&
     showcaseVideo.current_input_hash === showcaseVideo?.stored_input_hash;
