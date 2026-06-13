@@ -271,13 +271,13 @@ def build_workflow_schema() -> dict:
         "entry_state": ENTRY_STATE,
         "states": {
             state_id: {
-                "friendly_name": _STATE_MAP[state_id].get("friendly_name", state_id),
-                "description": _STATE_MAP[state_id].get("description", ""),
+                "friendly_name": state.get("friendly_name", state_id),
+                "description": state.get("description", ""),
                 "terminal": state_id in TERMINAL_STATES,
                 "successors": SUCCESSORS.get(state_id, []),
                 "schema": build_ui_schema(state_id),
             }
-            for state_id in VALID_STATES
+            for state_id, state in _STATE_MAP.items()
         },
         "globals": {
             name: {
