@@ -1,0 +1,32 @@
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
+load("//:python.bzl", "pytest_test")
+
+# Placeholder target matching the uv.override_package() entry in MODULE.bazel.
+# Bazel skips trying to install potterdoc-mcp from PyPI and uses this instead.
+py_library(
+    name = "potterdoc_mcp",
+    srcs = glob(["**/*.py"], exclude=["tests/**"]),
+    deps = [
+        "@pypi//httpx",
+        "@pypi//mcp",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "potterdoc_mcp_server",
+    srcs = ["__main__.py"],
+    main = "__main__.py",
+    deps = [":potterdoc_mcp"],
+    visibility = ["//visibility:public"],
+)
+
+pytest_test(
+    name = "potterdoc_mcp_test",
+    srcs = glob(["tests/**/*.py"]) + ["//tools:pytest_main.py"],
+    main = "//tools:pytest_main.py",
+    args = ["potterdoc_mcp/tests/"],
+    deps = [":potterdoc_mcp"],
+    expected_coverage = ["potterdoc_mcp/client.py", "potterdoc_mcp/server.py"],
+    visibility = ["//visibility:public"],
+)

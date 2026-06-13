@@ -52,6 +52,11 @@ uv.override_package(
     name = "glaze-tools",
     target = "//tools:glaze_tools",
 )
+uv.override_package(
+    lock = "//:uv.lock",
+    name = "potterdoc-mcp",
+    target = "//potterdoc_mcp:potterdoc_mcp",
+)
 use_repo(uv, "pypi")
 
 # ── Node toolchain ────────────────────────────────────────────────────────────
