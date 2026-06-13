@@ -97,7 +97,7 @@ export default function PieceDetail({
 function PieceDetailContent({
   piece,
   history,
-  historyLoading,
+  historyLoading = false,
   historyError,
   refetchHistory,
   onPieceUpdated,
@@ -482,6 +482,7 @@ function PieceDetailContent({
             <ShowcaseVideoPanel
               piece={piece}
               history={statesHistory}
+              historyLoading={historyLoading}
               atVideo={videoRouting.atVideo}
               onVideoNavigate={videoRouting.onVideoNavigate}
             />
@@ -585,11 +586,13 @@ function ArtifactActions({ artifact }: ArtifactActionsProps) {
 function ShowcaseVideoPanel({
   piece,
   history,
+  historyLoading,
   atVideo,
   onVideoNavigate,
 }: {
   piece: PieceDetailType;
   history?: PieceState[];
+  historyLoading: boolean;
   atVideo: boolean;
   onVideoNavigate: (open: boolean) => void;
 }) {
@@ -634,7 +637,8 @@ function ShowcaseVideoPanel({
     (showcaseVideo?.enabled ?? true) &&
     currentStatus !== "pending" &&
     currentStatus !== "running" &&
-    (showcaseVideo?.eligible ?? true);
+    (showcaseVideo?.eligible ?? true) &&
+    !historyLoading;
   const statusLabel =
     currentStatus === "idle"
       ? "No render has been requested yet."
@@ -687,13 +691,19 @@ function ShowcaseVideoPanel({
     >
       <Collapse in={expanded} unmountOnExit>
       <Stack spacing={2}>
-        <ShowcaseVideoInputPicker
-          piece={piece}
-          history={history}
-          selection={selection}
-          onSelectionChange={setSelection}
-          disabled={generating || currentStatus === "pending" || currentStatus === "running"}
-        />
+        {historyLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : (
+          <ShowcaseVideoInputPicker
+            piece={piece}
+            history={history}
+            selection={selection}
+            onSelectionChange={setSelection}
+            disabled={generating || currentStatus === "pending" || currentStatus === "running"}
+          />
+        )}
 
         <Box
           sx={(theme) => ({
