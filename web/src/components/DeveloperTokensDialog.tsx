@@ -38,9 +38,9 @@ type DeveloperTokensDialogProps = {
   onClose: () => void;
 };
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "Never";
-  return new Date(iso).toLocaleString();
+function formatDate(value: Date | string | null | undefined): string {
+  if (!value) return "Never";
+  return new Date(value).toLocaleString();
 }
 
 export function DeveloperTokensDialog({
