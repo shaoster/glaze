@@ -17,8 +17,10 @@ import TextSnippetIcon from "@mui/icons-material/TextSnippet";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import MergeIcon from "@mui/icons-material/MergeType";
+import axios from "axios";
 import {
   extractErrorMessage,
+  fetchR2PresignedUrl,
   importManualSquareCropRecords,
   type ManualSquareCropImportResponse,
 } from "../util/api";
@@ -385,7 +387,7 @@ export default function GlazeImportToolPage({
       })),
     );
     try {
-      const cropFiles: Record<string, File> = {};
+      const r2Keys: Record<string, string> = {};
       for (const record of records) {
         setImportBuildProgress((current) =>
           current.map((entry) =>
@@ -394,7 +396,7 @@ export default function GlazeImportToolPage({
               : entry,
           ),
         );
-        cropFiles[record.id] = await buildCropFile(record);
+        const cropFile = await buildCropFile(record);
         setImportBuildProgress((current) =>
           current.map((entry) =>
             entry.id === record.id
@@ -402,15 +404,21 @@ export default function GlazeImportToolPage({
               : entry,
           ),
         );
+        const presigned = await fetchR2PresignedUrl("image/webp");
+        const form = new FormData();
+        Object.entries(presigned.fields).forEach(([k, v]) => form.append(k, v));
+        form.append("file", cropFile);
+        await axios.post(presigned.upload_url, form);
+        r2Keys[record.id] = presigned.key;
       }
       const result = await importManualSquareCropRecords(
         records.map((record) => ({
           client_id: record.id,
           filename: record.filename,
           reviewed: record.reviewed,
+          r2_key: r2Keys[record.id] ?? "",
           parsed_fields: record.parsedFields,
         })),
-        cropFiles,
       );
       setImportBuildProgress((current) =>
         current.map((entry) => ({ ...entry, status: "ready", progress: 100 })),
