@@ -26,7 +26,7 @@ import {
 import HistoryIcon from "@mui/icons-material/History";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useBlocker, useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
-import type { PieceDetail as PieceDetailType } from "../util/types";
+import type { PieceDetail as PieceDetailType, PieceState } from "../util/types";
 import { DEFAULT_TRACK_ID } from "../util/music";
 import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -64,21 +64,35 @@ import PieceNameEditor from "./PieceNameEditor";
 
 type PieceDetailProps = {
   piece: PieceDetailType;
+  history?: PieceState[];
+  historyLoading?: boolean;
   onPieceUpdated: (updated: PieceDetailType) => void;
 };
 
 export default function PieceDetail({
   piece,
+  history,
+  historyLoading = false,
   onPieceUpdated,
 }: PieceDetailProps) {
   return (
     <PieceDetailSaveStatusProvider>
-      <PieceDetailContent piece={piece} onPieceUpdated={onPieceUpdated} />
+      <PieceDetailContent
+        piece={piece}
+        history={history}
+        historyLoading={historyLoading}
+        onPieceUpdated={onPieceUpdated}
+      />
     </PieceDetailSaveStatusProvider>
   );
 }
 
-function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
+function PieceDetailContent({
+  piece,
+  history,
+  historyLoading,
+  onPieceUpdated,
+}: PieceDetailProps) {
   const [isDirty, setIsDirty] = useState(false);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
 
@@ -87,7 +101,8 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   const canEdit = piece.can_edit;
   const hasWorkflowContent =
     canEdit || getCustomFieldDefinitions(currentState.state).length > 0;
-  const pastHistory = piece.history.slice(0, -1);
+  const statesHistory: PieceState[] = history ?? piece.history ?? [];
+  const pastHistory = statesHistory.slice(0, -1);
 
   const historyRouting = usePieceHistoryRouting(piece.id);
   const videoRouting = usePieceVideoRouting(piece.id);
@@ -106,7 +121,7 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
   }
   const createdLabel = formatDate(piece.created);
   const modifiedLabel = formatDate(piece.last_modified);
-  const galleryImages: PiecePhotoGalleryImage[] = piece.history.flatMap(
+  const galleryImages: PiecePhotoGalleryImage[] = statesHistory.flatMap(
     (state) => {
       const isCurrentState =
         state.created &&
@@ -458,23 +473,39 @@ function PieceDetailContent({ piece, onPieceUpdated }: PieceDetailProps) {
             title="Process Summary"
             titleId="process-summary-title"
           >
-            <ProcessSummary piece={piece} history={piece.history} />
+            {historyLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : (
+              <ProcessSummary piece={piece} history={statesHistory} />
+            )}
           </SectionCard>
         </Box>
 
         <SectionCard
           title="Timeline"
-          subtitle={`${pastHistory.length} completed state${pastHistory.length === 1 ? "" : "s"}`}
+          subtitle={
+            historyLoading
+              ? "Loading history..."
+              : `${pastHistory.length} completed state${pastHistory.length === 1 ? "" : "s"}`
+          }
         >
-          <PieceHistory
-            pastHistory={pastHistory}
-            piece={piece}
-            onPieceUpdated={onPieceUpdated}
-            rewindedStateId={rewindedStateId}
-            onRewind={(id) =>
-              id ? historyRouting.onRewind(id) : historyRouting.onClearRewind()
-            }
-          />
+          {historyLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : (
+            <PieceHistory
+              pastHistory={pastHistory}
+              piece={piece}
+              onPieceUpdated={onPieceUpdated}
+              rewindedStateId={rewindedStateId}
+              onRewind={(id) =>
+                id ? historyRouting.onRewind(id) : historyRouting.onClearRewind()
+              }
+            />
+          )}
         </SectionCard>
       </Box>
 

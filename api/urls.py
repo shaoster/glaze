@@ -62,6 +62,7 @@ urlpatterns = [
     path("telemetry/traces/", views.browser_traces, name="telemetry-traces"),
     path("pieces/", views.pieces, name="pieces"),
     path("pieces/<uuid:piece_id>/", views.piece_detail, name="piece-detail"),
+    path("pieces/<uuid:piece_id>/history/", views.piece_history, name="piece-history"),
     path("pieces/<uuid:piece_id>/states/", views.piece_states, name="piece-states"),
     path(
         "pieces/<uuid:piece_id>/states/<uuid:state_id>/",

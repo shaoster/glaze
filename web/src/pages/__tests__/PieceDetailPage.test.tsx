@@ -13,6 +13,7 @@ import type { PieceDetail } from "../../util/types";
 
 vi.mock("../../util/api", () => ({
   fetchPiece: vi.fn(),
+  fetchPieceHistory: vi.fn(),
   fetchAppInit: vi.fn(),
 }));
 
@@ -83,6 +84,7 @@ function renderPage({
 describe("PieceDetailPage", () => {
   beforeEach(() => {
     vi.mocked(api.fetchPiece).mockResolvedValue(MOCK_PIECE);
+    vi.mocked(api.fetchPieceHistory).mockResolvedValue(MOCK_PIECE.history);
     // fetchAppInit is subscribed to read-only; resolve immediately so init is defined and not fetching
     vi.mocked(api.fetchAppInit).mockResolvedValue({
       googleOauthClientId: "",
@@ -125,7 +127,7 @@ describe("PieceDetailPage", () => {
     renderPage({ id: "piece-42" });
 
     await waitFor(() =>
-      expect(api.fetchPiece).toHaveBeenCalledWith("piece-42"),
+      expect(api.fetchPiece).toHaveBeenCalledWith("piece-42", true),
     );
   });
 

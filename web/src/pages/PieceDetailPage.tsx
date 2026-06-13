@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchAppInit, fetchPiece } from "../util/api";
+import { fetchAppInit, fetchPiece, fetchPieceHistory } from "../util/api";
 import PieceDetailComponent from "../components/PieceDetail";
 import { type PieceDetail } from "../util/types";
 
@@ -41,6 +41,8 @@ export default function PieceDetailPage({
   const showBackButton = fromGallery || showBackToPieces;
   const queryClient = useQueryClient();
   const pieceQueryKey = ["piece", id] as const;
+  const historyQueryKey = ["piece", id, "history"] as const;
+
   const { data: init, isFetching: initFetching } = useQuery({
     queryKey: ["appInit"],
     queryFn: fetchAppInit,
@@ -51,13 +53,19 @@ export default function PieceDetailPage({
   // id is always defined — this component is only rendered via the /pieces/:id route
   const { data: piece, isLoading: loading, error } = useQuery<PieceDetail>({
     queryKey: pieceQueryKey,
-    queryFn: () => fetchPiece(id!),
+    queryFn: () => fetchPiece(id!, true), // exclude history on first load
     enabled: init !== undefined && (!!init.user || !initFetching),
     // Crops are materialized asynchronously by the backend: while any image
     // has coordinates but no cropped_url yet, poll so the cropped version
     // appears without a page reload once the task lands.
     refetchInterval: (query) =>
       query.state.data && hasPendingCrops(query.state.data) ? 3000 : false,
+  });
+
+  const { data: history, isLoading: historyLoading } = useQuery({
+    queryKey: historyQueryKey,
+    queryFn: () => fetchPieceHistory(id!),
+    enabled: piece !== undefined,
   });
 
   return (
@@ -91,7 +99,14 @@ export default function PieceDetailPage({
       {piece && (
         <PieceDetailComponent
           piece={piece}
-          onPieceUpdated={(updated) => queryClient.setQueryData(pieceQueryKey, updated)}
+          history={history}
+          historyLoading={historyLoading}
+          onPieceUpdated={(updated) => {
+            queryClient.setQueryData(pieceQueryKey, updated);
+            if (updated.history) {
+              queryClient.setQueryData(historyQueryKey, updated.history);
+            }
+          }}
         />
       )}
     </>

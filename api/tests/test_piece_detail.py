@@ -952,3 +952,49 @@ class TestPieceSummaryShowcaseVideoUrl:
         response = client.get(f"/api/pieces/{piece.id}/")
         assert response.status_code == 200
         assert response.json()["showcase_video_url"] == artifact_url
+
+
+@pytest.mark.django_db
+class TestPieceHistory:
+    def test_get_history_endpoint(self, client, piece, user):
+        from api.models import PieceState
+
+        PieceState.objects.create(
+            user=user, piece=piece, state="wheel_thrown", notes="thrown state", order=1
+        )
+        response = client.get(f"/api/pieces/{piece.id}/history/")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2  # designed and wheel_thrown
+        assert data[0]["state"] == "designed"
+        assert data[1]["state"] == "wheel_thrown"
+        assert data[1]["notes"] == "thrown state"
+
+    def test_get_history_not_found(self, client):
+        import uuid
+
+        response = client.get(f"/api/pieces/{uuid.uuid4()}/history/")
+        assert response.status_code == 404
+
+    def test_cannot_read_other_users_history(self, client, other_user):
+        from api.models import ENTRY_STATE, Piece, PieceState
+
+        foreign_piece = Piece.objects.create(user=other_user, name="Other User Piece")
+        PieceState.objects.create(piece=foreign_piece, state=ENTRY_STATE)
+        response = client.get(f"/api/pieces/{foreign_piece.id}/history/")
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestPieceDetailExcludeHistory:
+    def test_get_exclude_history(self, client, piece, user):
+        from api.models import PieceState
+
+        PieceState.objects.create(
+            user=user, piece=piece, state="wheel_thrown", notes="thrown state", order=1
+        )
+        response = client.get(f"/api/pieces/{piece.id}/?exclude_history=true")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["history"] == []
+        assert data["current_state"]["state"] == "wheel_thrown"

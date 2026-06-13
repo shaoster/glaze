@@ -554,9 +554,18 @@ export async function updateUserPreferences(
   };
 }
 
-export async function fetchPiece(id: string): Promise<PieceDetail> {
-  const { data } = await client.get<Wire<PieceDetail>>(`pieces/${id}/`);
+export async function fetchPiece(
+  id: string,
+  excludeHistory: boolean = false,
+): Promise<PieceDetail> {
+  const url = excludeHistory ? `pieces/${id}/?exclude_history=true` : `pieces/${id}/`;
+  const { data } = await client.get<Wire<PieceDetail>>(url);
   return mapPieceDetail(data);
+}
+
+export async function fetchPieceHistory(id: string): Promise<PieceState[]> {
+  const { data } = await client.get<Wire<PieceState>[]>(`pieces/${id}/history/`);
+  return data.map(mapPieceState);
 }
 
 export async function fetchWorkflowStateSchema(

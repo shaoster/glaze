@@ -159,6 +159,26 @@ def piece_state_ref_prefetches() -> list[Prefetch]:
 
 
 @traced
+def state_ref_prefetches() -> list[Prefetch]:
+    """Build Prefetch objects for workflow global refs on individual states."""
+    prefetches: list[Prefetch] = []
+    for global_name in get_state_global_ref_map():
+        config = get_global_config(global_name)
+        ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
+        related_name = ref_model._meta.get_field(
+            "piece_state"
+        ).remote_field.related_name
+        assert related_name is not None
+        prefetches.append(
+            Prefetch(
+                related_name,
+                queryset=ref_model.objects.select_related(global_name),
+            )
+        )
+    return prefetches
+
+
+@traced
 def piece_detail_queryset(request: Request):
     """Return the queryset needed to serialize full piece detail."""
     return piece_read_queryset(request).prefetch_related(

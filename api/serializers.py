@@ -634,10 +634,28 @@ class PieceDetailSerializer(PieceSummarySerializer):
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
+        request = self.context.get("request")
+        exclude_history = False
+        if request is not None:
+            query_params = getattr(request, "query_params", getattr(request, "GET", {}))
+            exclude_history = (
+                query_params.get("exclude_history", "false").lower() == "true"
+            )
+        if exclude_history:
+            return PieceStateSerializer(cs, context={**self.context, "piece": obj}).data
         return next(s for s in self._get_all_states_data(obj) if s["id"] == str(cs.pk))
 
     @extend_schema_field(_relation_array_schema("PieceState", shape="history"))
     def get_history(self, obj: Piece) -> list:
+        request = self.context.get("request")
+        exclude_history = False
+        if request is not None:
+            query_params = getattr(request, "query_params", getattr(request, "GET", {}))
+            exclude_history = (
+                query_params.get("exclude_history", "false").lower() == "true"
+            )
+        if exclude_history:
+            return []
         return self._get_all_states_data(obj)
 
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))
