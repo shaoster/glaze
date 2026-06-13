@@ -21,6 +21,8 @@ py_library(
     srcs = [
         "__init__.py",
         "auth/__init__.py",
+        "auth/agent_auth.py",
+        "auth/agent_token_views.py",
         "auth/jwt_auth.py",
         "auth/views.py",
         "auth/account_views.py",
@@ -179,6 +181,8 @@ filegroup(
         "analysis_views.py",
         "apps.py",
         "auth/__init__.py",
+        "auth/agent_auth.py",
+        "auth/agent_token_views.py",
         "auth/jwt_auth.py",
         "auth/views.py",
         "auth/account_views.py",
@@ -421,14 +425,22 @@ pytest_test(
     tags = ["integration"],
     size = "medium",
     srcs = _CONFTEST + [
+        "tests/test_agent_auth.py",
         "tests/test_auth.py",
     ],
-    args = ["api/tests/test_auth.py"],
+    args = [
+        "api/tests/test_agent_auth.py",
+        "api/tests/test_auth.py",
+    ],
     data = _TEST_DATA,
     env = _TEST_ENV,
     main = "//tools:pytest_main.py",
     deps = [":api_schema_lib"] + _PYTEST_DEPS,
-    expected_coverage = ["api/auth/views.py"],
+    expected_coverage = [
+        "api/auth/agent_auth.py",
+        "api/auth/agent_token_views.py",
+        "api/auth/views.py",
+    ],
 )
 
 pytest_test(

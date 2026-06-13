@@ -1446,6 +1446,18 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_developer_tokens_dialog_test",
+    srcs = ["src/components/__tests__/DeveloperTokensDialog.test.tsx"],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":web_lib",
+    ],
+    expected_coverage = [
+        "web/src/components/DeveloperTokensDialog*",
+    ],
+)
+
+vitest_test(
     name = "web_storybook_smoke_test",
     srcs = ["src/stories/storybook-smoke.test.tsx"],
     tags = ["ibazel_notify_changes"],
@@ -1492,6 +1504,7 @@ test_suite(
         ":web_public_piece_shell_test",
         ":web_state_transition_test",
         ":web_tag_manager_test",
+        ":web_developer_tokens_dialog_test",
         ":web_user_preferences_dialog_test",
         ":web_tag_test",
         ":web_generate_types_test",

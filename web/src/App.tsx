@@ -47,6 +47,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LogoutIcon from "@mui/icons-material/Logout";
 import CropFreeIcon from "@mui/icons-material/CropFree";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import KeyIcon from "@mui/icons-material/Key";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { alpha, ThemeProvider, createTheme } from "@mui/material/styles";
 
@@ -69,6 +70,7 @@ import { AuthTokenProvider, useAuthToken } from "./components/AuthTokenContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AppFooterLinks from "./components/AppFooterLinks";
 import PublicPieceShell, { ShowcasePage } from "./components/PublicPieceShell";
+import { DeveloperTokensDialog } from "./components/DeveloperTokensDialog";
 import UserPreferencesDialog from "./components/UserPreferencesDialog";
 import TutorialManager from "./components/TutorialManager";
 import {
@@ -358,6 +360,7 @@ function AppShell({
   onCurrentUserUpdated: (user: AuthUser) => void;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [developerTokensOpen, setDeveloperTokensOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteInProgress, setDeleteInProgress] = useState(false);
@@ -529,6 +532,17 @@ function AppShell({
                 </ListItemIcon>
                 Preferences
               </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  setDeveloperTokensOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <KeyIcon fontSize="small" />
+                </ListItemIcon>
+                Developer Tokens
+              </MenuItem>
               {currentUser.is_staff
                 ? [
                     <MenuItem
@@ -682,6 +696,10 @@ function AppShell({
             activeSectionId={preferencesSectionId}
             onClose={closePreferencesDialog}
             onSectionChange={switchPreferencesSection}
+          />
+          <DeveloperTokensDialog
+            open={developerTokensOpen}
+            onClose={() => setDeveloperTokensOpen(false)}
           />
           <AppFooterLinks sticky />
         </Container>

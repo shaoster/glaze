@@ -20,6 +20,7 @@ from backend.otel import traced
 
 from ..serializers import AuthUserSerializer
 from .account_views import delete_account_impl
+from .agent_token_views import agent_token_detail, agent_tokens
 from .export_views import auth_export
 from .google_views import auth_google
 from .invite_views import (
@@ -38,6 +39,8 @@ from .token_views import (
 )
 
 __all__ = [
+    "agent_token_detail",
+    "agent_tokens",
     "auth_delete_account",
     "auth_export",
     "auth_google",

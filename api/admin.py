@@ -15,6 +15,7 @@ from import_export import fields, resources
 from import_export.admin import ExportMixin
 
 from .models import (
+    AgentToken,
     AsyncTask,
     CropRun,
     FiringTemperature,
@@ -917,6 +918,22 @@ class ImageAdmin(admin.ModelAdmin):
     list_display = ("id", "r2_key", "url", "created")
     search_fields = ("r2_key", "url")
     readonly_fields = ("id", "created", "last_modified")
+
+
+# ── AgentToken admin ──────────────────────────────────────────────────────────
+
+
+@admin.register(AgentToken)
+class AgentTokenAdmin(admin.ModelAdmin):
+    list_display = ("name", "user", "created_at", "last_used_at")
+    readonly_fields = ("id", "name", "user", "token_hash", "created_at", "last_used_at")
+    search_fields = ("name", "user__email")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 # ── InviteCode admin ───────────────────────────────────────────────────────────

@@ -7,6 +7,8 @@ depending on compatibility wrappers.
 
 from .analysis_views import glaze_combination_images
 from .auth.views import (
+    agent_token_detail,
+    agent_tokens,
     auth_delete_account,
     auth_export,
     auth_google,
@@ -60,6 +62,8 @@ from .workflow_views import workflow_state_schema
 
 __all__ = [
     "CropRunViewSet",
+    "agent_token_detail",
+    "agent_tokens",
     "ImageCropRunsView",
     "_check_async_tasks",
     "_check_database",

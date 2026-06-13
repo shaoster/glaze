@@ -17,6 +17,8 @@ import axios from "axios";
 import { AxiosHeaders } from "axios";
 import type { AxiosRequestConfig } from "axios";
 import type {
+  AgentToken,
+  AgentTokenCreated,
   CaptionedImage,
   CropRun,
   FiringTemperatureRef,
@@ -1029,6 +1031,22 @@ export async function createHumanCropRun(payload: {
  * Extracts a human-readable error message from a backend response or Error object.
  * Handles Axios errors, DRF non_field_errors, and generic field errors.
  */
+export async function listAgentTokens(): Promise<AgentToken[]> {
+  const { data } = await client.get<AgentToken[]>("auth/agent-tokens/");
+  return data;
+}
+
+export async function createAgentToken(name: string): Promise<AgentTokenCreated> {
+  await ensureCsrfCookie();
+  const { data } = await client.post<AgentTokenCreated>("auth/agent-tokens/", { name });
+  return data;
+}
+
+export async function revokeAgentToken(id: string): Promise<void> {
+  await ensureCsrfCookie();
+  await client.delete(`auth/agent-tokens/${id}/`);
+}
+
 export function extractErrorMessage(
   error: unknown,
   defaultMessage = "An unexpected error occurred.",
