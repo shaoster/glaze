@@ -13,6 +13,7 @@ from rest_framework.request import Request
 from backend.otel import traced
 
 from ..models import Image, Piece, UserProfile
+from ..piece.helpers import piece_state_ref_prefetches
 from ..serializers import PieceDetailSerializer
 
 
@@ -26,12 +27,14 @@ def collect_export_data(user: Any, request: Request) -> tuple[str, str, list[Ima
             "states",
             "states__image_links",
             "states__image_links__image",
+            "states__image_links__cropped_image",
             "tag_links",
             "tag_links__tag",
+            *piece_state_ref_prefetches(),
         )
     )
     pieces_data = PieceDetailSerializer(
-        pieces, many=True, context={"request": request}
+        pieces, many=True, context={"request": request, "exclude_history": False}
     ).data
 
     profile = UserProfile.objects.filter(user=user).first()

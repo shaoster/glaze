@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
@@ -9,6 +10,7 @@ from rest_framework.response import Response
 
 from backend.otel import traced
 
+from ..models import PieceState
 from ..serializers import (
     PieceCreateSerializer,
     PieceDetailSerializer,
@@ -36,10 +38,16 @@ from .helpers import (
     piece_queryset as _piece_queryset,
 )
 from .helpers import (
+    piece_read_queryset as _piece_read_queryset,
+)
+from .helpers import (
     serialize_piece_detail as _serialize_piece_detail,
 )
 from .helpers import (
     serialize_piece_summary as _serialize_piece_summary,
+)
+from .helpers import (
+    state_ref_prefetches as _state_ref_prefetches,
 )
 
 
@@ -281,3 +289,36 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
     serializer.update(ps, serializer.validated_data)
     piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
     return Response(_serialize_piece_detail(piece, request))
+
+
+@extend_schema(
+    methods=["GET"],
+    responses={200: PieceStateSerializer(many=True)},
+    description="Retrieve the full state history of a single piece.",
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@traced
+def piece_history(request: Request, piece_id: str) -> Response:
+    """Retrieve the full state history of a single piece."""
+    piece = get_object_or_404(
+        _piece_read_queryset(request)
+        .prefetch_related(None)
+        .prefetch_related(
+            "tag_links__tag",
+            Prefetch(
+                "states",
+                queryset=PieceState.objects.prefetch_related(
+                    "image_links__image",
+                    "image_links__cropped_image",
+                    *_state_ref_prefetches(),
+                ),
+            ),
+        ),
+        pk=piece_id,
+    )
+    states = piece.states.all()
+    serializer = PieceStateSerializer(
+        states, many=True, context={"request": request, "piece": piece}
+    )
+    return Response(serializer.data)

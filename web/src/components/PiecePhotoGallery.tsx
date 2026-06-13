@@ -107,6 +107,9 @@ type PiecePhotoGalleryProps = {
   updatePastStateFn?: typeof updatePastState;
   pieceStates?: PieceStateRef[];
   moveImageFn?: typeof moveImage;
+  historyLoading?: boolean;
+  historyError?: unknown;
+  refetchHistory?: () => void;
 };
 
 function isEditableImage(
@@ -127,6 +130,9 @@ export default function PiecePhotoGallery({
   updatePastStateFn,
   pieceStates,
   moveImageFn,
+  historyLoading = false,
+  historyError = null,
+  refetchHistory,
 }: PiecePhotoGalleryProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -284,7 +290,7 @@ export default function PiecePhotoGallery({
     if (urlPhotoIndex !== null) setLightboxIndex(urlPhotoIndex);
   }, [urlPhotoIndex]);
 
-  if (atGallery) {
+  if (atGallery && !historyLoading) {
     const fromLightbox =
       (location.state as Record<string, unknown>)?.fromLightbox === true;
     if (images.length === 0) return <Navigate to={piecePath} replace />;
@@ -310,6 +316,33 @@ export default function PiecePhotoGallery({
         PaperProps={{ sx: { height: "80vh", borderRadius: "8px" } }}
       >
         <DialogContent sx={{ p: 2 }}>
+          {!!historyError && (
+            <Box
+              sx={{
+                mb: 2,
+                p: 1.5,
+                bgcolor: "error.light",
+                borderRadius: 1,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="body2" color="error.contrastText">
+                Failed to load past photos.
+              </Typography>
+              {refetchHistory && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  onClick={refetchHistory}
+                >
+                  Retry
+                </Button>
+              )}
+            </Box>
+          )}
           <PiecePhotoGalleryGrid
             images={images}
             canDeleteImages={canMutateCurrentStateImages}
@@ -328,7 +361,7 @@ export default function PiecePhotoGallery({
         </DialogActions>
       </Dialog>
 
-      {atLightbox && lightboxIndex !== null && (
+      {atLightbox && lightboxIndex !== null && !historyLoading && images[lightboxIndex] && (
         <ImageLightbox
           key={lightboxIndex}
           images={images}

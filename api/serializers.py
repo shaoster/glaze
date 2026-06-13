@@ -577,6 +577,24 @@ class PieceSummarySerializer(serializers.ModelSerializer):
         if photo_count is not None:
             return int(photo_count)
 
+        exclude_history = self.context.get("exclude_history")
+        if exclude_history is None:
+            request = self.context.get("request")
+            if request is not None:
+                query_params = getattr(
+                    request, "query_params", getattr(request, "GET", {})
+                )
+                exclude_history = (
+                    query_params.get("exclude_history", "false").lower() == "true"
+                )
+            else:
+                exclude_history = False
+
+        if exclude_history:
+            from .models import PieceStateImage
+
+            return PieceStateImage.objects.filter(piece_state__piece=obj).count()
+
         states = getattr(obj, "_prefetched_objects_cache", {}).get("states")
         if states is None:
             states = obj.states.all()
@@ -634,10 +652,40 @@ class PieceDetailSerializer(PieceSummarySerializer):
     def get_current_state(self, obj: Piece) -> dict:
         cs = obj.current_state
         assert cs is not None, f"Piece {obj.id} has no states"
+        exclude_history = self.context.get("exclude_history")
+        if exclude_history is None:
+            request = self.context.get("request")
+            if request is not None:
+                query_params = getattr(
+                    request, "query_params", getattr(request, "GET", {})
+                )
+                exclude_history = (
+                    query_params.get("exclude_history", "false").lower() == "true"
+                )
+            else:
+                exclude_history = False
+
+        if exclude_history:
+            return PieceStateSerializer(cs, context={**self.context, "piece": obj}).data
         return next(s for s in self._get_all_states_data(obj) if s["id"] == str(cs.pk))
 
     @extend_schema_field(_relation_array_schema("PieceState", shape="history"))
     def get_history(self, obj: Piece) -> list:
+        exclude_history = self.context.get("exclude_history")
+        if exclude_history is None:
+            request = self.context.get("request")
+            if request is not None:
+                query_params = getattr(
+                    request, "query_params", getattr(request, "GET", {})
+                )
+                exclude_history = (
+                    query_params.get("exclude_history", "false").lower() == "true"
+                )
+            else:
+                exclude_history = False
+
+        if exclude_history:
+            return []
         return self._get_all_states_data(obj)
 
     @extend_schema_field(serializers.CharField(allow_null=True, required=False))

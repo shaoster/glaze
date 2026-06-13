@@ -139,7 +139,7 @@ def piece_read_queryset(request: Request):
 
 
 @traced
-def piece_state_ref_prefetches() -> list[Prefetch]:
+def piece_state_ref_prefetches(prefix: str = "states") -> list[Prefetch]:
     """Build Prefetch objects for workflow global refs on piece states."""
     prefetches: list[Prefetch] = []
     for global_name in get_state_global_ref_map():
@@ -151,7 +151,27 @@ def piece_state_ref_prefetches() -> list[Prefetch]:
         assert related_name is not None
         prefetches.append(
             Prefetch(
-                f"states__{related_name}",
+                f"{prefix}__{related_name}",
+                queryset=ref_model.objects.select_related(global_name),
+            )
+        )
+    return prefetches
+
+
+@traced
+def state_ref_prefetches() -> list[Prefetch]:
+    """Build Prefetch objects for workflow global refs on individual states."""
+    prefetches: list[Prefetch] = []
+    for global_name in get_state_global_ref_map():
+        config = get_global_config(global_name)
+        ref_model = apps.get_model("api", f"PieceState{config['model']}Ref")
+        related_name = ref_model._meta.get_field(
+            "piece_state"
+        ).remote_field.related_name
+        assert related_name is not None
+        prefetches.append(
+            Prefetch(
+                related_name,
                 queryset=ref_model.objects.select_related(global_name),
             )
         )
@@ -161,15 +181,50 @@ def piece_state_ref_prefetches() -> list[Prefetch]:
 @traced
 def piece_detail_queryset(request: Request):
     """Return the queryset needed to serialize full piece detail."""
+    query_params = getattr(request, "query_params", getattr(request, "GET", {}))
+    exclude_history = query_params.get("exclude_history", "false").lower() == "true"
+
+    if exclude_history:
+        from ..models import CURRENT_STATE_ORDERING, PieceState
+
+        latest_state_subquery = Subquery(
+            PieceState.objects.filter(piece=OuterRef("piece"))
+            .order_by(*CURRENT_STATE_ORDERING)
+            .values("pk")[:1]
+        )
+        current_state_qs = PieceState.objects.filter(pk=latest_state_subquery)
+
+        return (
+            piece_read_queryset(request)
+            .prefetch_related(None)
+            .prefetch_related(
+                "tag_links__tag",
+                Prefetch(
+                    "states",
+                    queryset=current_state_qs,
+                    to_attr="prefetched_current_state",
+                ),
+                "prefetched_current_state__image_links__image",
+                "prefetched_current_state__image_links__cropped_image",
+                *piece_state_ref_prefetches(prefix="prefetched_current_state"),
+            )
+        )
+
     return piece_read_queryset(request).prefetch_related(
-        "states__image_links__image", *piece_state_ref_prefetches()
+        "states__image_links__image",
+        "states__image_links__cropped_image",
+        *piece_state_ref_prefetches(),
     )
 
 
 @traced
 def serialize_piece_detail(piece: Piece, request: Request):
     """Serialize a single piece into the detail payload."""
-    return PieceDetailSerializer(piece, context={"request": request}).data
+    query_params = getattr(request, "query_params", getattr(request, "GET", {}))
+    exclude_history = query_params.get("exclude_history", "false").lower() == "true"
+    return PieceDetailSerializer(
+        piece, context={"request": request, "exclude_history": exclude_history}
+    ).data
 
 
 @traced

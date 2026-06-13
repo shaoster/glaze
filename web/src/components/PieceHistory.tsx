@@ -41,6 +41,7 @@ const toDatetimeLocal = (date: Date) => {
 type PieceHistoryProps = {
   pastHistory: PieceState[];
   piece?: PieceDetailType;
+  history?: PieceState[];
   onPieceUpdated?: (updated: PieceDetailType) => void;
   rewindedStateId?: string | null;
   onRewind?: (id: string | null) => void;
@@ -203,6 +204,7 @@ function historyReducer(
 export default function PieceHistory({
   pastHistory,
   piece,
+  history,
   onPieceUpdated,
   rewindedStateId,
   onRewind,
@@ -235,8 +237,9 @@ export default function PieceHistory({
 
   if (pastHistory.length === 0 && !isEditable) return null;
 
+  const statesList = history ?? piece?.history ?? [];
   const presentStates = new Set<StateEnum>(
-    piece?.history.map((ps) => ps.state) ?? [],
+    statesList.map((ps) => ps.state),
   );
 
   const rewindIndex = rewindedStateId
