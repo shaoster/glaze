@@ -6,6 +6,19 @@ load("@aspect_rules_py//py:defs.bzl", "py_binary")
 # The service will listen on port 8080 for segment requests.
 
 py_binary(
+    name = "glaze_compute_service",
+    srcs = ["glaze_compute_service.py"],
+    deps = [
+        "@pypi//modal",
+        "@pypi//pyyaml",
+        "@pypi//requests",
+        "@pypi//pillow",
+        "@pypi//pillow_heif",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
     name = "piece_image_segment_service",
     srcs = ["piece_image_segment_service.py"],
     deps = [

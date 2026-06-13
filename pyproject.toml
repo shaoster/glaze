@@ -107,6 +107,8 @@ dependencies = [
     "opentelemetry-instrumentation-redis>=0.62b1",
     "strawberry-graphql-django>=0.86.1",
     "boto3>=1.43.27",
+    "modal>=1.5.0",
+    "gevent>=26.5.0",
 ]
 
 [tool.uv]

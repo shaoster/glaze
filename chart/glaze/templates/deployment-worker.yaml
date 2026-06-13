@@ -22,7 +22,7 @@ spec:
         - name: worker
           image: "{{ .Values.worker.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "-m", "celery", "-A", "backend", "worker", "-l", "INFO", "--pool=solo"]
+          command: ["python", "-m", "celery", "-A", "backend", "worker", "-l", "INFO", "--pool=gevent"]
           securityContext:
             runAsUser: 1001
             runAsGroup: 1001
@@ -53,6 +53,16 @@ spec:
                 secretKeyRef:
                   name: glaze-secrets
                   key: R2_SECRET_ACCESS_KEY
+            - name: MODAL_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: MODAL_TOKEN_ID
+            - name: MODAL_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: MODAL_TOKEN_SECRET
             # Intentionally overrides the ConfigMap value (service.name=glaze) for the worker.
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "service.name=glaze-worker"

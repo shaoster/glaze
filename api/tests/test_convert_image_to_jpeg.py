@@ -4,6 +4,7 @@ import io
 import re
 import uuid
 from unittest import mock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from PIL import Image as PILImage
@@ -55,44 +56,54 @@ class TestConvertImageToJpegTask:
             input_params={"key": key},
         )
 
-    def test_converts_png_to_jpeg_and_keeps_original(self, user, r2_env, monkeypatch):
-        from api.models import Image
-        from api.tasks import convert_image_to_jpeg
+    def _mock_modal(self, monkeypatch, *, width=4, height=4):
+        """Mock _modal_function and r2.generate_presigned_put for convert task."""
+        modal_calls = []
 
-        png_bytes = _make_tiny_png()
-        key = f"images/{user.id}/{uuid.uuid4()}.png"
-        uploaded: dict = {}
+        def _mock_fn(app_name, fn_name):
+            fn_mock = MagicMock()
+            fn_mock.remote = MagicMock()
+            fn_mock.remote.aio = AsyncMock(
+                return_value={"width": width, "height": height},
+                side_effect=lambda *a, **kw: modal_calls.append(a) or {"width": width, "height": height},
+            )
+            return fn_mock
 
-        def fake_get_object_bytes(k):
-            assert k == key
-            return png_bytes
-
-        def fake_upload_bytes(k, data, content_type):
-            uploaded["key"] = k
-            uploaded["data"] = data
-            uploaded["content_type"] = content_type
-            return f"https://media.example.com/{k}"
-
-        monkeypatch.setattr("api.r2.get_object_bytes", fake_get_object_bytes)
-        monkeypatch.setattr("api.r2.upload_bytes", fake_upload_bytes)
+        monkeypatch.setattr("api.tasks._modal_function", _mock_fn)
+        monkeypatch.setattr(
+            "api.r2.generate_presigned_put",
+            lambda key, content_type, **kwargs: f"https://presigned.example.com/{key}",
+        )
         monkeypatch.setattr(
             "api.r2.public_url_for_key",
             lambda k: f"https://media.example.com/{k}",
         )
+        return modal_calls
+
+    def test_converts_png_to_jpeg_and_keeps_original(self, user, r2_env, monkeypatch):
+        from api.models import Image
+        from api.tasks import convert_image_to_jpeg
+
+        key = f"images/{user.id}/{uuid.uuid4()}.png"
+        modal_calls = self._mock_modal(monkeypatch)
 
         task = self._make_task(user, key)
         result = convert_image_to_jpeg(task)
 
         assert result["status"] == "success"
-        assert uploaded["content_type"] == "image/jpeg"
-        assert uploaded["key"].endswith(".jpg")
-        assert re.fullmatch(rf"images/{user.id}/[0-9a-f-]{{36}}\.jpg", uploaded["key"])
-        # Return value includes dimensions.
+        assert result["key"].endswith(".jpg")
+        assert re.fullmatch(rf"images/{user.id}/[0-9a-f-]{{36}}\.jpg", result["key"])
+        # Return value includes dimensions from Modal.
         assert result["width"] == 4
         assert result["height"] == 4
+        # Modal was called with the source public URL and a presigned PUT URL.
+        assert len(modal_calls) == 1
+        source_public_url, presigned_put = modal_calls[0]
+        assert source_public_url == f"https://media.example.com/{key}"
+        assert result["key"] in presigned_put
 
         # A new JPEG Image row is created with lineage; the source is kept.
-        jpeg_img = Image.objects.get(r2_key=uploaded["key"])
+        jpeg_img = Image.objects.get(r2_key=result["key"])
         assert jpeg_img.derived_type == "jpeg_conversion"
         assert jpeg_img.derived_from is not None
         # Source Image row must also exist (created by the task).
@@ -134,29 +145,14 @@ class TestConvertImageToJpegTask:
             r2_key=f"images/{user.id}/orig.png",
         )
         key = source_image.r2_key
-        new_url = None
-
-        def fake_get_object_bytes(k):
-            return _make_tiny_png()
-
-        def fake_upload_bytes(k, data, ct):
-            nonlocal new_url
-            new_url = f"https://media.example.com/{k}"
-            return new_url
-
-        monkeypatch.setattr("api.r2.get_object_bytes", fake_get_object_bytes)
-        monkeypatch.setattr("api.r2.upload_bytes", fake_upload_bytes)
-        monkeypatch.setattr(
-            "api.r2.public_url_for_key",
-            lambda k: f"https://media.example.com/{k}",
-        )
+        self._mock_modal(monkeypatch)
 
         task = AsyncTask.objects.create(
             user=user,
             task_type="convert_image_to_jpeg",
             input_params={"key": key, "image_id": str(source_image.id)},
         )
-        convert_image_to_jpeg(task)
+        result = convert_image_to_jpeg(task)
 
         # Source Image row must be unchanged.
         source_image.refresh_from_db()
@@ -164,8 +160,7 @@ class TestConvertImageToJpegTask:
         assert source_image.r2_key == key
 
         # A new JPEG Image row must have been created with lineage.
-        assert new_url is not None
-        jpeg_image = Image.objects.get(url=new_url)
+        jpeg_image = Image.objects.get(url=result["url"])
         assert jpeg_image.r2_key.endswith(".jpg")
         assert jpeg_image.derived_from_id == source_image.id
         assert jpeg_image.derived_type == "jpeg_conversion"

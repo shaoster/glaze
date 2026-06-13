@@ -111,6 +111,8 @@ py_library(
         ":api_schema_lib",
         ":api_workflow_lib",
         "@pypi//celery",
+        "@pypi//gevent",
+        "@pypi//modal",
         "@pypi//redis",
     ],
 )
@@ -313,6 +315,7 @@ pytest_test(
         "tests/test_host_settings.py",
         "tests/test_image_field_migration.py",
         "tests/test_model_factory.py",
+        "tests/test_task_progress_webhook.py",
         "tests/test_utils.py",
     ],
     args = [
@@ -327,6 +330,7 @@ pytest_test(
         "api/tests/test_host_settings.py",
         "api/tests/test_global_entries.py",
         "api/tests/test_image_field_migration.py",
+        "api/tests/test_task_progress_webhook.py",
     ],
     data = _TEST_DATA,
     env = _TEST_ENV,
