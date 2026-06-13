@@ -46,10 +46,8 @@ try:
             "numpy",
             "pillow==12.2.0",
             "pillow-heif==1.3.0",
-            "pyyaml",
             "requests==2.33.1",
         )
-        .copy_local_file("music_catalog.yml", "/root/music_catalog.yml")
     )
 
     app = modal.App("glaze-compute")
@@ -352,25 +350,10 @@ def _make_progress_callback(
     return callback
 
 
-def _resolve_music_url(track_id: str | None) -> str | None:
-    """Resolve a music_track_id to its audio URL via the bundled catalog."""
-    if not track_id:
-        return None
-    try:
-        import yaml
-
-        with open("/root/music_catalog.yml") as f:
-            catalog = yaml.safe_load(f)
-        track = catalog.get("tracks", {}).get(track_id, {})
-        return (track.get("audio") or {}).get("url")
-    except Exception:
-        logger.warning("Failed to resolve music track %s from catalog", track_id)
-    return None
-
-
 def _render_to_file(
     storyboard: dict,
     output_path: Path,
+    music_url: str | None = None,
     on_progress: Callable[[int], None] | None = None,
 ) -> None:
     """Render a storyboard to an fMP4+sidx file at output_path.
@@ -446,7 +429,7 @@ def _render_to_file(
         audio_stream.layout = "stereo"
         audio_resampler = AudioResampler(format="fltp", layout="stereo", rate=44100)
 
-        music_url = _resolve_music_url(storyboard.get("music_track_id"))
+        # music_url resolved by caller (Celery) and passed in
         audio_packets: list[Any] = []
         sample_rate = 44100
         target_samples = round(video_duration_seconds * sample_rate)
@@ -654,6 +637,7 @@ if app is not None:
         presigned_put_url: str,
         progress_webhook_url: str,
         progress_token: str,
+        music_url: str | None = None,
     ) -> None:
         """Render storyboard to fMP4+sidx, PUT MP4 to R2 via presigned URL.
 
@@ -662,6 +646,7 @@ if app is not None:
             presigned_put_url: Presigned PUT URL for the showcase video R2 key.
             progress_webhook_url: URL to POST progress updates to.
             progress_token: HMAC token for authenticating progress callbacks.
+            music_url: Resolved audio URL for the selected music track, or None.
         """
         on_progress = _make_progress_callback(progress_webhook_url, progress_token)
 
@@ -669,7 +654,7 @@ if app is not None:
             output_path = Path(tf.name)
 
         try:
-            _render_to_file(storyboard, output_path, on_progress=on_progress)
+            _render_to_file(storyboard, output_path, music_url=music_url, on_progress=on_progress)
             mp4_bytes = output_path.read_bytes()
             _put_bytes(presigned_put_url, mp4_bytes, "video/mp4")
         finally:
