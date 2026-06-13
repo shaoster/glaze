@@ -31,9 +31,9 @@ runs:
     - name: Cache Bazel Repository
       uses: actions/cache@v4
       with:
-        path: ~/.cache/bazel/_bazel_runner/cache/repos/v1
-        key: bazel-repo-${{ inputs.deps-key }}
-        restore-keys: bazel-repo-
+        path: ~/.cache/bazel-repo
+        key: bazel-repo-${{ runner.os }}-${{ inputs.deps-key }}
+        restore-keys: bazel-repo-${{ runner.os }}-
 
     - name: Cache Bazel Disk
       uses: actions/cache@v4
@@ -44,9 +44,10 @@ runs:
           bazel-disk-${{ inputs.cache-key-prefix }}-${{ inputs.deps-key }}-
           bazel-disk-
 
-    - name: Inject BuildBuddy API key into .bazelrc
+    - name: Inject BuildBuddy API key and repo cache path into .bazelrc
       shell: bash
       working-directory: ${{ inputs.workdir }}
       run: |
         echo "" >> .bazelrc
         echo "common:ci --remote_header=x-buildbuddy-api-key=${{ inputs.buildbuddy-api-key }}" >> .bazelrc
+        echo "common --repository_cache=~/.cache/bazel-repo" >> .bazelrc
