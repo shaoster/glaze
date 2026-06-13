@@ -1,13 +1,14 @@
 import {
   type ComponentProps,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
   usePieceHistoryRouting,
   usePieceTagsRouting,
-  usePieceVideoRouting,
 } from "../routing/pieceRouting";
 import RoutedGlobalEntryField from "./RoutedGlobalEntryField";
 import {
@@ -26,6 +27,7 @@ import {
 } from "@mui/material";
 import HistoryIcon from "@mui/icons-material/History";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useBlocker, useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
 import type { PieceDetail as PieceDetailType, PieceState } from "../util/types";
 import { DEFAULT_TRACK_ID } from "../util/music";
@@ -122,7 +124,6 @@ function PieceDetailContent({
   const pastHistory = statesHistory.slice(0, -1);
 
   const historyRouting = usePieceHistoryRouting(piece.id);
-  const videoRouting = usePieceVideoRouting(piece.id);
   const tagsRouting = usePieceTagsRouting(piece.id);
 
   const { rewindedStateId } = historyRouting;
@@ -485,8 +486,6 @@ function PieceDetailContent({
               historyLoading={historyLoading}
               historyError={historyError}
               refetchHistory={refetchHistory}
-              atVideo={videoRouting.atVideo}
-              onVideoNavigate={videoRouting.onVideoNavigate}
             />
           </Box>
         )}
@@ -591,24 +590,31 @@ function ShowcaseVideoPanel({
   historyLoading,
   historyError,
   refetchHistory,
-  atVideo,
-  onVideoNavigate,
 }: {
   piece: PieceDetailType;
   history?: PieceState[];
   historyLoading: boolean;
   historyError?: unknown;
   refetchHistory?: () => void;
-  atVideo: boolean;
-  onVideoNavigate: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
-  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const [selection, setSelection] = useState<ShowcaseVideoInputSelection>({
     excludedImageKeys: [],
     excludedNoteKeys: [],
     musicTrackId: DEFAULT_TRACK_ID,
   });
+
+  // Piece edits change the render hash server-side; invalidate so the fresh
+  // current_input_hash is fetched and the stale-needs-regeneration status
+  // (or re-enabled button) reflects the updated piece content.
+  const prevPieceRef = useRef(piece);
+  useEffect(() => {
+    if (prevPieceRef.current !== piece) {
+      prevPieceRef.current = piece;
+      queryClient.invalidateQueries({ queryKey: ["showcase-video", piece.id] });
+    }
+  }, [piece, queryClient]);
 
   const {
     data: showcaseVideo,
@@ -632,14 +638,26 @@ function ShowcaseVideoPanel({
     mutationFn: () => requestPieceShowcaseVideo(piece.id, selection),
     onSuccess: (updated) => {
       queryClient.setQueryData(["showcase-video", piece.id], updated);
-      setUserExpanded(true);
-      onVideoNavigate(true);
     },
   });
 
   const currentStatus = showcaseVideo?.status ?? "idle";
+  const storedImageKeys = showcaseVideo?.excluded_image_keys ?? [];
+  const storedNoteKeys = showcaseVideo?.excluded_note_keys ?? [];
+  const selectionMatchesStoredTask =
+    selection.musicTrackId === (showcaseVideo?.music_track_id ?? DEFAULT_TRACK_ID) &&
+    selection.excludedImageKeys.length === storedImageKeys.length &&
+    selection.excludedImageKeys.every((k) => storedImageKeys.includes(k)) &&
+    selection.excludedNoteKeys.length === storedNoteKeys.length &&
+    selection.excludedNoteKeys.every((k) => storedNoteKeys.includes(k));
+  const hashUnchanged =
+    selectionMatchesStoredTask &&
+    currentStatus === "succeeded" &&
+    showcaseVideo?.current_input_hash != null &&
+    showcaseVideo.current_input_hash === showcaseVideo?.stored_input_hash;
   const canGenerate =
     !generating &&
+    !hashUnchanged &&
     (showcaseVideo?.enabled ?? true) &&
     currentStatus !== "pending" &&
     currentStatus !== "running" &&
@@ -663,8 +681,6 @@ function ShowcaseVideoPanel({
     currentStatus === "running" ? (showcaseVideo?.progress ?? 0) : null;
 
   const artifact = showcaseVideo?.artifact ?? null;
-  // atVideo (URL) takes strict priority; local pin used for session state.
-  const expanded = atVideo ? true : (userExpanded ?? (artifact === null));
   const errorMessage = rawGenerateError
     ? extractErrorMessage(
         rawGenerateError,
@@ -682,18 +698,19 @@ function ShowcaseVideoPanel({
       title="Showcase Video"
       subtitle="Render a deterministic Keepsake slideshow from the piece history."
       titleAdornment={
-        <IconButton
-          size="small"
-          onClick={() => {
-            const next = !expanded;
-            setUserExpanded(next);
-            onVideoNavigate(next);
-          }}
-          aria-label={expanded ? "Collapse showcase video" : "Expand showcase video"}
-          sx={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-        >
-          <ExpandMoreIcon fontSize="small" />
-        </IconButton>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          {artifact && !expanded && (
+            <CheckCircleIcon fontSize="small" sx={{ color: "success.main" }} />
+          )}
+          <IconButton
+            size="small"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-label={expanded ? "Collapse showcase video" : "Expand showcase video"}
+            sx={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+          >
+            <ExpandMoreIcon fontSize="small" />
+          </IconButton>
+        </Box>
       }
     >
       <Collapse in={expanded} unmountOnExit>

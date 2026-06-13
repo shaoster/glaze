@@ -637,6 +637,8 @@ export type ShowcaseVideoStatus = {
   is_stale: boolean;
   stale_reason: string | null;
   music_track_id: string | null;
+  excluded_image_keys: string[];
+  excluded_note_keys: string[];
   storyboard: Record<string, unknown> | null;
   artifact: ShowcaseVideoArtifact | null;
   error: string | null;
