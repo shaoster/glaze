@@ -638,8 +638,13 @@ function ShowcaseVideoPanel({
   });
 
   const currentStatus = showcaseVideo?.status ?? "idle";
+  const hashUnchanged =
+    currentStatus === "succeeded" &&
+    showcaseVideo?.current_input_hash != null &&
+    showcaseVideo.current_input_hash === showcaseVideo?.stored_input_hash;
   const canGenerate =
     !generating &&
+    !hashUnchanged &&
     (showcaseVideo?.enabled ?? true) &&
     currentStatus !== "pending" &&
     currentStatus !== "running" &&

@@ -487,6 +487,47 @@ describe("PieceDetail", () => {
     ).toBeInTheDocument();
   });
 
+  it("disables 'Render again' button when hash is unchanged after a successful render", async () => {
+    vi.mocked(api.fetchPieceShowcaseVideo).mockResolvedValue({
+      piece_id: "piece-id-1",
+      task_id: "task-1",
+      status: "succeeded",
+      task_status: "success",
+      enabled: true,
+      disabled_reason: null,
+      eligible: true,
+      current_input_hash: "abc",
+      stored_input_hash: "abc",
+      is_stale: false,
+      stale_reason: null,
+      music_track_id: null,
+      storyboard: null,
+      artifact: {
+        url: "https://example.com/video.mp4",
+        download_url: "https://example.com/video.mp4?dl=1",
+        filename: "showcase.mp4",
+        content_type: "video/mp4",
+      },
+      error: null,
+    });
+    await renderPieceDetail(
+      makePiece({
+        current_state: makeState({ state: "completed" }),
+        history: [makeState({ state: "completed" })],
+      }),
+    );
+
+    // Wait for data to load (panel collapses when artifact is present), then expand
+    fireEvent.click(await screen.findByRole("button", { name: "Expand showcase video" }));
+
+    // Button should be disabled — piece hasn't changed since last render
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Render again" }),
+      ).toBeDisabled(),
+    );
+  });
+
   it("shares an editable terminal piece through the PieceDetail API interaction", async () => {
     const updated = makePiece({
       shared: true,
