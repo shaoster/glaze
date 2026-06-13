@@ -700,6 +700,7 @@ function AppShell({
           <DeveloperTokensDialog
             open={developerTokensOpen}
             onClose={() => setDeveloperTokensOpen(false)}
+            userId={currentUser.id}
           />
           <AppFooterLinks sticky />
         </Container>

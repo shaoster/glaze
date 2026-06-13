@@ -36,6 +36,7 @@ import type { AgentToken } from "../util/types";
 type DeveloperTokensDialogProps = {
   open: boolean;
   onClose: () => void;
+  userId: number;
 };
 
 function formatDate(value: Date | string | null | undefined): string {
@@ -46,6 +47,7 @@ function formatDate(value: Date | string | null | undefined): string {
 export function DeveloperTokensDialog({
   open,
   onClose,
+  userId,
 }: DeveloperTokensDialogProps) {
   const queryClient = useQueryClient();
   const [newTokenName, setNewTokenName] = useState("");
@@ -56,7 +58,7 @@ export function DeveloperTokensDialog({
     data: tokens = [],
     isLoading,
   } = useQuery<AgentToken[]>({
-    queryKey: ["agentTokens"],
+    queryKey: ["agentTokens", userId],
     queryFn: listAgentTokens,
     enabled: open,
   });

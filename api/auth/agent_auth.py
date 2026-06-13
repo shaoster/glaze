@@ -31,7 +31,7 @@ class AgentTokenAuthentication(BaseAuthentication):
 
         try:
             agent_token = AgentToken.objects.select_related("user").get(
-                token_hash=token_hash
+                token_hash=token_hash, user__is_active=True
             )
         except AgentToken.DoesNotExist:
             raise AuthenticationFailed("Invalid agent token.")

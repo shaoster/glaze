@@ -26,7 +26,7 @@ function renderDialog(open = true) {
   const onClose = vi.fn();
   render(
     <QueryClientProvider client={queryClient}>
-      <DeveloperTokensDialog open={open} onClose={onClose} />
+      <DeveloperTokensDialog open={open} onClose={onClose} userId={1} />
     </QueryClientProvider>
   );
   return { onClose };

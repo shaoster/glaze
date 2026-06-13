@@ -64,6 +64,18 @@ class TestAgentTokenAuthentication:
         response = c.get("/api/pieces/")
         assert response.status_code == 401
 
+    def test_deactivated_user_token_returns_401(self, db):
+        inactive_user = User.objects.create(
+            username="inactive@example.com",
+            email="inactive@example.com",
+            is_active=False,
+        )
+        _, plain = _create_token(inactive_user)
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=_bearer(plain))
+        response = c.get("/api/pieces/")
+        assert response.status_code == 401
+
     def test_agent_token_forces_is_staff_false(self, db):
         staff_user = User.objects.create(
             username="staff@example.com", email="staff@example.com", is_staff=True
@@ -137,6 +149,12 @@ class TestAgentTokenManagement:
         list_response = c.get(_MANAGEMENT_URL)
         for t in list_response.json():
             assert "token" not in t
+
+    def test_create_token_name_too_long_returns_400(self, user):
+        c = APIClient()
+        c.force_login(user)
+        response = c.post(_MANAGEMENT_URL, {"name": "x" * 101}, format="json")
+        assert response.status_code == 400
 
     def test_create_token_missing_name_returns_400(self, user):
         c = APIClient()

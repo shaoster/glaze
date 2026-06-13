@@ -92,6 +92,11 @@ def agent_tokens(request: Request) -> Response:
         return Response(
             {"name": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST
         )
+    if len(name) > 100:
+        return Response(
+            {"name": ["Ensure this field has no more than 100 characters."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     plain_text = _generate_token()
     agent_token = AgentToken.objects.create(

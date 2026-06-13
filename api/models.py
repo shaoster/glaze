@@ -798,7 +798,7 @@ class AgentToken(models.Model):
         related_name="agent_tokens",
     )
     name = models.CharField(max_length=100)
-    token_hash = models.CharField(max_length=64)
+    token_hash = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
 
