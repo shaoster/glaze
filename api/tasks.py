@@ -402,7 +402,7 @@ def generate_cropped_image(task: AsyncTask) -> dict:
 
     presigned_put = r2.generate_presigned_put(key, "image/jpeg")
     crop_image_fn = _modal_function("glaze-compute", "crop_image")
-    asyncio.run(crop_image_fn.remote.aio(image.url, crop, presigned_put))
+    asyncio.run(crop_image_fn.remote.aio(r2.public_url_for_key(image.r2_key), crop, presigned_put))
     updated = set_cropped_fields(image, crop, r2_key=key, url=url)
     return {
         "status": "success",
