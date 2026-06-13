@@ -158,3 +158,32 @@ class TestPatchImageCrop:
             format="json",
         )
         assert response.status_code == 400
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "crop",
+    [
+        {"x": -0.1, "y": 0.0, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": -0.1, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": -0.1, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 0.5, "height": -0.1},
+        {"x": 1.1, "y": 0.0, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": 1.1, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 1.1, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 0.5, "height": 1.1},
+        {"x": 0.0, "y": 0.0, "width": 0.0, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 0.5, "height": 0.0},
+        {"x": 0.6, "y": 0.0, "width": 0.5, "height": 0.5},  # x + width > 1
+        {"x": 0.0, "y": 0.6, "width": 0.5, "height": 0.5},  # y + height > 1
+    ],
+)
+class TestPatchImageCropValidation:
+    def test_out_of_bounds_crop_returns_400(self, client, image_in_editable_piece, crop):
+        image = image_in_editable_piece
+        response = client.patch(
+            f"/api/images/{image.id}/crop/",
+            crop,
+            format="json",
+        )
+        assert response.status_code == 400

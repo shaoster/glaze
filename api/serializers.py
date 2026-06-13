@@ -270,6 +270,24 @@ class ImageCropSerializer(serializers.Serializer):
     width = serializers.FloatField()
     height = serializers.FloatField()
 
+    def validate(self, data):
+        errors = {}
+        for field in ("x", "y", "width", "height"):
+            if not 0.0 <= data[field] <= 1.0:
+                errors[field] = "Must be between 0.0 and 1.0."
+        if not errors:
+            if data["width"] <= 0:
+                errors["width"] = "Must be greater than 0."
+            if data["height"] <= 0:
+                errors["height"] = "Must be greater than 0."
+            if data["x"] + data["width"] > 1.0:
+                errors["width"] = "x + width must not exceed 1.0."
+            if data["y"] + data["height"] > 1.0:
+                errors["height"] = "y + height must not exceed 1.0."
+        if errors:
+            raise serializers.ValidationError(errors)
+        return data
+
 
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
