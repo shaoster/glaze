@@ -98,3 +98,27 @@ class TestHealthReady:
         assert len(schema["paths"]) > 0
         for path in schema["paths"].keys():
             assert path.startswith("/api/")
+
+    def test_openapi_schema_registers_agent_token_security_scheme(self):
+        from drf_spectacular.generators import SchemaGenerator
+
+        generator = SchemaGenerator()
+        schema = generator.get_schema(request=None, public=True)
+        security_schemes = schema.get("components", {}).get("securitySchemes", {})
+        assert "agentTokenAuth" in security_schemes, (
+            f"Expected 'agentTokenAuth' in securitySchemes, got: {list(security_schemes.keys())}"
+        )
+
+    def test_openapi_schema_no_illegal_component_names(self):
+        import re
+
+        from drf_spectacular.generators import SchemaGenerator
+
+        generator = SchemaGenerator()
+        schema = generator.get_schema(request=None, public=True)
+        component_names = list(schema.get("components", {}).get("schemas", {}).keys())
+        legal_pattern = re.compile(r"^[A-Za-z0-9_.\-]+$")
+        illegal = [name for name in component_names if not legal_pattern.match(name)]
+        assert illegal == [], (
+            f"Expected all component names to be legal identifiers, got illegal: {illegal}"
+        )

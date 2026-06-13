@@ -13,7 +13,12 @@ import secrets
 from typing import cast
 
 from django.contrib.auth.models import User
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+    inline_serializer,
+)
 from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
@@ -68,7 +73,9 @@ class AgentTokenCreatedSerializer(serializers.ModelSerializer):
         "and will not be accessible again — store it securely. Tokens authenticate "
         "via ``Authorization: Bearer pdagent_<token>``."
     ),
-    request=serializers.Serializer,
+    request=inline_serializer(
+        "AgentTokenCreate", fields={"name": serializers.CharField()}
+    ),
     responses={
         201: AgentTokenCreatedSerializer,
         400: OpenApiResponse(description="Missing or invalid name."),
