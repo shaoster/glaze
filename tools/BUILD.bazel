@@ -134,6 +134,25 @@ pytest_test(
     visibility = ["//visibility:public"],
 )
 
+# ── Tutorials schema validation ──────────────────────────────────────────────
+
+pytest_test(
+    name = "tutorials_schema_test",
+    srcs = [
+        "tests/test_tutorials_schema.py",
+        "//tools:pytest_main.py",
+    ],
+    main = "//tools:pytest_main.py",
+    args = ["tools/tests/test_tutorials_schema.py"],
+    data = ["//:tutorials_files"],
+    deps = [
+        "@pypi//jsonschema",
+        "@pypi//pyyaml",
+    ],
+    tags = ["lint"],
+    visibility = ["//visibility:public"],
+)
+
 # ── Kubernetes manifest validation ───────────────────────────────────────────
 
 sh_test(
