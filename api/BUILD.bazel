@@ -215,6 +215,7 @@ filegroup(
         "health_views.py",
         "import_views.py",
         "invitations.py",
+        "llm_schema.py",
         "logging.py",
         "manual_tile_imports.py",
         "model_factories.py",
