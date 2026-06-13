@@ -1,10 +1,10 @@
 """LLM-tailored OpenAPI schema configuration for the PotterDoc Agent API."""
 
-_LLM_PATH_PREFIXES = (
-    "/api/pieces/",
-    "/api/globals/",
-    "/api/images/",
-)
+# Globals that must not appear in the LLM schema. The `piece` global is a DSL
+# reference target; pieces must be created via POST /api/pieces/ so that the
+# first `designed` state is initialized — bypassing that via the generic global
+# endpoint would produce a Piece with no state history.
+_EXCLUDED_GLOBALS = {"piece"}
 
 _AGENT_AUTH_SCHEME = {
     "type": "http",
@@ -18,19 +18,42 @@ _AGENT_AUTH_SCHEME = {
 }
 
 
+def _is_llm_endpoint(path: str) -> bool:
+    if path.startswith("/api/pieces/"):
+        return True
+    if path.startswith("/api/globals/"):
+        # Extract the global name (third path segment).
+        parts = path.split("/")  # ['', 'api', 'globals', '<name>', ...]
+        global_name = parts[3] if len(parts) > 3 else ""
+        return global_name not in _EXCLUDED_GLOBALS
+    # Only the specific crop endpoint, not piece_state or crop-runs.
+    if path.endswith("/crop/"):
+        return True
+    return False
+
+
 def llm_schema_preprocessing_hook(endpoints, **kwargs):
     return [
         (path, path_regex, method, callback)
         for path, path_regex, method, callback in endpoints
-        if any(path.startswith(prefix) for prefix in _LLM_PATH_PREFIXES)
+        if _is_llm_endpoint(path)
     ]
 
 
 def llm_schema_postprocessing_hook(result, generator, request, public, **kwargs):
-    """Replace all security schemes with agentAuth only and set document-level security."""
+    """Replace all security schemes with agentAuth and normalize per-op security."""
     result.setdefault("components", {})
     result["components"]["securitySchemes"] = {"agentAuth": _AGENT_AUTH_SCHEME}
     result["security"] = [{"agentAuth": []}]
+
+    # Per-operation security overrides reference whichever schemes were registered
+    # on the authenticators (bearerAuth, cookieAuth). Those schemes are removed
+    # above, so stale per-op entries must be cleared to avoid dangling references.
+    for path_item in result.get("paths", {}).values():
+        for operation in path_item.values():
+            if isinstance(operation, dict):
+                operation.pop("security", None)
+
     return result
 
 
