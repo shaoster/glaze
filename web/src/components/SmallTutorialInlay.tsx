@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import CloseIcon from "@mui/icons-material/Close";
-import { Box, IconButton, Paper, Popper, Typography } from "@mui/material";
+import { Box, IconButton, Paper, Popper, Typography, useTheme } from "@mui/material";
 
 import { useMutation } from "@tanstack/react-query";
 import { useCurrentUser, useSaveUserPreferences } from "./CurrentUserContext";
@@ -31,6 +31,7 @@ export default function SmallTutorialInlay({
   dismissLabel,
   placement,
 }: SmallTutorialInlayProps) {
+  const theme = useTheme();
   const currentUser = useCurrentUser();
   const saveUserPreferences = useSaveUserPreferences();
   const tutorialVisibility = currentUser?.preferences[tutorialKey] ?? true;
@@ -124,7 +125,7 @@ export default function SmallTutorialInlay({
           options: { offset: popperOffset },
         },
       ]}
-      sx={{ zIndex: "auto" }}
+      sx={{ zIndex: theme.zIndex.modal + 1 }}
     >
       <Paper
         variant="outlined"

@@ -20,6 +20,11 @@ properties:
 
 $defs:
   tutorial:
+    oneOf:
+      - $ref: "#/$defs/anchored-tutorial"
+      - $ref: "#/$defs/modal-tutorial"
+
+  anchored-tutorial:
     type: object
     required: [preference, inlay, attachment]
     additionalProperties: false
@@ -32,7 +37,7 @@ $defs:
         description: Tutorial IDs that must be dismissed before this tutorial is shown.
       preference:
         type: object
-        required: [label, hint]
+        required: [label]
         additionalProperties: false
         properties:
           label:
@@ -46,6 +51,10 @@ $defs:
         required: [label, dismiss_label]
         additionalProperties: false
         properties:
+          type:
+            type: string
+            enum: [anchored]
+            description: Inlay type discriminant. Omit or set to "anchored" for a coachmark popper.
           label:
             type: string
             description: Text shown inside the tutorial bubble.
@@ -59,7 +68,19 @@ $defs:
         properties:
           selector:
             type: string
-            description: CSS selector for the target element to attach the tutorial to.
+            description: |
+              CSS selector for the target element to attach the tutorial to.
+              The full CSS selector language is supported, enabling presence-based,
+              state-conditional, and context-dependent targeting:
+
+                #element-id                      — presence-based: show when element exists
+                #btn:not([disabled])             — only when the element is enabled
+                #btn[disabled]                   — only when the element is disabled
+                [aria-expanded="true"] #child    — state via ancestor attribute
+
+              Note: modal-hosted elements become reachable once their dialog opens
+              (MutationObserver fires on DOM insertion AND on attribute changes);
+              choose placement relative to the element's position in the viewport.
           placement:
             type: string
             enum: [top, left, right]
@@ -72,6 +93,83 @@ $defs:
               type:
                 type: string
                 enum: [open-preferences, dismiss-only]
+                description: |
+                  Action to perform when the tutorial is clicked.
+                  "open-preferences" opens the preferences dialog (requires section).
+                  "dismiss-only" dismisses the tutorial without any navigation.
               section:
                 type: string
                 description: The preference section ID to open when the tutorial is clicked.
+
+  modal-tutorial:
+    type: object
+    required: [preference, inlay, route]
+    additionalProperties: false
+    properties:
+      depends_on:
+        type: array
+        items:
+          type: string
+          pattern: "^[a-z][a-z0-9_]*$"
+        description: Tutorial IDs that must be dismissed before this tutorial is shown.
+      preference:
+        type: object
+        required: [label]
+        additionalProperties: false
+        properties:
+          label:
+            type: string
+            description: Label shown in the User Preferences UI checkbox.
+          hint:
+            type: string
+            description: Hint text shown in the User Preferences UI.
+      inlay:
+        type: object
+        required: [type, label, dismiss_label, pages]
+        additionalProperties: false
+        properties:
+          type:
+            type: string
+            const: modal
+            description: Inlay type discriminant — must be "modal" for a full-screen walkthrough.
+          label:
+            type: string
+            description: Human-readable name for this tutorial.
+          dismiss_label:
+            type: string
+            description: Accessibility label for the dismiss/close button.
+          eyebrow:
+            type: string
+            description: >
+              Short eyebrow text shown in the header. Defaults to
+              "Welcome to PotterDoc · Quick tour".
+          complete_label:
+            type: string
+            description: Label for the CTA button on the last page. Defaults to "Start using PotterDoc".
+          pages:
+            type: array
+            minItems: 2
+            maxItems: 5
+            description: Ordered list of pages shown in the walkthrough.
+            items:
+              type: object
+              required: [title, body]
+              additionalProperties: false
+              properties:
+                title:
+                  type: string
+                  description: Page title. Supports <em>…</em> for italic spans.
+                body:
+                  type: string
+                  description: Page body copy.
+                bullets:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional bullet points shown below the body.
+      route:
+        type: string
+        description: >
+          URL pathname pattern matched against window.location.pathname via
+          react-router-dom matchPath. Use exact paths (e.g. /pieces) to avoid
+          matching child routes that open their own modals.
