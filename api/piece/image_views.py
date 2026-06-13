@@ -4,10 +4,10 @@ This module owns the image move/crop flows so ``piece_views.py`` can stay focuse
 on piece list/detail/state behavior.
 """
 
-import base64 as _base64
 import uuid
 
 import requests as _requests
+from django.db import transaction
 from django.db.models import Max
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -151,35 +151,6 @@ def _fetch_url_bytes(url: str) -> tuple[bytes, str] | Response:
     return data, content_type
 
 
-def _decode_base64_bytes(b64_str: str) -> tuple[bytes, str] | Response:
-    """Decode a base64 string (with optional data URI prefix). Returns (data, content_type) or error Response."""
-    content_type = "image/jpeg"
-    if b64_str.startswith("data:"):
-        try:
-            header, b64_str = b64_str.split(",", 1)
-            mime = header.split(";")[0][5:]
-            if mime:
-                content_type = mime
-        except ValueError:
-            return Response(
-                {"detail": "Invalid data URI format."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-    try:
-        data = _base64.b64decode(b64_str)
-    except Exception:
-        return Response(
-            {"detail": "Invalid base64 data."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if len(data) > _MAX_UPLOAD_BYTES:
-        return Response(
-            {"detail": "Image exceeds 10 MB size limit."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    return data, content_type
-
-
 def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
     """Shared implementation for server-side image upload to a piece state."""
     from ..tasks import get_task_interface
@@ -193,16 +164,9 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
     validated = serializer.validated_data
-
-    url = validated.get("url")
-    b64 = validated.get("base64")
     caption = validated.get("caption", "")
 
-    if url:
-        result = _fetch_url_bytes(url)
-    else:
-        result = _decode_base64_bytes(b64)
-
+    result = _fetch_url_bytes(validated["url"])
     if isinstance(result, Response):
         return result
     data, content_type = result
