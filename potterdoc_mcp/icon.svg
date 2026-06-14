@@ -1,0 +1,22 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" fill="none">
+
+  <!-- Uniformly scaled group, centered for circular favicon -->
+  <g transform="translate(64 64) scale(1.358) translate(-64 -64)">
+
+    <!-- WHEEL -->
+    <ellipse cx="64" cy="93.2143" rx="42" ry="12" fill="#E6C3A0" stroke="#8A3F1D" stroke-width="1"></ellipse>
+
+    <!-- POT BODY -->
+    <path d="
+        M42 29.2143
+        L86 29.2143
+        L86 93.2143
+        C86 99.2143, 42 99.2143, 42 93.2143
+        Z
+      " fill="#C66A3D" stroke="#8A3F1D" stroke-width="1" stroke-linejoin="round"></path>
+
+    <!-- POT RIM -->
+    <ellipse cx="64" cy="29.2143" rx="22.5" ry="6.4286" fill="#8A3F1D"></ellipse>
+
+  </g>
+</svg>

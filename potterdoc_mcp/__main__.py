@@ -10,6 +10,7 @@ import os
 import secrets
 import time
 import urllib.parse
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -74,6 +75,11 @@ def _build_http_app():
 
     async def health(request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok"})
+
+    _icon_svg = (Path(__file__).parent / "icon.svg").read_text()
+
+    async def icon_svg(request: Request) -> Response:
+        return Response(_icon_svg, media_type="image/svg+xml")
 
     # ------------------------------------------------------------------
     # OAuth 2.0 Authorization Server endpoints
@@ -263,6 +269,7 @@ def _build_http_app():
         middleware=[Middleware(BearerAuthMiddleware)],
         routes=[
             Route("/health", health),
+            Route("/icon.svg", icon_svg),
             Route(
                 "/.well-known/oauth-authorization-server",
                 oauth_metadata,

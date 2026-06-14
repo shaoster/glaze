@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.types import Icon
 
 from potterdoc_mcp.client import PotterDocClient
 
@@ -51,6 +52,12 @@ mcp = FastMCP(
         "states and required fields, and transition_piece to advance a piece through "
         "the firing workflow."
     ),
+    icons=[
+        Icon(
+            src=f"{os.environ.get('MCP_BASE_URL', 'https://mcp.potterdoc.com')}/icon.svg",
+            mimeType="image/svg+xml",
+        )
+    ],
     lifespan=_lifespan,
     stateless_http=True,
 )
