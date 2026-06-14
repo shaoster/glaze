@@ -63,7 +63,14 @@
       "WebFetch(domain:www.npmjs.com)",
       "WebFetch(domain:advanced-cropper.github.io)",
       "Bash(GIT_SEQUENCE_EDITOR=\"sed -i '2s/pick/squash/'\" git rebase -i HEAD~2)",
-      "Bash(awk '/^diff --git/{file=$3} file ~ /CropOverlay|GlazeImportCrop|BUILD/')"
+      "Bash(awk '/^diff --git/{file=$3} file ~ /CropOverlay|GlazeImportCrop|BUILD/')",
+      "Bash(sed -i '/^    host=\"0\\\\.0\\\\.0\\\\.0\",$/d; /^    port=8080,$/d' /home/phil/code/glaze/.agent-worktrees/claude/issue-938-remote-mcp-http/potterdoc_mcp/server.py)",
+      "Bash(sed -n '48,62p' /home/phil/code/glaze/.agent-worktrees/claude/issue-938-remote-mcp-http/potterdoc_mcp/server.py)",
+      "Bash(gz_test //api:api_mypy //api:api_llm_schema_test)",
+      "WebFetch(domain:developers.openai.com)",
+      "Bash(gz_test //api:api_mypy //api:api_llm_schema_test //api:api_piece_test)",
+      "Bash(gz_format api/piece/image_views.py api/views.py api/urls.py api/llm_schema.py api/serializers.py api/tests/test_llm_schema.py)",
+      "Bash(gz_test //api:api_piece_test //api:api_mypy)"
     ],
     "additionalDirectories": [
       "/tmp"

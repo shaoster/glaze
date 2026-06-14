@@ -193,6 +193,7 @@ filegroup(
         "auth/export_views.py",
         "auth/google_views.py",
         "auth/invite_views.py",
+        "auth/mcp_token_views.py",
         "auth/mock_idp_views.py",
         "auth/token_views.py",
         "auth/preferences_views.py",
