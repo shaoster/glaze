@@ -86,11 +86,34 @@ def _build_http_app():
                 "issuer": base,
                 "authorization_endpoint": f"{base}/oauth/authorize",
                 "token_endpoint": f"{base}/oauth/token",
+                "registration_endpoint": f"{base}/oauth/register",
                 "response_types_supported": ["code"],
                 "grant_types_supported": ["authorization_code"],
                 "code_challenge_methods_supported": ["S256"],
                 "token_endpoint_auth_methods_supported": ["none"],
             }
+        )
+
+    async def oauth_register(request: Request) -> JSONResponse:
+        # RFC 7591 Dynamic Client Registration.
+        # We don't persist registrations — redirect_uri is validated at authorize
+        # time against the OAUTH_ALLOWED_REDIRECT_URI_PREFIXES allowlist instead.
+        # Return a stable client_id so the caller can proceed through the flow.
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        redirect_uris = body.get("redirect_uris", [])
+        return JSONResponse(
+            {
+                "client_id": "potterdoc-mcp-client",
+                "client_id_issued_at": int(time.time()),
+                "redirect_uris": redirect_uris,
+                "grant_types": ["authorization_code"],
+                "response_types": ["code"],
+                "token_endpoint_auth_method": "none",
+            },
+            status_code=201,
         )
 
     async def oauth_authorize(request: Request) -> Response:
@@ -244,6 +267,7 @@ def _build_http_app():
                 "/.well-known/oauth-authorization-server",
                 oauth_metadata,
             ),
+            Route("/oauth/register", oauth_register, methods=["POST"]),
             Route("/oauth/authorize", oauth_authorize),
             Route("/oauth/callback", oauth_callback),
             Route("/oauth/token", oauth_token, methods=["POST"]),
