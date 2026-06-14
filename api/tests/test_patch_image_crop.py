@@ -187,3 +187,21 @@ class TestPatchImageCropValidation:
             format="json",
         )
         assert response.status_code == 400
+
+
+@pytest.mark.django_db
+class TestPatchImageCropEpsilonTolerance:
+    def test_floating_point_sum_just_over_one_is_accepted(
+        self, client, image_in_editable_piece
+    ):
+        # 0.9/23 + 22.1/23 produces a sum slightly above 1.0 due to float division;
+        # the endpoint must tolerate this rather than returning 400.
+        x = 0.9 / 23
+        width = 22.1 / 23
+        assert x + width > 1.0, "precondition: sum exceeds 1.0 due to float round-off"
+        response = client.patch(
+            f"/api/images/{image_in_editable_piece.id}/crop/",
+            {"x": x, "y": 0.0, "width": width, "height": 0.5},
+            format="json",
+        )
+        assert response.status_code == 200
