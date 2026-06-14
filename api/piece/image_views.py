@@ -140,13 +140,18 @@ def _fetch_url_to_r2(url: str, user_id: "int | None") -> "tuple[str, str] | Resp
             status=status.HTTP_400_BAD_REQUEST,
         )
     content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
-    ext = _ext_for_content_type(content_type)
+    if content_type not in _IMAGE_CONTENT_TYPE_TO_EXT:
+        return Response(
+            {"detail": f"Unsupported image type: {content_type}."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     data = resp.content
     if len(data) > _MAX_UPLOAD_BYTES:
         return Response(
             {"detail": "Image exceeds 10 MB size limit."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    ext = _ext_for_content_type(content_type)
     key = f"images/{user_id}/{uuid.uuid4()}.{ext}"
     public_url = r2.upload_bytes(key, data, content_type)
     return public_url, key
