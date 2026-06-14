@@ -77,6 +77,28 @@ def test_register_multiple_redirect_uris(client):
     assert response.json()["redirect_uris"] == uris
 
 
+def test_register_invalid_json_returns_400(client):
+    response = client.post(
+        "/oauth/register",
+        content=b"not json",
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 400
+    assert response.json()["error"] == "invalid_client_metadata"
+
+
+# ---------------------------------------------------------------------------
+# /icon.svg
+# ---------------------------------------------------------------------------
+
+
+def test_icon_svg(client):
+    response = client.get("/icon.svg")
+    assert response.status_code == 200
+    assert "image/svg+xml" in response.headers["content-type"]
+    assert "<svg" in response.text
+
+
 # ---------------------------------------------------------------------------
 # /oauth/authorize
 # ---------------------------------------------------------------------------

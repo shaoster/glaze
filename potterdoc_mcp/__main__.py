@@ -108,7 +108,10 @@ def _build_http_app():
         try:
             body = await request.json()
         except Exception:
-            body = {}
+            return JSONResponse(
+                {"error": "invalid_client_metadata", "error_description": "Request body must be valid JSON."},
+                status_code=400,
+            )
         redirect_uris = body.get("redirect_uris", [])
         return JSONResponse(
             {

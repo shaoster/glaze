@@ -75,7 +75,7 @@ genrule(
 
 pkg_tar(
     name = "mcp_src_tar",
-    srcs = glob(["**/*.py", "*.svg"], exclude=["tests/**"]),
+    srcs = glob(["**/*.py", "**/*.svg"], exclude=["tests/**"]),
     strip_prefix = ".",
     package_dir = "/app/potterdoc_mcp",
 )
