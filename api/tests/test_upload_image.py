@@ -94,6 +94,14 @@ class TestUploadImageEndpoints:
         )
         assert response.status_code == 400
 
+    def test_unauthenticated_returns_401(self, piece_with_state):
+        piece, _ = piece_with_state
+        response = APIClient().post(
+            self._current_url(piece.id),
+            {"file": _jpeg_file()},
+        )
+        assert response.status_code == 401
+
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
     def test_unsupported_content_type_returns_400(
         self, mock_r2, auth_client, piece_with_state

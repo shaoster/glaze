@@ -141,7 +141,7 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
             {"detail": f"Unsupported image type: {content_type}."},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    if file_obj.size > _MAX_UPLOAD_BYTES:
+    if (file_obj.size or 0) > _MAX_UPLOAD_BYTES:
         return Response(
             {"detail": "Image exceeds 10 MB size limit."},
             status=status.HTTP_400_BAD_REQUEST,
