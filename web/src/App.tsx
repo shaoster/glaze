@@ -709,6 +709,22 @@ function AppShell({
   );
 }
 
+function LazyRoute({ element }: { element: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <Suspense
+        fallback={
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+            <CircularProgress />
+          </Box>
+        }
+      >
+        {element}
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
 function UnauthenticatedApp({
   onAuthenticated,
   redirectTo,
@@ -736,114 +752,12 @@ function UnauthenticatedApp({
                 />
               }
             />
-            <Route
-              path="/about"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <AboutPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/privacy-policy"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <PrivacyPolicyPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/terms-of-service"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <TermsOfServicePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/pieces/:id/showcase"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <ShowcasePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/pieces/:id/*"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <PublicPieceShell />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/invite"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <InvitePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
+            <Route path="/about" element={<LazyRoute element={<AboutPage />} />} />
+            <Route path="/privacy-policy" element={<LazyRoute element={<PrivacyPolicyPage />} />} />
+            <Route path="/terms-of-service" element={<LazyRoute element={<TermsOfServicePage />} />} />
+            <Route path="/pieces/:id/showcase" element={<LazyRoute element={<ShowcasePage />} />} />
+            <Route path="/pieces/:id/*" element={<LazyRoute element={<PublicPieceShell />} />} />
+            <Route path="/invite" element={<LazyRoute element={<InvitePage />} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>,
         ),
@@ -884,16 +798,7 @@ function AuthenticatedApp({
               <Route path="new" element={<PieceListPage />} />
               <Route path="analyze/*" element={<AnalyzePage />} />
             </Route>
-            <Route
-              path="/pieces/:id/showcase"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <ShowcasePage isAuthenticated />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
+            <Route path="/pieces/:id/showcase" element={<LazyRoute element={<ShowcasePage isAuthenticated />} />} />
             <Route path="/pieces/:id/*" element={<PieceDetailPage />} />
             <Route
               path="/tools/glaze-import"
@@ -905,84 +810,20 @@ function AuthenticatedApp({
                 )
               }
             />
-            <Route
-              path="/invite"
-              element={
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          py: 4,
-                        }}
-                      >
-                        <CircularProgress />
-                      </Box>
-                    }
-                  >
-                    <InvitePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
+            <Route path="/invite" element={<LazyRoute element={<InvitePage />} />} />
             <Route
               path="/staff/invite"
               element={
                 currentUser.is_staff ? (
-                  <ErrorBoundary>
-                    <Suspense
-                      fallback={
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            py: 4,
-                          }}
-                        >
-                          <CircularProgress />
-                        </Box>
-                      }
-                    >
-                      <StaffInvitePage />
-                    </Suspense>
-                  </ErrorBoundary>
+                  <LazyRoute element={<StaffInvitePage />} />
                 ) : (
                   <Navigate to="/" replace />
                 )
               }
             />
-            <Route
-              path="/about"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <AboutPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/privacy-policy"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <PrivacyPolicyPage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/terms-of-service"
-              element={
-                <ErrorBoundary>
-                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
-                    <TermsOfServicePage />
-                  </Suspense>
-                </ErrorBoundary>
-              }
-            />
+            <Route path="/about" element={<LazyRoute element={<AboutPage />} />} />
+            <Route path="/privacy-policy" element={<LazyRoute element={<PrivacyPolicyPage />} />} />
+            <Route path="/terms-of-service" element={<LazyRoute element={<TermsOfServicePage />} />} />
             <Route
               path="/preferences"
               element={<Box sx={{ minHeight: "100dvh" }} />}
