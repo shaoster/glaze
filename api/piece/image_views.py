@@ -24,7 +24,7 @@ from .. import r2
 from ..crops import apply_crop
 from ..models import AsyncTask, Image, PieceStateImage
 from ..serializers import (
-    ImageCropSerializer,
+    ImageCropInputSerializer,
     PieceDetailSerializer,
     UploadImageSerializer,
 )
@@ -296,7 +296,7 @@ def upload_image_to_current_state(request: Request, piece_id) -> Response:
 
 @extend_schema(
     operation_id="images_crop_partial_update",
-    request=ImageCropSerializer,
+    request=ImageCropInputSerializer,
     responses=PieceDetailSerializer,
     description="Update the crop bounds for an image. Returns the updated piece detail.",
 )
@@ -306,7 +306,7 @@ def upload_image_to_current_state(request: Request, piece_id) -> Response:
 def patch_image_crop(request, image_id):
     """Update the crop metadata for the most recent piece-state image link."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)
-    serializer = ImageCropSerializer(data=request.data)
+    serializer = ImageCropInputSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
     # An Image can appear in multiple PieceStateImages (e.g. after a "Move to"

@@ -158,3 +158,50 @@ class TestPatchImageCrop:
             format="json",
         )
         assert response.status_code == 400
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "crop",
+    [
+        {"x": -0.1, "y": 0.0, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": -0.1, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": -0.1, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 0.5, "height": -0.1},
+        {"x": 1.1, "y": 0.0, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": 1.1, "width": 0.5, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 1.1, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 0.5, "height": 1.1},
+        {"x": 0.0, "y": 0.0, "width": 0.0, "height": 0.5},
+        {"x": 0.0, "y": 0.0, "width": 0.5, "height": 0.0},
+        {"x": 0.6, "y": 0.0, "width": 0.5, "height": 0.5},  # x + width > 1
+        {"x": 0.0, "y": 0.6, "width": 0.5, "height": 0.5},  # y + height > 1
+    ],
+)
+class TestPatchImageCropValidation:
+    def test_out_of_bounds_crop_returns_400(self, client, image_in_editable_piece, crop):
+        image = image_in_editable_piece
+        response = client.patch(
+            f"/api/images/{image.id}/crop/",
+            crop,
+            format="json",
+        )
+        assert response.status_code == 400
+
+
+@pytest.mark.django_db
+class TestPatchImageCropEpsilonTolerance:
+    def test_floating_point_sum_just_over_one_is_accepted(
+        self, client, image_in_editable_piece
+    ):
+        # 0.9/23 + 22.1/23 produces a sum slightly above 1.0 due to float division;
+        # the endpoint must tolerate this rather than returning 400.
+        x = 0.9 / 23
+        width = 22.1 / 23
+        assert x + width > 1.0, "precondition: sum exceeds 1.0 due to float round-off"
+        response = client.patch(
+            f"/api/images/{image_in_editable_piece.id}/crop/",
+            {"x": x, "y": 0.0, "width": width, "height": 0.5},
+            format="json",
+        )
+        assert response.status_code == 200

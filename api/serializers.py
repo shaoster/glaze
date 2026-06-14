@@ -271,6 +271,37 @@ class ImageCropSerializer(serializers.Serializer):
     height = serializers.FloatField()
 
 
+class ImageCropInputSerializer(ImageCropSerializer):
+    """ImageCropSerializer with strict bounds validation for the crop-edit endpoint.
+
+    The base class is used as a nested read/write field in piece state serializers
+    where echoed crop values may pre-date this validation. This subclass is used
+    only as the direct request body for PATCH /api/images/{image_id}/crop/.
+    """
+
+    # Tolerance for floating-point round-off when the client computes x and width
+    # independently from pixel coordinates (e.g. 0.9/23 + 22.1/23 ≈ 1.0 + ε).
+    _EPSILON = 1e-9
+
+    def validate(self, data):
+        errors = {}
+        for field in ("x", "y", "width", "height"):
+            if not 0.0 <= data[field] <= 1.0:
+                errors[field] = "Must be between 0.0 and 1.0."
+        if not errors:
+            if data["width"] <= 0:
+                errors["width"] = "Must be greater than 0."
+            if data["height"] <= 0:
+                errors["height"] = "Must be greater than 0."
+            if data["x"] + data["width"] > 1.0 + self._EPSILON:
+                errors["width"] = "x + width must not exceed 1.0."
+            if data["y"] + data["height"] > 1.0 + self._EPSILON:
+                errors["height"] = "y + height must not exceed 1.0."
+        if errors:
+            raise serializers.ValidationError(errors)
+        return data
+
+
 class CaptionedImageSerializer(serializers.Serializer):
     url = serializers.CharField()
     caption = serializers.CharField(allow_blank=True, default="")
