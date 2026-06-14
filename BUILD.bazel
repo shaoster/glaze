@@ -1,6 +1,5 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_image_layer")
-load("@rules_distroless//distroless:defs.bzl", "group", "passwd")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
@@ -313,58 +312,7 @@ oci_push(
     # Example: bazel run //:push -- --tag $(git rev-parse --short HEAD)
 )
 
-# passwd/group layers for the celery worker image.
-# rules_distroless generates /etc/passwd and /etc/group as additive OCI layers,
-# appending celery (uid/gid 1001) without clobbering existing base image users.
-passwd(
-    name = "celery_passwd",
-    entries = [
-        {
-            "username": "celery",
-            "uid": 1001,
-            "gid": 1001,
-            "gecos": [],
-            "home": "/home/celery",
-            "shell": "/usr/sbin/nologin",
-        },
-    ],
-)
-
-group(
-    name = "celery_group",
-    entries = [
-        {
-            "name": "celery",
-            "gid": 1001,
-        },
-    ],
-)
-
-oci_image(
-    name = "celery_worker_image",
-    base = ":image",
-    entrypoint = [
-        "/bin/bash",
-        "/app/docker-entrypoint.sh",
-        "celery",
-        "-A",
-        "backend",
-        "worker",
-        "-l",
-        "INFO",
-    ],
-    tars = [
-        ":celery_passwd",
-        ":celery_group",
-    ],
-    user = "celery",
-)
-
-oci_push(
-    name = "push_worker",
-    image = ":celery_worker_image",
-    repository = "ghcr.io/shaoster/glaze-worker",
-)  # Load the freshly-built image into the local docker daemon so CI (and devs)
+  # Load the freshly-built image into the local docker daemon so CI (and devs)
 
 # can `docker compose up` against it without a registry round-trip.
 # `bazel run //:load` tags it as ghcr.io/shaoster/glaze:latest, matching the

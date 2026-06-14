@@ -87,16 +87,6 @@ redis:
     limits:
       memory: "128Mi"
 
-worker:
-  replicaCount: 1
-  image:
-    repository: ghcr.io/shaoster/glaze-worker
-  resources:
-    requests:
-      memory: "128Mi"
-    limits:
-      memory: "256Mi"
-
 otelcol:
   enabled: true
   image: otel/opentelemetry-collector-contrib:0.126.0

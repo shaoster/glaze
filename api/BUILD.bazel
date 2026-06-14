@@ -114,8 +114,6 @@ py_library(
     deps = [
         ":api_schema_lib",
         ":api_workflow_lib",
-        "@pypi//celery",
-        "@pypi//gevent",
         "@pypi//modal",
         "@pypi//redis",
     ],
@@ -315,7 +313,6 @@ pytest_test(
     srcs = _CONFTEST + [
         "tests/test_async_maintenance.py",
         "tests/test_async_tasks.py",
-        "tests/test_celery_tasks.py",
         "tests/test_crop_run.py",
         "tests/test_generate_cropped_image.py",
         "tests/test_global_entries.py",
@@ -329,7 +326,6 @@ pytest_test(
     args = [
         "api/tests/test_async_maintenance.py",
         "api/tests/test_async_tasks.py",
-        "api/tests/test_celery_tasks.py",
         "api/tests/test_crop_run.py",
         "api/tests/test_generate_cropped_image.py",
         "api/tests/test_model_factory.py",

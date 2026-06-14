@@ -2,8 +2,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Optional, Protocol
 
-from celery import shared_task
-from celery.signals import task_failure
 from django.db import close_old_connections, transaction
 
 from .models import AsyncTask
@@ -65,7 +63,7 @@ class TaskInterface(Protocol):
 
 
 def _execute_task(task_id: Any) -> None:
-    """Shared execution logic for both in-memory and Celery workers."""
+    """Shared execution logic for background tasks."""
     from .logging import task_context
 
     with task_context(str(task_id)):
@@ -112,11 +110,7 @@ def _execute_task(task_id: Any) -> None:
                 task.status = AsyncTask.Status.FAILURE
                 task.error = str(e)
                 task.save(update_fields=["status", "error", "last_modified"])
-                from celery.exceptions import SoftTimeLimitExceeded, TimeLimitExceeded
-
-                if not isinstance(e, Exception) or isinstance(
-                    e, (SoftTimeLimitExceeded, TimeLimitExceeded)
-                ):
+                if not isinstance(e, Exception):
                     raise
         finally:
             # Clean up connections so the thread pool doesn't leak them
@@ -142,82 +136,6 @@ class InMemoryTaskInterface:
         transaction.on_commit(lambda: _executor.submit(_execute_task, task.id))
 
 
-class CeleryTaskInterface:
-    """Submits tasks to a Celery broker."""
-
-    def __init__(self) -> None:
-        from django.conf import settings
-        from redis import Redis
-
-        self._redis: Redis | None = (
-            Redis.from_url(
-                settings.CELERY_BROKER_URL,
-                socket_connect_timeout=2,
-                socket_timeout=2,
-            )
-            if settings.CELERY_BROKER_URL
-            else None
-        )
-
-    def health_check(self) -> bool:
-        if self._redis is None:
-            return False
-        try:
-            # Assumes Redis broker; Celery doesn't provide a cheap generic
-            # "broker_is_up" without a full connection/handshake.
-            # NOTE: Update this if the broker ever changes away from Redis.
-            return bool(self._redis.ping())
-        except Exception:
-            return False
-
-    def submit(self, task: AsyncTask) -> None:
-        logger.info(f"Submitting task {task.task_type} ({task.id}) to Celery.")
-        soft_limit = TaskRegistry.get_time_limit(task.task_type)
-        kwargs: Dict[str, Any] = {}
-        if soft_limit is not None:
-            kwargs["soft_time_limit"] = soft_limit
-            kwargs["time_limit"] = soft_limit + 30
-        task_id = task.id
-        transaction.on_commit(
-            lambda: run_celery_task.apply_async(args=[task_id], **kwargs)
-        )
-
-
-@shared_task
-def run_celery_task(task_id: Any) -> None:
-    """Celery worker entrypoint for all AsyncTasks."""
-    _execute_task(task_id)
-
-
-@task_failure.connect
-def handle_task_failure(
-    sender=None,
-    task_id=None,
-    exception=None,
-    args=None,
-    kwargs=None,
-    **kwargs_extra,
-) -> None:
-    """Fallback handler to mark AsyncTask as failed if Celery worker crashes, times out, or fails."""
-    if sender and sender.name == "api.tasks.run_celery_task" and args:
-        db_task_id = args[0]
-        try:
-            close_old_connections()
-            task = AsyncTask.objects.get(id=db_task_id)
-            if task.status != AsyncTask.Status.FAILURE:
-                logger.error(
-                    f"Celery task failure signal triggered for task {db_task_id}. "
-                    f"Updating AsyncTask status to FAILURE. Exception: {exception}"
-                )
-                task.status = AsyncTask.Status.FAILURE
-                task.error = f"Celery task execution failed: {exception}"
-                task.save(update_fields=["status", "error", "last_modified"])
-        except Exception:
-            logger.exception(
-                f"Failed to update AsyncTask status on Celery task failure for {db_task_id}"
-            )
-
-
 # Global interface instance.
 def _modal_function(app_name: str, fn_name: str) -> Any:
     """Thin wrapper around modal.Function.from_name — mock this in tests."""
@@ -228,15 +146,7 @@ def _modal_function(app_name: str, fn_name: str) -> Any:
 
 def get_task_interface() -> TaskInterface:
     global _task_interface
-    if _task_interface is not None:
-        return _task_interface
-
-    from django.conf import settings
-
-    backend = getattr(settings, "ASYNC_TASK_BACKEND", "inmemory")
-    if backend == "celery":
-        _task_interface = CeleryTaskInterface()
-    else:
+    if _task_interface is None:
         _task_interface = InMemoryTaskInterface()
     return _task_interface
 
@@ -360,9 +270,9 @@ def generate_cropped_image(task: AsyncTask) -> dict:
     so completion can update every current row matching the pair even if the
     triggering row was deleted and recreated while the task ran.
 
-    Heavy compute (PIL crop) is offloaded to Modal. Celery owns all DB reads
+    Heavy compute (PIL crop) is offloaded to Modal. Django owns all DB reads
     and writes; Modal receives public URLs and presigned PUT URLs only — no
-    bytes transit the Celery↔Modal boundary.
+    bytes transit the Django↔Modal boundary.
     """
     from . import r2
     from .crops import crop_key_for, set_cropped_fields
@@ -425,7 +335,7 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
 
     Returns ``url``, ``key``, ``width``, and ``height`` of the new JPEG.
 
-    Heavy compute (PIL decode/encode) is offloaded to Modal. Celery owns all
+    Heavy compute (PIL decode/encode) is offloaded to Modal. Django owns all
     DB reads and writes; Modal receives public URLs and a presigned PUT URL.
     """
     import uuid  # noqa: PLC0415

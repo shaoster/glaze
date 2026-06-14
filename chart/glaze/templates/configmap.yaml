@@ -46,7 +46,6 @@ metadata:
   labels:
     {{- include "glaze.labels" . | nindent 4 }}
 data:
-  CELERY_BROKER_URL: "redis://{{ include "glaze.fullname" . }}-redis:6379/0"
   REDIS_CACHE_URL: "redis://{{ include "glaze.fullname" . }}-redis:6379/1"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://{{ include "glaze.fullname" . }}-otelcol:4317"
   OTEL_RESOURCE_ATTRIBUTES: "service.name=glaze"

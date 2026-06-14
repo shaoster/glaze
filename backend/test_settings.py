@@ -287,16 +287,6 @@ else:
         }
     }
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "")
-ASYNC_TASK_BACKEND = os.environ.get(
-    "ASYNC_TASK_BACKEND", "celery" if CELERY_BROKER_URL else "inmemory"
-)
-
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_BACKEND = None
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
 
 LOGGING = {
     "version": 1,

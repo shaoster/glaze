@@ -226,27 +226,6 @@ class TestGenerateCroppedImageTask:
         assert recreated.cropped_image is not None
         assert recreated.cropped_image.r2_key == crop_key_for(image.r2_key, CROP)
 
-    def test_succeeds_when_asyncio_run_is_unavailable(self, user, monkeypatch):
-        """asyncio.run() raises RuntimeError under gevent; task must use .remote() directly."""
-        import asyncio
-
-        _set_r2_env(monkeypatch)
-        self._mock_r2(monkeypatch)
-
-        def _raise(_):
-            raise RuntimeError(
-                "asyncio.run() cannot be called from a running event loop"
-            )
-
-        monkeypatch.setattr(asyncio, "run", _raise)
-        piece, state, image, link = _make_piece_with_image(user, crop=CROP)
-        task = self._make_task(user, image)
-        _execute_task(task.id)
-        task.refresh_from_db()
-        assert task.status == AsyncTask.Status.SUCCESS
-        link.refresh_from_db()
-        assert link.cropped_image is not None
-
     def test_skips_image_not_stored_in_r2(self, user, monkeypatch):
         _set_r2_env(monkeypatch)
         piece, state, image, link = _make_piece_with_image(user, crop=CROP)

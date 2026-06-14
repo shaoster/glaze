@@ -1,6 +1,7 @@
 import pytest
 
 from api.models import (
+    AsyncTask,
     CropRun,
     GlazeCombination,
     GlazeType,
@@ -10,6 +11,7 @@ from api.models import (
     PieceStateImage,
 )
 from api.utils import (
+    _is_crop_task_failed,
     crop_to_dict,
     replace_piece_state_images,
     sync_glaze_type_singleton_combination,
@@ -223,3 +225,57 @@ class TestReplacePieceStateImages:
         assert not PieceStateImage.objects.filter(pk=psi.pk).exists()
         crop_run.refresh_from_db()
         assert crop_run.piece_state_image is None
+
+
+CROP_A = {"x": 0.1, "y": 0.2, "width": 0.6, "height": 0.5}
+CROP_B = {"x": 0.0, "y": 0.0, "width": 0.5, "height": 0.5}
+
+
+@pytest.mark.django_db
+class TestIsCropTaskFailed:
+    def _make_image(self, user):
+        return Image.objects.create(
+            user=user,
+            url="https://media.example.com/images/1/test.jpg",
+            r2_key="images/1/test.jpg",
+        )
+
+    def _make_task(self, user, image, crop, status):
+        return AsyncTask.objects.create(
+            user=user,
+            task_type="generate_cropped_image",
+            input_params={"image_id": str(image.id), "crop": crop},
+            status=status,
+        )
+
+    def test_false_when_no_task_exists(self, user):
+        image = self._make_image(user)
+        assert not _is_crop_task_failed(image.id, image.r2_key, CROP_A)
+
+    def test_true_when_latest_task_for_exact_crop_failed(self, user):
+        image = self._make_image(user)
+        self._make_task(user, image, CROP_A, AsyncTask.Status.FAILURE)
+        assert _is_crop_task_failed(image.id, image.r2_key, CROP_A)
+
+    def test_false_when_failure_is_for_different_crop_on_same_image(self, user):
+        """Bug regression: old failure for CROP_B must not block CROP_A."""
+        image = self._make_image(user)
+        self._make_task(user, image, CROP_B, AsyncTask.Status.FAILURE)
+        assert not _is_crop_task_failed(image.id, image.r2_key, CROP_A)
+
+    def test_false_when_latest_task_is_pending_after_earlier_failure(self, user):
+        """A new PENDING task after a previous FAILURE should clear the failed state."""
+        image = self._make_image(user)
+        self._make_task(user, image, CROP_A, AsyncTask.Status.FAILURE)
+        self._make_task(user, image, CROP_A, AsyncTask.Status.PENDING)
+        assert not _is_crop_task_failed(image.id, image.r2_key, CROP_A)
+
+    def test_false_when_r2_key_is_none(self, user):
+        image = self._make_image(user)
+        self._make_task(user, image, CROP_A, AsyncTask.Status.FAILURE)
+        assert not _is_crop_task_failed(image.id, None, CROP_A)
+
+    def test_false_when_crop_is_none(self, user):
+        image = self._make_image(user)
+        self._make_task(user, image, CROP_A, AsyncTask.Status.FAILURE)
+        assert not _is_crop_task_failed(image.id, image.r2_key, None)

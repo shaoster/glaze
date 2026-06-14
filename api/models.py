@@ -669,7 +669,7 @@ class AsyncTask(models.Model):
     Tracks the lifecycle and result of an asynchronous background task.
 
     This model provides a stable, persistent identifier for tasks across different
-    background worker implementations (e.g., ThreadPoolExecutor, Celery).
+    background worker implementations (e.g., ThreadPoolExecutor).
     """
 
     class Status(models.TextChoices):

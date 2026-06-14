@@ -9,10 +9,6 @@ if [ $# -gt 0 ]; then
         python|python3|/usr/bin/python|/usr/bin/python3)
             exec "$@"
             ;;
-        celery)
-            shift 1
-            exec python -m celery "$@"
-            ;;
         *)
             exec "$@"
             ;;

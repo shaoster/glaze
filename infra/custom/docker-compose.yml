@@ -52,7 +52,6 @@ services:
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
       DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
-      CELERY_BROKER_URL: redis://redis:6379/0
       REDIS_CACHE_URL: redis://redis:6379/1
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
@@ -76,28 +75,6 @@ services:
       retries: 5
       start_period: 60s
 
-  worker:
-    image: ghcr.io/shaoster/glaze:latest
-    restart: unless-stopped
-    command: python -m celery -A backend worker -l INFO
-    environment:
-      PRODUCTION: "${PRODUCTION:-}"
-      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
-      DATABASE_URL: postgres://glaze:${POSTGRES_PASSWORD}@db:5432/glaze
-      CELERY_BROKER_URL: redis://redis:6379/0
-      REDIS_CACHE_URL: redis://redis:6379/1
-      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
-      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
-      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      deploy_init:
-        condition: service_completed_successfully
 
   nginx:
     image: nginx:1.25-alpine

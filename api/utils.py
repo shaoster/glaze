@@ -317,21 +317,26 @@ def normalize_image_payload(payload: object, user=None):
     return image
 
 
-def _is_crop_task_failed(image_id, r2_key: str | None) -> bool:
-    """Return True if the latest generate_cropped_image task for this image failed.
+def _is_crop_task_failed(image_id, r2_key: str | None, crop: dict | None) -> bool:
+    """Return True if the most recent crop task for this (image, crop) pair failed.
 
-    Only queries when the image is R2-backed; non-R2 images can never have a
-    crop task, so the answer is always False for them.
+    Only queries when the image is R2-backed and a crop is set; non-R2 images
+    and uncropped links can never have a crop task.
     """
-    if not r2_key or not image_id:
+    if not r2_key or not image_id or not crop:
         return False
     from .models import AsyncTask
 
-    return AsyncTask.objects.filter(
-        task_type="generate_cropped_image",
-        input_params__image_id=str(image_id),
-        status=AsyncTask.Status.FAILURE,
-    ).exists()
+    latest = (
+        AsyncTask.objects.filter(
+            task_type="generate_cropped_image",
+            input_params__image_id=str(image_id),
+            input_params__crop=crop,
+        )
+        .order_by("-created")
+        .first()
+    )
+    return latest is not None and latest.status == AsyncTask.Status.FAILURE
 
 
 def captioned_image_to_dict(link) -> dict:
@@ -341,7 +346,7 @@ def captioned_image_to_dict(link) -> dict:
     crop = link.crop
     cropped_url = link.cropped_image.url if link.cropped_image else None
     crop_task_failed = (
-        _is_crop_task_failed(link.image_id, r2_key)
+        _is_crop_task_failed(link.image_id, r2_key, crop)
         if crop and not cropped_url
         else False
     )

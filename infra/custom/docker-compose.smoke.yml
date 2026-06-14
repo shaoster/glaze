@@ -3,7 +3,6 @@
 services:
   web:
     environment:
-      CELERY_BROKER_URL: ""
       REDIS_CACHE_URL: ""
     depends_on:
       db:
