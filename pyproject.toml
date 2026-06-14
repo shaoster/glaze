@@ -109,10 +109,11 @@ dependencies = [
     "boto3>=1.43.27",
     "modal>=1.5.0",
     "gevent>=26.5.0",
+    "mcp>=1.0.0",
 ]
 
 [tool.uv]
 find-links = ["third_party/python"]
 
 [tool.uv.workspace]
-members = ["tools"]
+members = ["tools", "potterdoc_mcp"]

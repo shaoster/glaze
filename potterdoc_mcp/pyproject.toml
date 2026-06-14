@@ -1,0 +1,16 @@
+[project]
+name = "potterdoc-mcp"
+version = "0.1.0"
+description = "MCP server for PotterDoc — exposes PotterDoc REST API as semantic MCP tools"
+requires-python = "~=3.12.0"
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+potterdoc-mcp = "potterdoc_mcp.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
