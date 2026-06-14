@@ -270,6 +270,15 @@ class ImageCropSerializer(serializers.Serializer):
     width = serializers.FloatField()
     height = serializers.FloatField()
 
+
+class ImageCropInputSerializer(ImageCropSerializer):
+    """ImageCropSerializer with strict bounds validation for the crop-edit endpoint.
+
+    The base class is used as a nested read/write field in piece state serializers
+    where echoed crop values may pre-date this validation. This subclass is used
+    only as the direct request body for PATCH /api/images/{image_id}/crop/.
+    """
+
     def validate(self, data):
         errors = {}
         for field in ("x", "y", "width", "height"):
