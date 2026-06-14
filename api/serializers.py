@@ -1273,8 +1273,13 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
         fields = ["piece_state_image_id", "crop", "notes"]
 
 
+@extend_schema_field({"type": "string", "format": "binary"})
+class _BinaryFileField(serializers.FileField):
+    pass
+
+
 class UploadImageSerializer(serializers.Serializer):
-    file = serializers.FileField()
+    file = _BinaryFileField()
     caption = serializers.CharField(required=False, default="", allow_blank=True)
 
 
