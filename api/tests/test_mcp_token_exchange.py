@@ -7,7 +7,6 @@ import httpx
 import pytest
 from django.contrib.auth.models import User
 from django.test.utils import override_settings
-from rest_framework.test import APIRequestFactory
 
 from api.auth.mcp_token_views import exchange_for_mcp_agent_token_impl
 from api.models import AgentToken, UserProfile
@@ -34,15 +33,7 @@ def _FAKE_VERIFY(id_token):
 def _make_request(
     code="authcode", redirect_uri="https://mcp.potterdoc.com/oauth/callback"
 ):
-    factory = APIRequestFactory()
-    raw = factory.post(
-        "/api/auth/google/exchange-for-agent-token/",
-        {"code": code, "redirect_uri": redirect_uri},
-        format="json",
-    )
-    return SimpleNamespace(
-        data={"code": code, "redirect_uri": redirect_uri}, _request=raw
-    )
+    return SimpleNamespace(data={"code": code, "redirect_uri": redirect_uri})
 
 
 @pytest.fixture()
@@ -164,14 +155,8 @@ def test_invalid_id_token_returns_400(existing_user):
 
 @pytest.mark.django_db
 def test_missing_code_returns_400(existing_user):
-    factory = APIRequestFactory()
-    raw = factory.post(
-        "/api/auth/google/exchange-for-agent-token/",
-        {"redirect_uri": "https://mcp.potterdoc.com/oauth/callback"},
-        format="json",
-    )
     request = SimpleNamespace(
-        data={"redirect_uri": "https://mcp.potterdoc.com/oauth/callback"}, _request=raw
+        data={"redirect_uri": "https://mcp.potterdoc.com/oauth/callback"}
     )
     response = exchange_for_mcp_agent_token_impl(
         request,
@@ -184,13 +169,7 @@ def test_missing_code_returns_400(existing_user):
 
 @pytest.mark.django_db
 def test_missing_redirect_uri_returns_400(existing_user):
-    factory = APIRequestFactory()
-    raw = factory.post(
-        "/api/auth/google/exchange-for-agent-token/",
-        {"code": "authcode"},
-        format="json",
-    )
-    request = SimpleNamespace(data={"code": "authcode"}, _request=raw)
+    request = SimpleNamespace(data={"code": "authcode"})
     response = exchange_for_mcp_agent_token_impl(
         request,
         exchange_auth_code=_FAKE_EXCHANGE,

@@ -71,6 +71,24 @@ def test_authorize_redirects_to_google(client, monkeypatch):
     assert "openid" in params["scope"]
 
 
+def test_authorize_rejects_disallowed_redirect_uri(client, monkeypatch):
+    monkeypatch.setenv("MCP_BASE_URL", "https://mcp.example.com")
+    monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "gid")
+    # No OAUTH_ALLOWED_REDIRECT_URI_PREFIXES override → default is https://claude.ai/
+
+    response = client.get(
+        "/oauth/authorize",
+        params={
+            "redirect_uri": "https://evil.com/steal",
+            "state": "s1",
+            "code_challenge": "ch1",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert response.json()["error"] == "invalid_request"
+
+
 def test_authorize_stores_state(client, monkeypatch):
     monkeypatch.setenv("MCP_BASE_URL", "https://mcp.example.com")
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "gid")

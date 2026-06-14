@@ -96,8 +96,25 @@ def _build_http_app():
     async def oauth_authorize(request: Request) -> Response:
         base = os.environ.get("MCP_BASE_URL", "https://mcp.potterdoc.com")
         google_client_id = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+        # Comma-separated URI prefixes that may appear as redirect_uri. Prevents
+        # open-redirect + auth-code theft: without this an attacker could craft a
+        # link with redirect_uri=https://evil.com, complete the Google flow on the
+        # victim's behalf, and claim their pdagent_ token from /oauth/token.
+        allowed_prefixes = [
+            p.strip()
+            for p in os.environ.get(
+                "OAUTH_ALLOWED_REDIRECT_URI_PREFIXES", "https://claude.ai/"
+            ).split(",")
+            if p.strip()
+        ]
 
         client_redirect_uri = request.query_params.get("redirect_uri", "")
+        if not any(client_redirect_uri.startswith(p) for p in allowed_prefixes):
+            return JSONResponse(
+                {"error": "invalid_request", "error_description": "redirect_uri not allowed"},
+                status_code=400,
+            )
+
         client_state = request.query_params.get("state", "")
         code_challenge = request.query_params.get("code_challenge", "")
 
@@ -116,7 +133,6 @@ def _build_http_app():
                 "response_type": "code",
                 "scope": "openid email",
                 "state": nonce,
-                "access_type": "offline",
                 "prompt": "select_account",
             }
         )
@@ -160,14 +176,10 @@ def _build_http_app():
             )
 
         if not resp.is_success:
-            try:
-                detail = resp.json().get("detail", "Authentication failed.")
-            except Exception:
-                detail = "Authentication failed."
             error_params = urllib.parse.urlencode(
                 {
                     "error": "access_denied",
-                    "error_description": detail,
+                    "error_description": "Authentication failed.",
                     "state": client_state,
                 }
             )
