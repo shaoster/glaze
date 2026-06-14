@@ -78,20 +78,27 @@ class TestLLMSchemaFiltering:
             )
 
     def test_globals_paths_present(self, client):
-        from api.llm_schema import _EXCLUDED_GLOBALS
+        from api.llm_schema import _INCLUDED_GLOBALS
+
+        schema = _get_llm_schema(client)
+        paths = schema.get("paths", {})
+        for name in _INCLUDED_GLOBALS:
+            expected = f"/api/globals/{name}/"
+            assert expected in paths, (
+                f"Included global path {expected!r} missing from LLM schema"
+            )
+
+    def test_non_tag_globals_excluded(self, client):
+        from api.llm_schema import _INCLUDED_GLOBALS
         from api.workflow import get_global_names
 
         schema = _get_llm_schema(client)
         paths = schema.get("paths", {})
-        global_names = [n for n in get_global_names() if n not in _EXCLUDED_GLOBALS]
-        assert len(global_names) > 0, (
-            "workflow.yml should define at least one non-excluded global"
-        )
-        for name in global_names:
-            expected = f"/api/globals/{name}/"
-            assert expected in paths, (
-                f"Global entry path {expected!r} missing from LLM schema"
-            )
+        for name in get_global_names():
+            if name not in _INCLUDED_GLOBALS:
+                assert f"/api/globals/{name}/" not in paths, (
+                    f"Global {name!r} should be excluded from LLM schema"
+                )
 
     def test_all_operations_have_operation_id(self, client):
         schema = _get_llm_schema(client)

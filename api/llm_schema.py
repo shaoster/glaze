@@ -1,10 +1,12 @@
 """LLM-tailored OpenAPI schema configuration for the PotterDoc Agent API."""
 
-# Globals that must not appear in the LLM schema. The `piece` global is a DSL
-# reference target; pieces must be created via POST /api/pieces/ so that the
-# first `designed` state is initialized — bypassing that via the generic global
-# endpoint would produce a Piece with no state history.
-_EXCLUDED_GLOBALS = {"piece"}
+# Only these globals appear in the LLM schema. The piece global is excluded
+# because pieces must be created via POST /api/pieces/ (so the initial
+# `designed` state is initialized). All other library globals (clay_body,
+# glaze_type, etc.) are reference data that LLM clients can derive from
+# the piece detail response; they are excluded to stay within the 30-operation
+# limit imposed by GPT Builder.
+_INCLUDED_GLOBALS = {"tag"}
 
 _AGENT_AUTH_SCHEME = {
     "type": "http",
@@ -25,7 +27,7 @@ def _is_llm_endpoint(path: str) -> bool:
         # Extract the global name (third path segment).
         parts = path.split("/")  # ['', 'api', 'globals', '<name>', ...]
         global_name = parts[3] if len(parts) > 3 else ""
-        return global_name not in _EXCLUDED_GLOBALS
+        return global_name in _INCLUDED_GLOBALS
     # Only the specific crop endpoint, not piece_state or crop-runs.
     if path.endswith("/crop/"):
         return True
