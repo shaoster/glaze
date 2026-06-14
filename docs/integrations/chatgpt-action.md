@@ -136,6 +136,19 @@ Adjust crop coordinates on an uploaded image: `PATCH /api/images/{image_id}/crop
 
 ---
 
+## Keeping the Schema Up to Date
+
+The OpenAPI schema is imported once during setup and is not updated automatically. When PotterDoc adds new endpoints or changes existing ones, re-import to pick up the changes:
+
+1. Go to [chat.openai.com](https://chat.openai.com) → **Explore GPTs → My GPTs** → click your PotterDoc Assistant → **Edit**.
+2. In the **Configure** tab, scroll to **Actions** and click the action name.
+3. Click **Import from URL**, re-enter `https://app.potterdoc.com/api/schema/llm/`, and click **Import**.
+4. Review any new or changed operations, then click **Update** to save.
+
+You can also preview the current schema at any time by opening `https://app.potterdoc.com/api/schema/llm/` in a browser — it returns the live OpenAPI JSON.
+
+---
+
 ## Known Limitations
 
 | Limitation | Workaround |
