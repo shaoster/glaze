@@ -3,11 +3,18 @@ load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("//:python.bzl", "pytest_test")
 
+filegroup(
+    name = "potterdoc_mcp_data",
+    srcs = glob(["**/*.svg"]),
+    visibility = ["//visibility:public"],
+)
+
 # Placeholder target matching the uv.override_package() entry in MODULE.bazel.
 # Bazel skips trying to install potterdoc-mcp from PyPI and uses this instead.
 py_library(
     name = "potterdoc_mcp",
     srcs = glob(["**/*.py"], exclude=["tests/**"]),
+    data = [":potterdoc_mcp_data"],
     deps = [
         "@pypi//httpx",
         "@pypi//mcp",
