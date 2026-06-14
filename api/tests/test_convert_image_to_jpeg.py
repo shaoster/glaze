@@ -4,7 +4,7 @@ import io
 import re
 import uuid
 from unittest import mock
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from PIL import Image as PILImage
@@ -62,9 +62,7 @@ class TestConvertImageToJpegTask:
 
         def _mock_fn(app_name, fn_name):
             fn_mock = MagicMock()
-            fn_mock.remote = MagicMock()
-            fn_mock.remote.aio = AsyncMock(
-                return_value={"width": width, "height": height},
+            fn_mock.remote = MagicMock(
                 side_effect=lambda *a, **kw: modal_calls.append(a)
                 or {"width": width, "height": height},
             )
@@ -133,6 +131,26 @@ class TestConvertImageToJpegTask:
         )
         with pytest.raises(ValueError, match="Missing key"):
             convert_image_to_jpeg(task)
+
+    def test_succeeds_when_asyncio_run_is_unavailable(self, user, r2_env, monkeypatch):
+        """asyncio.run() raises RuntimeError under gevent; task must use .remote() directly."""
+        import asyncio
+
+        from api.tasks import convert_image_to_jpeg
+
+        key = f"images/{user.id}/{uuid.uuid4()}.png"
+        self._mock_modal(monkeypatch)
+        monkeypatch.setattr(
+            asyncio,
+            "run",
+            lambda _: (_ for _ in ()).throw(
+                RuntimeError("asyncio.run() cannot be called from a running event loop")
+            ),
+        )
+        task = self._make_task(user, key)
+        result = convert_image_to_jpeg(task)
+        assert result["status"] == "success"
+        assert result["key"].endswith(".jpg")
 
     def test_creates_jpeg_image_row_with_lineage_when_image_id_provided(
         self, user, r2_env, monkeypatch

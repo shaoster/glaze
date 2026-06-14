@@ -95,7 +95,7 @@ worker:
     requests:
       memory: "128Mi"
     limits:
-      memory: "512Mi"
+      memory: "256Mi"
 
 otelcol:
   enabled: true

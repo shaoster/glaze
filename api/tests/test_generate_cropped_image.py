@@ -1,7 +1,7 @@
 """Tests for the eager crop pipeline (generate_cropped_image task + helpers)."""
 
 import io
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from django.contrib.auth.models import User
@@ -134,8 +134,7 @@ class TestGenerateCroppedImageTask:
 
         def _mock_fn_lookup(app_name, fn_name):
             fn_mock = MagicMock()
-            fn_mock.remote = MagicMock()
-            fn_mock.remote.aio = AsyncMock(
+            fn_mock.remote = MagicMock(
                 side_effect=lambda *args, **kwargs: modal_calls.append(args)
             )
             return fn_mock
@@ -227,6 +226,27 @@ class TestGenerateCroppedImageTask:
         assert recreated.cropped_image is not None
         assert recreated.cropped_image.r2_key == crop_key_for(image.r2_key, CROP)
 
+    def test_succeeds_when_asyncio_run_is_unavailable(self, user, monkeypatch):
+        """asyncio.run() raises RuntimeError under gevent; task must use .remote() directly."""
+        import asyncio
+
+        _set_r2_env(monkeypatch)
+        self._mock_r2(monkeypatch)
+        monkeypatch.setattr(
+            asyncio,
+            "run",
+            lambda _: (_ for _ in ()).throw(
+                RuntimeError("asyncio.run() cannot be called from a running event loop")
+            ),
+        )
+        piece, state, image, link = _make_piece_with_image(user, crop=CROP)
+        task = self._make_task(user, image)
+        _execute_task(task.id)
+        task.refresh_from_db()
+        assert task.status == AsyncTask.Status.SUCCESS
+        link.refresh_from_db()
+        assert link.cropped_image is not None
+
     def test_skips_image_not_stored_in_r2(self, user, monkeypatch):
         _set_r2_env(monkeypatch)
         piece, state, image, link = _make_piece_with_image(user, crop=CROP)
@@ -281,8 +301,7 @@ class TestPatchCropTriggersPipeline:
             lambda key, content_type, **kwargs: f"https://presigned.example.com/{key}",
         )
         fn_mock = MagicMock()
-        fn_mock.remote = MagicMock()
-        fn_mock.remote.aio = AsyncMock(return_value=None)
+        fn_mock.remote = MagicMock(return_value=None)
         monkeypatch.setattr("api.tasks._modal_function", lambda *a, **kw: fn_mock)
         _execute_task(task.id)
         link.refresh_from_db()
