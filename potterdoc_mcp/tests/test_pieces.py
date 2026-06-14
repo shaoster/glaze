@@ -36,8 +36,9 @@ def test_list_pieces_no_filters(client: PotterDocClient) -> None:
     call_kwargs = mock_post.call_args
     body = call_kwargs.kwargs["json"]
     assert "pieces(" in body["query"]
-    assert "limit: 20" in body["query"]
-    assert "offset: 0" in body["query"]
+    assert body["variables"]["limit"] == 20
+    assert body["variables"]["offset"] == 0
+    assert "filter" not in body["variables"]
 
 
 def test_list_pieces_with_search(client: PotterDocClient) -> None:
@@ -52,8 +53,8 @@ def test_list_pieces_with_search(client: PotterDocClient) -> None:
 
     assert result == expected
     body = mock_post.call_args.kwargs["json"]
-    assert 'search: "bowl"' in body["query"]
-    assert "limit: 5" in body["query"]
+    assert body["variables"]["filter"]["search"] == "bowl"
+    assert body["variables"]["limit"] == 5
 
 
 def test_list_pieces_api_error_raises_mcp_error(client: PotterDocClient) -> None:

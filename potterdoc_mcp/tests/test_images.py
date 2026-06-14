@@ -42,27 +42,6 @@ def test_upload_piece_image_url(client: PotterDocClient) -> None:
     mock_post.assert_called_once_with("/api/pieces/abc/state/upload-image/", json=body)
 
 
-def test_upload_piece_image_base64(client: PotterDocClient) -> None:
-    upload_result = {"piece_state_image": {"id": "img2"}}
-    with patch.object(
-        client._http,
-        "post",
-        new_callable=AsyncMock,
-        return_value=_mock_response(201, upload_result),
-    ) as mock_post:
-        result = asyncio.run(client.upload_piece_image("abc", base64="aGVsbG8="))
-
-    assert result == upload_result
-    body = mock_post.call_args.kwargs["json"]
-    assert "base64" in body
-    assert "url" not in body
-
-
-def test_upload_piece_image_no_source_raises(client: PotterDocClient) -> None:
-    with pytest.raises(McpError, match="Either"):
-        asyncio.run(client.upload_piece_image("abc"))
-
-
 def test_crop_piece_image(client: PotterDocClient) -> None:
     image = {"id": "img1", "crop": {"x": 0.1, "y": 0.0, "width": 0.8, "height": 1.0}}
     with patch.object(
@@ -77,7 +56,7 @@ def test_crop_piece_image(client: PotterDocClient) -> None:
 
     assert result == image
     body = mock_patch.call_args.kwargs["json"]
-    assert body == {"crop": {"x": 0.1, "y": 0.0, "width": 0.8, "height": 1.0}}
+    assert body == {"x": 0.1, "y": 0.0, "width": 0.8, "height": 1.0}
     mock_patch.assert_called_once_with("/api/images/img1/crop/", json=body)
 
 

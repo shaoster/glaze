@@ -114,14 +114,33 @@ async def create_piece(name: str, notes: str = "") -> dict[str, Any]:
 async def get_workflow_schema() -> dict[str, Any]:
     """Fetch the dynamic workflow schema.
 
-    Returns the complete workflow definition including all states, allowed state
-    transitions (successors), required and optional custom fields per state, and
-    available global library entities (clay bodies, glaze types, locations, etc.).
+    Returns the complete workflow definition: all states, allowed transitions
+    (successors), required and optional custom fields per state, and the names
+    of available global library types (clay bodies, glaze types, locations, etc.).
 
     Call this before transition_piece to discover what fields are required for
-    the target state.
+    the target state. Then call list_global_entries with the relevant global name
+    to get the actual IDs to supply in custom_fields.
     """
     return await _get_client().get_workflow_schema()
+
+
+@mcp.tool()
+async def list_global_entries(global_name: str) -> list[dict]:
+    """List all entries for a global library type (clay bodies, glaze types, etc.).
+
+    Use this to discover the numeric IDs needed when filling custom_fields for a
+    state transition. Call get_workflow_schema first to see which globals exist and
+    what field names they use.
+
+    Args:
+        global_name: The global type key from the workflow schema (e.g. "clay_body",
+            "glaze_type", "location").
+
+    Returns a list of global entry objects, each with at least ``id`` and a
+    display name field.
+    """
+    return await _get_client().list_global_entries(global_name)
 
 
 # ------------------------------------------------------------------
@@ -142,7 +161,7 @@ async def transition_piece(
 
     Args:
         piece_id: The piece UUID.
-        target_state: The workflow state ID to transition to (e.g. "thrown", "bisqued").
+        target_state: The workflow state ID to transition to (e.g. "wheel_thrown", "bisque_fired").
         custom_fields: Dict of field name → value for any fields required by the
             target state schema. Pass null/omit if the state has no required fields.
 
@@ -164,11 +183,10 @@ async def transition_piece(
 async def update_piece_metadata(
     piece_id: str,
     name: str | None = None,
-    notes: str | None = None,
     shared: bool | None = None,
     tags: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Update piece metadata — name, notes, sharing flag, or tags.
+    """Update piece metadata — name, sharing flag, or tags.
 
     Supply only the fields you want to change; omitted fields are left unchanged.
     Note: public library entities (clay bodies, glaze types owned by the library)
@@ -177,16 +195,15 @@ async def update_piece_metadata(
     Args:
         piece_id: The piece UUID.
         name: New display name.
-        notes: Updated free-text notes.
         shared: Whether the piece's terminal state is publicly viewable.
-        tags: Full replacement list of tag names (e.g. ["bowl", "celadon"]).
+        tags: Full replacement list of tag IDs (integers). Call get_workflow_schema
+            to discover available tags and their IDs.
 
     Returns the updated piece summary.
     """
     return await _get_client().update_piece_metadata(
         piece_id=piece_id,
         name=name,
-        notes=notes,
         shared=shared,
         tags=tags,
     )
@@ -200,19 +217,17 @@ async def update_piece_metadata(
 @mcp.tool()
 async def upload_piece_image(
     piece_id: str,
-    url: str | None = None,
-    base64: str | None = None,
+    url: str,
     caption: str = "",
 ) -> dict[str, Any]:
     """Attach an image to a piece's current workflow state.
 
-    Provide either a publicly accessible HTTPS URL (the server streams it directly)
-    or base64-encoded image data. The server handles storage and async JPEG conversion.
+    The server fetches the image from the provided URL and handles storage and
+    async JPEG conversion.
 
     Args:
         piece_id: The piece UUID.
-        url: Public HTTPS URL of the image (max 10 MB). Preferred for LLM agents.
-        base64: Base64-encoded image data (alternative to url).
+        url: Public HTTPS URL of the image (max 10 MB).
         caption: Optional caption for the image.
 
     Returns the created PieceStateImage object and background task IDs for
@@ -221,7 +236,6 @@ async def upload_piece_image(
     return await _get_client().upload_piece_image(
         piece_id=piece_id,
         url=url,
-        base64=base64,
         caption=caption,
     )
 

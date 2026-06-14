@@ -14,8 +14,7 @@ _GRAPHQL_PIECE_FIELDS = """
   id
   name
   currentState {
-    stateName
-    stateLabel
+    state
   }
   tags {
     name
@@ -75,26 +74,31 @@ class PotterDocClient:
         offset: int = 0,
     ) -> dict[str, Any]:
         """GraphQL-backed piece query (token-efficient)."""
-        filter_parts: list[str] = []
-        if search:
-            filter_parts.append(f'search: "{search}"')
-        if state:
-            joined = ", ".join(f'"{s}"' for s in state)
-            filter_parts.append(f"state: [{joined}]")
-        if tag_ids:
-            joined = ", ".join(str(t) for t in tag_ids)
-            filter_parts.append(f"tagIds: [{joined}]")
-
-        filter_arg = f"filter: {{{', '.join(filter_parts)}}}" if filter_parts else ""
-        query = f"""
-        query {{
-          pieces({filter_arg}, limit: {limit}, offset: {offset}) {{
+        query = (
+            """
+        query SearchPieces($filter: PieceFilter, $limit: Int!, $offset: Int!) {
+          pieces(filter: $filter, limit: $limit, offset: $offset) {
             count
-            results {{{_GRAPHQL_PIECE_FIELDS}}}
-          }}
-        }}
+            results {"""
+            + _GRAPHQL_PIECE_FIELDS
+            + """}
+          }
+        }
         """
-        r = await self._http.post("/api/graphql/", json={"query": query})
+        )
+        variables: dict[str, Any] = {"limit": limit, "offset": offset}
+        filter_input: dict[str, Any] = {}
+        if search:
+            filter_input["search"] = search
+        if state:
+            filter_input["state"] = state
+        if tag_ids:
+            filter_input["tagIds"] = tag_ids
+        if filter_input:
+            variables["filter"] = filter_input
+        r = await self._http.post(
+            "/api/graphql/", json={"query": query, "variables": variables}
+        )
         _raise_for_status(r)
         body = r.json()
         if "errors" in body:
@@ -116,15 +120,12 @@ class PotterDocClient:
         piece_id: str,
         *,
         name: str | None = None,
-        notes: str | None = None,
         shared: bool | None = None,
         tags: list[str] | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {}
         if name is not None:
             payload["name"] = name
-        if notes is not None:
-            payload["notes"] = notes
         if shared is not None:
             payload["shared"] = shared
         if tags is not None:
@@ -141,6 +142,12 @@ class PotterDocClient:
 
     async def get_workflow_schema(self) -> dict[str, Any]:
         r = await self._http.get("/api/workflow/")
+        _raise_for_status(r)
+        return r.json()  # type: ignore[no-any-return]
+
+    async def list_global_entries(self, global_name: str) -> list[dict[str, Any]]:
+        """List all entries for a global library type (e.g. clay_body, glaze_type)."""
+        r = await self._http.get(f"/api/globals/{global_name}/")
         _raise_for_status(r)
         return r.json()  # type: ignore[no-any-return]
 
@@ -168,17 +175,10 @@ class PotterDocClient:
     async def upload_piece_image(
         self,
         piece_id: str,
-        url: str | None = None,
-        base64: str | None = None,
+        url: str,
         caption: str = "",
     ) -> dict[str, Any]:
-        if not url and not base64:
-            raise _error("Either 'url' or 'base64' must be provided.")
-        payload: dict[str, Any] = {"caption": caption}
-        if url:
-            payload["url"] = url
-        else:
-            payload["base64"] = base64
+        payload: dict[str, Any] = {"caption": caption, "url": url}
         r = await self._http.post(
             f"/api/pieces/{piece_id}/state/upload-image/", json=payload
         )
@@ -193,7 +193,9 @@ class PotterDocClient:
         width: float,
         height: float,
     ) -> dict[str, Any]:
-        crop = {"x": x, "y": y, "width": width, "height": height}
-        r = await self._http.patch(f"/api/images/{image_id}/crop/", json={"crop": crop})
+        r = await self._http.patch(
+            f"/api/images/{image_id}/crop/",
+            json={"x": x, "y": y, "width": width, "height": height},
+        )
         _raise_for_status(r)
         return r.json()  # type: ignore[no-any-return]
