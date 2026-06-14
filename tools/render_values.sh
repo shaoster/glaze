@@ -37,4 +37,10 @@ ingress:
     - secretName: glaze-tls
       hosts:
         - "${ALLOWED_HOST}"
+mcp:
+  enabled: true
+  host: "mcp.potterdoc.com"
+  apiUrl: "${APP_ORIGIN}"
+  image:
+    repository: "ghcr.io/shaoster/glaze-mcp"
 EOF

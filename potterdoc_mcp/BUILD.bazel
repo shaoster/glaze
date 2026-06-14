@@ -1,4 +1,6 @@
-load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_library")
+load("@aspect_rules_py//py:defs.bzl", "py_binary", "py_image_layer", "py_library")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("//:python.bzl", "pytest_test")
 
 # Placeholder target matching the uv.override_package() entry in MODULE.bazel.
@@ -31,4 +33,77 @@ pytest_test(
     deps = [":potterdoc_mcp"],
     expected_coverage = ["potterdoc_mcp/client.py", "potterdoc_mcp/server.py"],
     visibility = ["//visibility:public"],
+)
+
+py_image_layer(
+    name = "mcp_python_layer",
+    binary = ":potterdoc_mcp_server",
+    root = "/app",
+)
+
+genrule(
+    name = "mcp_python_layer_tar",
+    srcs = [
+        ":mcp_python_layer",
+    ],
+    outs = ["mcp_python_layer.tar"],
+    cmd = """
+        set -e
+        tmp=$$(mktemp -d)
+        dest=$$(mktemp -d)
+        for layer in $(locations :mcp_python_layer); do
+            tar -xf "$$layer" -C "$$tmp"
+        done
+        mkdir -p "$$dest/app/site-packages"
+        copied=0
+        while IFS= read -r site_packages; do
+            cp -a "$$site_packages"/. "$$dest/app/site-packages"/
+            copied=1
+        done < <(find "$$tmp" -type d -path '*/site-packages' | sort)
+        if [ "$$copied" -ne 1 ]; then
+            echo "No site-packages directories were found in the py_image_layer output" >&2
+            rm -rf "$$tmp" "$$dest"
+            exit 1
+        fi
+        OUT_TAR="$$PWD/$@"
+        tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
+        rm -rf "$$tmp" "$$dest"
+    """,
+    tags = ["no-sandbox"],
+)
+
+pkg_tar(
+    name = "mcp_src_tar",
+    srcs = glob(["**/*.py"], exclude=["tests/**"]),
+    strip_prefix = ".",
+    package_dir = "/app/potterdoc_mcp",
+)
+
+oci_image(
+    name = "image_mcp",
+    base = "@python312_slim",
+    entrypoint = [
+        "python",
+        "-m",
+        "potterdoc_mcp",
+        "--transport",
+        "http",
+    ],
+    env = {
+        "PYTHONPATH": "/app:/app/site-packages",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONUNBUFFERED": "1",
+    },
+    exposed_ports = ["8080/tcp"],
+    tars = [
+        ":mcp_python_layer_tar",
+        ":mcp_src_tar",
+    ],
+    workdir = "/app",
+)
+
+oci_push(
+    name = "push_mcp",
+    image = ":image_mcp",
+    repository = "ghcr.io/shaoster/glaze-mcp",
 )

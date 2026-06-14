@@ -212,7 +212,6 @@ def _load_font(path: str, size: int) -> Any:
 def _draw_text_centered(
     draw: Any, text: str, font: Any, canvas_w: int, y: int, color: tuple
 ) -> None:
-
     bbox = draw.textbbox((0, 0), text, font=font)
     text_w = bbox[2] - bbox[0]
     x = max(0, (canvas_w - text_w) // 2)

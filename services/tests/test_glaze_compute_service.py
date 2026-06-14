@@ -2,7 +2,6 @@ import ast
 
 import services.glaze_compute_service as _compute_service
 
-
 # Modal enforces this server-side; values below this are rejected at deploy time.
 MODAL_DISK_MIN_MIB = 524288
 

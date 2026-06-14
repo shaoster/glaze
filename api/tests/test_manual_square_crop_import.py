@@ -38,7 +38,9 @@ class TestManualSquareCropImport:
         client.force_authenticate(user=admin)
 
         _set_r2_env(monkeypatch)
-        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: True)
+        monkeypatch.setattr(
+            "api.manual_tile_imports.r2.object_exists", lambda key: True
+        )
 
         payload = {
             "records": [
@@ -89,7 +91,9 @@ class TestManualSquareCropImport:
         client.force_authenticate(user=admin)
 
         _set_r2_env(monkeypatch)
-        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: True)
+        monkeypatch.setattr(
+            "api.manual_tile_imports.r2.object_exists", lambda key: True
+        )
 
         payload = {
             "records": [
@@ -166,7 +170,9 @@ class TestManualSquareCropImport:
         client.force_authenticate(user=admin)
 
         _set_r2_env(monkeypatch)
-        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: False)
+        monkeypatch.setattr(
+            "api.manual_tile_imports.r2.object_exists", lambda key: False
+        )
 
         payload = {
             "records": [
@@ -350,7 +356,9 @@ class TestImportGlazeCombination:
 
     def _patch_r2(self, monkeypatch):
         _set_r2_env(monkeypatch)
-        monkeypatch.setattr("api.manual_tile_imports.r2.object_exists", lambda key: True)
+        monkeypatch.setattr(
+            "api.manual_tile_imports.r2.object_exists", lambda key: True
+        )
 
     def test_error_when_combination_missing_name_and_components(self, monkeypatch):
         self._patch_r2(monkeypatch)
