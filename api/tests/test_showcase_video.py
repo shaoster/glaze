@@ -365,14 +365,13 @@ class TestShowcaseVideoApi:
         )
         piece.save()
 
+        def _raise(_):
+            raise RuntimeError(
+                "asyncio.run() cannot be called from a running event loop"
+            )
+
         _mock_modal_render(monkeypatch)
-        monkeypatch.setattr(
-            asyncio,
-            "run",
-            lambda _: (_ for _ in ()).throw(
-                RuntimeError("asyncio.run() cannot be called from a running event loop")
-            ),
-        )
+        monkeypatch.setattr(asyncio, "run", _raise)
 
         client.force_authenticate(user=user)
         url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})

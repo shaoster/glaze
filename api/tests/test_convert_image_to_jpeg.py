@@ -138,15 +138,14 @@ class TestConvertImageToJpegTask:
 
         from api.tasks import convert_image_to_jpeg
 
+        def _raise(_):
+            raise RuntimeError(
+                "asyncio.run() cannot be called from a running event loop"
+            )
+
         key = f"images/{user.id}/{uuid.uuid4()}.png"
         self._mock_modal(monkeypatch)
-        monkeypatch.setattr(
-            asyncio,
-            "run",
-            lambda _: (_ for _ in ()).throw(
-                RuntimeError("asyncio.run() cannot be called from a running event loop")
-            ),
-        )
+        monkeypatch.setattr(asyncio, "run", _raise)
         task = self._make_task(user, key)
         result = convert_image_to_jpeg(task)
         assert result["status"] == "success"

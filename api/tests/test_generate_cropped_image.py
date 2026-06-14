@@ -232,13 +232,13 @@ class TestGenerateCroppedImageTask:
 
         _set_r2_env(monkeypatch)
         self._mock_r2(monkeypatch)
-        monkeypatch.setattr(
-            asyncio,
-            "run",
-            lambda _: (_ for _ in ()).throw(
-                RuntimeError("asyncio.run() cannot be called from a running event loop")
-            ),
-        )
+
+        def _raise(_):
+            raise RuntimeError(
+                "asyncio.run() cannot be called from a running event loop"
+            )
+
+        monkeypatch.setattr(asyncio, "run", _raise)
         piece, state, image, link = _make_piece_with_image(user, crop=CROP)
         task = self._make_task(user, image)
         _execute_task(task.id)
