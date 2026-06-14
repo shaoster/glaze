@@ -6,7 +6,6 @@ on piece list/detail/state behavior.
 
 import uuid
 
-import requests as _requests
 from django.db import transaction
 from django.db.models import Max
 from django.http import Http404
@@ -120,41 +119,8 @@ def _needs_jpeg_conversion(key: str) -> bool:
     return ext in _NON_JPEG_IMAGE_EXTENSIONS
 
 
-def _stream_url_to_r2(url: str, user_id: int | None) -> tuple[str, str] | Response:
-    """Fetch *url* and stream it directly to R2 via multipart upload.
-
-    Returns ``(public_url, key)`` on success, or an error ``Response``.
-    Enforces HTTPS-only and a 10 MB cap without buffering the full body.
-    """
-    if not url.startswith("https://"):
-        return Response(
-            {"detail": "Only HTTPS URLs are supported."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    try:
-        resp = _requests.get(url, timeout=10, stream=True)
-        resp.raise_for_status()
-    except Exception:
-        return Response(
-            {"detail": "Failed to fetch image from URL."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    content_type = resp.headers.get("Content-Type", "image/jpeg")
-    ext = _ext_for_content_type(content_type)
-    key = f"images/{user_id}/{uuid.uuid4()}.{ext}"
-    try:
-        with resp:
-            public_url = r2.upload_stream(key, resp, content_type, _MAX_UPLOAD_BYTES)
-    except r2.UploadTooLargeError:
-        return Response(
-            {"detail": "Image exceeds 10 MB size limit."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    return public_url, key
-
-
 def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
-    """Shared implementation for server-side image upload to a piece state."""
+    """Shared implementation for direct multipart image upload to a piece state."""
     from ..tasks import get_task_interface
 
     serializer = UploadImageSerializer(data=request.data)
@@ -167,11 +133,23 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
         )
     validated = serializer.validated_data
     caption = validated.get("caption", "")
+    file_obj = validated["file"]
 
-    result = _stream_url_to_r2(validated["url"], request.user.id)
-    if isinstance(result, Response):
-        return result
-    public_url, key = result
+    content_type = file_obj.content_type or "image/jpeg"
+    if content_type not in _IMAGE_CONTENT_TYPE_TO_EXT:
+        return Response(
+            {"detail": f"Unsupported image type: {content_type}."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if file_obj.size > _MAX_UPLOAD_BYTES:
+        return Response(
+            {"detail": "Image exceeds 10 MB size limit."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    ext = _ext_for_content_type(content_type)
+    key = f"images/{request.user.id}/{uuid.uuid4()}.{ext}"
+    public_url = r2.upload_bytes(key, file_obj.read(), content_type)
 
     conversion_task_id = None
     if _needs_jpeg_conversion(key):
@@ -203,7 +181,7 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
 
 @extend_schema(
     operation_id="pieces_past_state_upload_image",
-    request=UploadImageSerializer,
+    request={"multipart/form-data": UploadImageSerializer},
     responses={
         201: {
             "type": "object",
@@ -227,9 +205,10 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
         503: {"type": "object"},
     },
     description=(
-        "Upload an image (via URL or base64) to a specific past state. "
+        "Upload an image file to a specific past state. "
         "Requires the piece to be in editable mode. "
-        "Exactly one of `url` or `base64` must be provided. "
+        "Send as multipart/form-data with a `file` field (JPEG, PNG, WebP, HEIC, max 10 MB) "
+        "and an optional `caption`. "
         "Returns the created `PieceStateImage` and background task IDs."
     ),
 )
@@ -250,7 +229,7 @@ def upload_image_to_past_state(request: Request, piece_id, state_id) -> Response
 
 @extend_schema(
     operation_id="pieces_current_state_upload_image",
-    request=UploadImageSerializer,
+    request={"multipart/form-data": UploadImageSerializer},
     responses={
         201: {
             "type": "object",
@@ -274,8 +253,9 @@ def upload_image_to_past_state(request: Request, piece_id, state_id) -> Response
         503: {"type": "object"},
     },
     description=(
-        "Upload an image (via URL or base64) to the current unsealed state. "
-        "Exactly one of `url` or `base64` must be provided. "
+        "Upload an image file to the current unsealed state. "
+        "Send as multipart/form-data with a `file` field (JPEG, PNG, WebP, HEIC, max 10 MB) "
+        "and an optional `caption`. "
         "Returns the created `PieceStateImage` and background task IDs."
     ),
 )

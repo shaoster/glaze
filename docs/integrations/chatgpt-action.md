@@ -116,12 +116,12 @@ To attach an existing global to the current state, use `PATCH /api/pieces/{piece
 
 ## Image and Crop Control
 
-Upload images by providing a publicly accessible URL — the server fetches and stores the image itself:
+Upload images directly as file attachments using multipart/form-data:
 
-- **Current state:** `POST /api/pieces/{piece_id}/state/upload-image/` with `{"url": "<image_url>", "caption": "optional caption"}`
-- **Past state:** `POST /api/pieces/{piece_id}/states/{state_id}/upload-image/` with the same body
+- **Current state:** `POST /api/pieces/{piece_id}/state/upload-image/` with `file` (image bytes) and optional `caption`
+- **Past state:** `POST /api/pieces/{piece_id}/states/{state_id}/upload-image/` with the same fields
 
-When the user shares a photo link or a URL they have copied, pass it directly as `url`. The server accepts JPEG, PNG, WebP, and HEIC; images over 10 MB are rejected. If the image needs format conversion a background task ID is returned in `background_tasks.conversion_task_id` — you can ignore it unless the user asks about processing status.
+When the user attaches a photo in the chat, send it directly as the `file` field. The server accepts JPEG, PNG, WebP, and HEIC; images over 10 MB are rejected. If the image needs format conversion a background task ID is returned in `background_tasks.conversion_task_id` — you can ignore it unless the user asks about processing status.
 
 Adjust crop coordinates on an uploaded image: `PATCH /api/images/{image_id}/crop/` with `{"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 1.0}` where values are fractions of image dimensions (0.0–1.0).
 
@@ -131,7 +131,7 @@ Adjust crop coordinates on an uploaded image: `PATCH /api/images/{image_id}/crop
 - When the user says "next state" or "advance" without specifying a target, list the available successors and ask which one they want.
 - When a required field is ambiguous (e.g., a glaze type name that partially matches multiple options), list the candidates and ask the user to choose.
 - If you do not recognize a piece name, search for it before reporting it as not found.
-- When the user says "add a photo" or "upload this image", ask them to share a direct URL to the image (e.g. from their camera roll via a sharing service, or a web URL).
+- When the user says "add a photo" or "upload this image", ask them to attach the image directly in the chat.
 ```
 
 ---
@@ -153,7 +153,7 @@ You can also preview the current schema at any time by opening `https://potterdo
 
 | Limitation | Workaround |
 |---|---|
-| Image uploads require a public URL — direct camera capture is not supported via ChatGPT Actions | Share the photo to a service that provides a direct link (e.g. iCloud shared link, Google Photos, Imgur), then tell the GPT the URL |
+| Images must be attached directly in the chat — the API does not accept external URLs | Attach the photo as a file in the ChatGPT conversation; the GPT will upload it to PotterDoc |
 | Public library objects (clay bodies, glaze types, firing temperatures) cannot be created or edited by agents | Request additions from your PotterDoc administrator |
 | Agent tokens cannot revoke themselves | Revoke tokens from Settings → Agent Tokens in the web UI |
 | State transitions are permanent (append-only history) | The assistant will always ask for confirmation before transitioning |
@@ -169,5 +169,5 @@ After completing setup, confirm each item works in the GPT Builder preview pane:
 - [ ] "What states can my Test piece move to?" → GPT fetches the piece and lists `successors`
 - [ ] "Transition Test to wheel_thrown" → GPT asks for confirmation, then executes the transition
 - [ ] "What clay bodies are available?" → GPT fetches `GET /api/globals/clay_body/` and lists results
-- [ ] "Add this photo: https://example.com/bowl.jpg" → GPT calls the upload endpoint and confirms the image was added
+- [ ] Attach a photo and say "Add this to my Test piece" → GPT calls the upload endpoint and confirms the image was added
 - [ ] "Crop the image to show just the top half" → GPT calls `PATCH /api/images/{id}/crop/` with appropriate coordinates
