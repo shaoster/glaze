@@ -9,6 +9,8 @@ py_library(
     deps = [
         "@pypi//httpx",
         "@pypi//mcp",
+        "@pypi//starlette",
+        "@pypi//uvicorn",
     ],
     visibility = ["//visibility:public"],
 )

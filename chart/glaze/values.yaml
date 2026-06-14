@@ -147,3 +147,16 @@ network:
   serviceCidr: "10.43.0.0/16"
   # Tailscale CGNAT range — allows CD runner and other Tailscale nodes to reach /api/health/ready/.
   tailscaleCidr: "100.64.0.0/10"
+
+mcp:
+  enabled: false
+  host: mcp.potterdoc.com
+  apiUrl: "https://potterdoc.com"
+  image:
+    repository: ghcr.io/shaoster/glaze-mcp
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "25m"
+    limits:
+      memory: "128Mi"
