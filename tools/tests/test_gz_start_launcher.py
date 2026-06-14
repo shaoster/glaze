@@ -546,3 +546,50 @@ def test_start_backend_does_not_reset_shared_db_when_fake_initial_fails(
     assert not list(shared.glob("db.bak.*.sqlite3")), (
         "shared db must not have been backed up (backup implies deletion)"
     )
+
+
+def test_start_backend_resets_worktree_local_db_when_workspace_is_under_shared(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """When workspace is a subdir of shared (.agent-worktrees layout) and the db
+    lives inside workspace, --fake-initial failure must still back up and reset it."""
+    shared = tmp_path / "repo"
+    workspace = shared / ".agent-worktrees" / "claude" / "issue-999-foo"
+    workspace.mkdir(parents=True)
+    local_db = workspace / "db.sqlite3"
+    local_db.write_bytes(b"")
+    roots = launcher.Roots(workspace=workspace, shared=shared)
+
+    run_calls: list[dict] = []
+
+    def fake_run(cmd, *, cwd, env, check, capture_output=False, **kwargs):
+        run_calls.append({"cmd": list(cmd), "capture_output": capture_output})
+        if "--fake-initial" in cmd:
+            raise _subprocess.CalledProcessError(1, cmd)
+
+    class MockPopen:
+        pid = 99
+
+    monkeypatch.setattr(launcher, "ensure_running", lambda _: (None, False))
+    monkeypatch.setattr(launcher, "rotate_log", lambda _: None)
+    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+    monkeypatch.setattr(launcher, "launch_child", lambda *a, **kw: MockPopen())
+
+    pid = launcher.start_backend(
+        roots,
+        {},
+        workspace / "backend.pid",
+        workspace / "backend.port",
+        workspace / "backend.log",
+        8080,
+        5173,
+    )
+
+    assert pid == 99
+    assert not local_db.exists(), "worktree-local db must have been moved to backup"
+    backups = list(workspace.glob("db.bak.*.sqlite3"))
+    assert len(backups) == 1, "expected exactly one backup file in the workspace"
+    fresh_migrate_calls = [
+        c for c in run_calls if "migrate" in c["cmd"] and "--fake-initial" not in c["cmd"]
+    ]
+    assert len(fresh_migrate_calls) >= 1, "fallback must run a fresh migrate after backup"

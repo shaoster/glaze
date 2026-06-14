@@ -543,7 +543,14 @@ def start_backend(
             raise
         # Don't auto-reset the shared checkout's db — it may contain dev data
         # for other worktrees. Re-raise with a clear diagnostic instead.
-        if roots.workspace != roots.shared and db_path.is_relative_to(roots.shared):
+        # Also require that db_path is NOT inside roots.workspace: in the
+        # .agent-worktrees layout, workspace is a subdir of shared, so a
+        # worktree-local db would satisfy is_relative_to(roots.shared) too.
+        if (
+            roots.workspace != roots.shared
+            and db_path.is_relative_to(roots.shared)
+            and not db_path.is_relative_to(roots.workspace)
+        ):
             print(
                 f"backend: migrate --fake-initial failed on shared db {db_path}; "
                 "cannot auto-reset. Delete it manually or run migrate directly.",
