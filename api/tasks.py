@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, Dict, Optional, Protocol
@@ -402,11 +401,7 @@ def generate_cropped_image(task: AsyncTask) -> dict:
 
     presigned_put = r2.generate_presigned_put(key, "image/jpeg")
     crop_image_fn = _modal_function("glaze-compute", "crop_image")
-    asyncio.run(
-        crop_image_fn.remote.aio(
-            r2.public_url_for_key(image.r2_key), crop, presigned_put
-        )
-    )
+    crop_image_fn.remote(r2.public_url_for_key(image.r2_key), crop, presigned_put)
     updated = set_cropped_fields(image, crop, r2_key=key, url=url)
     return {
         "status": "success",
@@ -457,7 +452,7 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
     source_public_url = r2.public_url_for_key(source_key)
 
     convert_fn = _modal_function("glaze-compute", "convert_to_jpeg")
-    result = asyncio.run(convert_fn.remote.aio(source_public_url, presigned_put))
+    result = convert_fn.remote(source_public_url, presigned_put)
     width: int = result["width"]
     height: int = result["height"]
     new_url = r2.public_url_for_key(new_key)
@@ -566,10 +561,8 @@ def generate_showcase_video(task: AsyncTask) -> dict:
     music_url = track.audio.url if track else None
 
     render_fn = _modal_function("glaze-compute", "render_showcase_video")
-    asyncio.run(
-        render_fn.remote.aio(
-            storyboard, presigned_put, progress_webhook_url, progress_token, music_url
-        )
+    render_fn.remote(
+        storyboard, presigned_put, progress_webhook_url, progress_token, music_url
     )
 
     return {
