@@ -86,9 +86,19 @@ urlpatterns = [
         name="piece-past-state-upload-image",
     ),
     path(
+        "pieces/<uuid:piece_id>/states/<uuid:state_id>/upload-image-refs/",
+        views.upload_image_from_refs_to_past_state,
+        name="piece-past-state-upload-image-refs",
+    ),
+    path(
         "pieces/<uuid:piece_id>/state/upload-image/",
         views.upload_image_to_current_state,
         name="piece-current-state-upload-image",
+    ),
+    path(
+        "pieces/<uuid:piece_id>/state/upload-image-refs/",
+        views.upload_image_from_refs_to_current_state,
+        name="piece-current-state-upload-image-refs",
     ),
     path(
         "pieces/<uuid:piece_id>/current_state/",

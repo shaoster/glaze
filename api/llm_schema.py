@@ -22,15 +22,20 @@ _AGENT_AUTH_SCHEME = {
 
 def _is_llm_endpoint(path: str) -> bool:
     if path.startswith("/api/pieces/"):
+        # Exclude multipart upload-image — ChatGPT cannot bind chat attachments
+        # to multipart file fields in custom actions. Use upload-image-refs instead.
+        if path.endswith("/upload-image/"):
+            return False
+        # Exclude crop — actions cannot return images, so the LLM cannot verify
+        # the result; the crop workflow is inherently visual.
+        if path.endswith("/crop/"):
+            return False
         return True
     if path.startswith("/api/globals/"):
         # Extract the global name (third path segment).
         parts = path.split("/")  # ['', 'api', 'globals', '<name>', ...]
         global_name = parts[3] if len(parts) > 3 else ""
         return global_name in _INCLUDED_GLOBALS
-    # Only the specific crop endpoint, not piece_state or crop-runs.
-    if path.endswith("/crop/"):
-        return True
     return False
 
 
