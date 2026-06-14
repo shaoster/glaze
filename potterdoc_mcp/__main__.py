@@ -10,6 +10,7 @@ import os
 import secrets
 import time
 import urllib.parse
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -75,6 +76,11 @@ def _build_http_app():
     async def health(request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok"})
 
+    _icon_svg = (Path(__file__).parent / "icon.svg").read_text()
+
+    async def icon_svg(request: Request) -> Response:
+        return Response(_icon_svg, media_type="image/svg+xml")
+
     # ------------------------------------------------------------------
     # OAuth 2.0 Authorization Server endpoints
     # ------------------------------------------------------------------
@@ -86,11 +92,37 @@ def _build_http_app():
                 "issuer": base,
                 "authorization_endpoint": f"{base}/oauth/authorize",
                 "token_endpoint": f"{base}/oauth/token",
+                "registration_endpoint": f"{base}/oauth/register",
                 "response_types_supported": ["code"],
                 "grant_types_supported": ["authorization_code"],
                 "code_challenge_methods_supported": ["S256"],
                 "token_endpoint_auth_methods_supported": ["none"],
             }
+        )
+
+    async def oauth_register(request: Request) -> JSONResponse:
+        # RFC 7591 Dynamic Client Registration.
+        # We don't persist registrations — redirect_uri is validated at authorize
+        # time against the OAUTH_ALLOWED_REDIRECT_URI_PREFIXES allowlist instead.
+        # Return a stable client_id so the caller can proceed through the flow.
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(
+                {"error": "invalid_client_metadata", "error_description": "Request body must be valid JSON."},
+                status_code=400,
+            )
+        redirect_uris = body.get("redirect_uris", [])
+        return JSONResponse(
+            {
+                "client_id": "potterdoc-mcp-client",
+                "client_id_issued_at": int(time.time()),
+                "redirect_uris": redirect_uris,
+                "grant_types": ["authorization_code"],
+                "response_types": ["code"],
+                "token_endpoint_auth_method": "none",
+            },
+            status_code=201,
         )
 
     async def oauth_authorize(request: Request) -> Response:
@@ -240,10 +272,12 @@ def _build_http_app():
         middleware=[Middleware(BearerAuthMiddleware)],
         routes=[
             Route("/health", health),
+            Route("/icon.svg", icon_svg),
             Route(
                 "/.well-known/oauth-authorization-server",
                 oauth_metadata,
             ),
+            Route("/oauth/register", oauth_register, methods=["POST"]),
             Route("/oauth/authorize", oauth_authorize),
             Route("/oauth/callback", oauth_callback),
             Route("/oauth/token", oauth_token, methods=["POST"]),
