@@ -850,6 +850,64 @@ describe("App auth flow", () => {
   });
 });
 
+describe("authenticated footer link routing (issue #934)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.pushState({}, "", "/");
+    clearAccessToken();
+    vi.mocked(fetchAppInit).mockResolvedValue({
+      googleOauthClientId: "test-client-id",
+      adminBaseUrl: null,
+      user: MOCK_USER,
+    });
+  });
+
+  it("navigates to /about from the authenticated footer", async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "About Us" })).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("link", { name: "About Us" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/about");
+      expect(screen.getByRole("heading", { name: "About Us" })).toBeInTheDocument();
+    });
+  });
+
+  it("navigates to /privacy-policy from the authenticated footer", async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Privacy Policy" })).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("link", { name: "Privacy Policy" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/privacy-policy");
+      expect(screen.getByRole("heading", { name: "Privacy Policy" })).toBeInTheDocument();
+    });
+  });
+
+  it("navigates to /terms-of-service from the authenticated footer", async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Terms of Service" })).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("link", { name: "Terms of Service" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/terms-of-service");
+      expect(screen.getByRole("heading", { name: "Terms of Service" })).toBeInTheDocument();
+    });
+  });
+});
+
 describe("invite page routing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
