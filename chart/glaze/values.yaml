@@ -151,6 +151,7 @@ network:
 mcp:
   enabled: false
   host: mcp.potterdoc.com
+  baseUrl: "https://mcp.potterdoc.com"
   apiUrl: "https://potterdoc.com"
   image:
     repository: ghcr.io/shaoster/glaze-mcp

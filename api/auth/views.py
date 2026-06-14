@@ -34,6 +34,7 @@ from .invite_views import (
     staff_invite_code,
 )
 from .jwt_auth import JWTCookieAuthentication
+from .mcp_token_views import exchange_for_mcp_agent_token
 from .mock_idp_views import mock_idp_authorize, mock_idp_complete
 from .preferences_views import auth_preferences
 from .token_views import (
@@ -50,6 +51,7 @@ __all__ = [
     "auth_delete_account",
     "auth_export",
     "auth_google",
+    "exchange_for_mcp_agent_token",
     "auth_logout",
     "auth_me",
     "auth_preferences",

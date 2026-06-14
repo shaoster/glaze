@@ -30,6 +30,7 @@ py_library(
         "auth/export_data.py",
         "auth/export_views.py",
         "auth/google_views.py",
+        "auth/mcp_token_views.py",
         "auth/invite_views.py",
         "auth/mock_idp_views.py",
         "auth/token_views.py",
@@ -192,6 +193,7 @@ filegroup(
         "auth/export_views.py",
         "auth/google_views.py",
         "auth/invite_views.py",
+        "auth/mcp_token_views.py",
         "auth/mock_idp_views.py",
         "auth/token_views.py",
         "auth/preferences_views.py",
@@ -432,10 +434,12 @@ pytest_test(
     srcs = _CONFTEST + [
         "tests/test_agent_auth.py",
         "tests/test_auth.py",
+        "tests/test_mcp_token_exchange.py",
     ],
     args = [
         "api/tests/test_agent_auth.py",
         "api/tests/test_auth.py",
+        "api/tests/test_mcp_token_exchange.py",
     ],
     data = _TEST_DATA,
     env = _TEST_ENV,
@@ -444,6 +448,7 @@ pytest_test(
     expected_coverage = [
         "api/auth/agent_auth.py",
         "api/auth/agent_token_views.py",
+        "api/auth/mcp_token_views.py",
         "api/auth/views.py",
     ],
 )

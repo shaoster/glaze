@@ -46,6 +46,11 @@ urlpatterns = [
     path("auth/token/revoke/", views.auth_token_revoke, name="auth-token-revoke"),
     path("auth/preferences/", views.auth_preferences, name="auth-preferences"),
     path("auth/google/", views.auth_google, name="auth-google"),
+    path(
+        "auth/google/exchange-for-agent-token/",
+        views.exchange_for_mcp_agent_token,
+        name="auth-google-exchange-for-agent-token",
+    ),
     path("auth/export/", views.auth_export, name="auth-export"),
     path("auth/account/", views.auth_delete_account, name="auth-delete-account"),
     path(

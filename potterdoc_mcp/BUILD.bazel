@@ -31,7 +31,7 @@ pytest_test(
     main = "//tools:pytest_main.py",
     args = ["potterdoc_mcp/tests/"],
     deps = [":potterdoc_mcp"],
-    expected_coverage = ["potterdoc_mcp/client.py", "potterdoc_mcp/server.py"],
+    expected_coverage = ["potterdoc_mcp/__main__.py", "potterdoc_mcp/client.py", "potterdoc_mcp/server.py"],
     visibility = ["//visibility:public"],
 )
 

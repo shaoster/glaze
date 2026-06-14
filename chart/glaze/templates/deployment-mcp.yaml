@@ -29,6 +29,16 @@ spec:
           env:
             - name: POTTERDOC_API_URL
               value: "{{ .Values.mcp.apiUrl }}"
+            - name: MCP_BASE_URL
+              value: "{{ .Values.mcp.baseUrl }}"
+            - name: GOOGLE_OAUTH_CLIENT_ID
+              value: "{{ .Values.appConfig.googleOauthClientId }}"
+            - name: GOOGLE_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: GOOGLE_OAUTH_CLIENT_SECRET
+                  optional: true
           startupProbe:
             httpGet:
               path: /health
