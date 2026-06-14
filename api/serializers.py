@@ -1274,7 +1274,9 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
 
 
 class UploadImageSerializer(serializers.Serializer):
-    file = serializers.FileField()
+    file = extend_schema_field({"type": "string", "format": "binary"})(
+        serializers.FileField()
+    )
     caption = serializers.CharField(required=False, default="", allow_blank=True)
 
 
