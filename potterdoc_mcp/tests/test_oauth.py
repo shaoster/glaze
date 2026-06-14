@@ -37,8 +37,44 @@ def test_oauth_metadata(client, monkeypatch):
     assert body["issuer"] == "https://mcp.example.com"
     assert body["authorization_endpoint"] == "https://mcp.example.com/oauth/authorize"
     assert body["token_endpoint"] == "https://mcp.example.com/oauth/token"
+    assert body["registration_endpoint"] == "https://mcp.example.com/oauth/register"
     assert "S256" in body["code_challenge_methods_supported"]
     assert "authorization_code" in body["grant_types_supported"]
+
+
+# ---------------------------------------------------------------------------
+# /oauth/register
+# ---------------------------------------------------------------------------
+
+
+def test_register_returns_client_id(client, monkeypatch):
+    monkeypatch.setenv("MCP_BASE_URL", "https://mcp.example.com")
+    response = client.post(
+        "/oauth/register",
+        json={"redirect_uris": ["https://claude.ai/oauth/callback"]},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["client_id"] == "potterdoc-mcp-client"
+    assert body["redirect_uris"] == ["https://claude.ai/oauth/callback"]
+    assert body["grant_types"] == ["authorization_code"]
+    assert body["token_endpoint_auth_method"] == "none"
+    assert "client_id_issued_at" in body
+
+
+def test_register_empty_body(client):
+    response = client.post("/oauth/register", json={})
+    assert response.status_code == 201
+    body = response.json()
+    assert body["client_id"] == "potterdoc-mcp-client"
+    assert body["redirect_uris"] == []
+
+
+def test_register_multiple_redirect_uris(client):
+    uris = ["https://claude.ai/cb1", "https://claude.ai/cb2"]
+    response = client.post("/oauth/register", json={"redirect_uris": uris})
+    assert response.status_code == 201
+    assert response.json()["redirect_uris"] == uris
 
 
 # ---------------------------------------------------------------------------
