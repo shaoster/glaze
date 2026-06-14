@@ -1274,7 +1274,7 @@ class CropRunCreateSerializer(serializers.ModelSerializer):
 
 
 class UploadImageSerializer(serializers.Serializer):
-    url = serializers.CharField()
+    file = serializers.FileField()
     caption = serializers.CharField(required=False, default="", allow_blank=True)
 
 
