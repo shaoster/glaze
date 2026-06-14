@@ -6,6 +6,7 @@ on piece list/detail/state behavior.
 
 import uuid
 
+import httpx
 from django.db import transaction
 from django.db.models import Max
 from django.http import Http404
@@ -119,10 +120,97 @@ def _needs_jpeg_conversion(key: str) -> bool:
     return ext in _NON_JPEG_IMAGE_EXTENSIONS
 
 
-def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
-    """Shared implementation for direct multipart image upload to a piece state."""
+def _fetch_url_to_r2(url: str, user_id: "int | None") -> "tuple[str, str] | Response":
+    """Fetch *url* (HTTPS only) and upload the bytes to R2.
+
+    Returns ``(public_url, key)`` on success, or an error ``Response``.
+    Enforces a 10 MB cap without streaming the full body before the check.
+    """
+    if not url.startswith("https://"):
+        return Response(
+            {"detail": "Only HTTPS download URLs are supported."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        resp = httpx.get(url, timeout=15, follow_redirects=True)
+        resp.raise_for_status()
+    except Exception:
+        return Response(
+            {"detail": "Failed to fetch image from download URL."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+    ext = _ext_for_content_type(content_type)
+    data = resp.content
+    if len(data) > _MAX_UPLOAD_BYTES:
+        return Response(
+            {"detail": "Image exceeds 10 MB size limit."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    key = f"images/{user_id}/{uuid.uuid4()}.{ext}"
+    public_url = r2.upload_bytes(key, data, content_type)
+    return public_url, key
+
+
+_UPLOAD_IMAGE_RESPONSES = {
+    201: {
+        "type": "object",
+        "properties": {
+            "piece_state_image": {"type": "object"},
+            "background_tasks": {
+                "type": "object",
+                "properties": {
+                    "conversion_task_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": True,
+                    }
+                },
+            },
+        },
+    },
+    400: {"type": "object"},
+    403: {"type": "object"},
+    404: {"type": "object"},
+    503: {"type": "object"},
+}
+
+
+def _attach_image_to_piece_state(
+    piece_state, public_url: str, key: str, caption: str, user
+) -> Response:
+    """Create PieceStateImage from an already-uploaded R2 key and return 201."""
     from ..tasks import get_task_interface
 
+    conversion_task_id = None
+    if _needs_jpeg_conversion(key):
+        task = AsyncTask.objects.create(
+            user=user,
+            task_type="convert_image_to_jpeg",
+            input_params={"key": key, "image_id": None},
+        )
+        get_task_interface().submit(task)
+        conversion_task_id = str(task.id)
+
+    image = normalize_image_payload(public_url, user=user)
+    next_order = (piece_state.image_links.aggregate(m=Max("order"))["m"] or -1) + 1
+    link = PieceStateImage.objects.create(
+        piece_state=piece_state,
+        image=image,
+        caption=caption,
+        order=next_order,
+    )
+    return Response(
+        {
+            "piece_state_image": captioned_image_to_dict(link),
+            "background_tasks": {"conversion_task_id": conversion_task_id},
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
+    """Shared implementation for direct multipart image upload to a piece state."""
     serializer = UploadImageSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -150,60 +238,45 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
     ext = _ext_for_content_type(content_type)
     key = f"images/{request.user.id}/{uuid.uuid4()}.{ext}"
     public_url = r2.upload_bytes(key, file_obj.read(), content_type)
-
-    conversion_task_id = None
-    if _needs_jpeg_conversion(key):
-        task = AsyncTask.objects.create(  # type: ignore[misc]
-            user=request.user,
-            task_type="convert_image_to_jpeg",
-            input_params={"key": key, "image_id": None},
-        )
-        get_task_interface().submit(task)
-        conversion_task_id = str(task.id)
-
-    image = normalize_image_payload(public_url, user=request.user)
-    next_order = (piece_state.image_links.aggregate(m=Max("order"))["m"] or -1) + 1
-    link = PieceStateImage.objects.create(
-        piece_state=piece_state,
-        image=image,
-        caption=caption,
-        order=next_order,
+    return _attach_image_to_piece_state(
+        piece_state, public_url, key, caption, request.user
     )
 
-    return Response(
-        {
-            "piece_state_image": captioned_image_to_dict(link),
-            "background_tasks": {"conversion_task_id": conversion_task_id},
-        },
-        status=status.HTTP_201_CREATED,
+
+def _upload_image_from_refs_to_piece_state(request: Request, piece_state) -> Response:
+    """Upload the first openaiFileIdRefs entry's download_link to R2."""
+    if not r2.is_r2_configured():
+        return Response(
+            {"detail": "Object storage is not configured on the server."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    refs = request.data.get("openaiFileIdRefs")
+    if not refs or not isinstance(refs, list):
+        return Response(
+            {"detail": "openaiFileIdRefs must be a non-empty list."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    first = refs[0]
+    download_link = first.get("download_link") if isinstance(first, dict) else None
+    if not download_link:
+        return Response(
+            {"detail": "openaiFileIdRefs[0] must contain a download_link."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    caption = request.data.get("caption", "")
+    result = _fetch_url_to_r2(download_link, request.user.id)
+    if isinstance(result, Response):
+        return result
+    public_url, key = result
+    return _attach_image_to_piece_state(
+        piece_state, public_url, key, caption, request.user
     )
 
 
 @extend_schema(
     operation_id="pieces_past_state_upload_image",
     request={"multipart/form-data": UploadImageSerializer},
-    responses={
-        201: {
-            "type": "object",
-            "properties": {
-                "piece_state_image": {"type": "object"},
-                "background_tasks": {
-                    "type": "object",
-                    "properties": {
-                        "conversion_task_id": {
-                            "type": "string",
-                            "format": "uuid",
-                            "nullable": True,
-                        }
-                    },
-                },
-            },
-        },
-        400: {"type": "object"},
-        403: {"type": "object"},
-        404: {"type": "object"},
-        503: {"type": "object"},
-    },
+    responses=_UPLOAD_IMAGE_RESPONSES,
     description=(
         "Upload an image file to a specific past state. "
         "Requires the piece to be in editable mode. "
@@ -230,28 +303,7 @@ def upload_image_to_past_state(request: Request, piece_id, state_id) -> Response
 @extend_schema(
     operation_id="pieces_current_state_upload_image",
     request={"multipart/form-data": UploadImageSerializer},
-    responses={
-        201: {
-            "type": "object",
-            "properties": {
-                "piece_state_image": {"type": "object"},
-                "background_tasks": {
-                    "type": "object",
-                    "properties": {
-                        "conversion_task_id": {
-                            "type": "string",
-                            "format": "uuid",
-                            "nullable": True,
-                        }
-                    },
-                },
-            },
-        },
-        400: {"type": "object"},
-        403: {"type": "object"},
-        404: {"type": "object"},
-        503: {"type": "object"},
-    },
+    responses=_UPLOAD_IMAGE_RESPONSES,
     description=(
         "Upload an image file to the current unsealed state. "
         "Send as multipart/form-data with a `file` field (JPEG, PNG, WebP, HEIC, max 10 MB) "
@@ -272,6 +324,79 @@ def upload_image_to_current_state(request: Request, piece_id) -> Response:
             status=status.HTTP_404_NOT_FOUND,
         )
     return _upload_image_to_piece_state(request, piece_state)
+
+
+_OPENAI_FILE_REFS_REQUEST = {
+    "application/json": {
+        "type": "object",
+        "properties": {
+            "openaiFileIdRefs": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "OpenAI file references injected by the ChatGPT runtime. "
+                    "Each entry is an object with name, id, mime_type, and download_link. "
+                    "Pass the chat-attached image here."
+                ),
+            },
+            "caption": {"type": "string", "default": ""},
+        },
+        "required": ["openaiFileIdRefs"],
+    }
+}
+
+
+@extend_schema(
+    operation_id="pieces_past_state_upload_image_from_refs",
+    request=_OPENAI_FILE_REFS_REQUEST,
+    responses=_UPLOAD_IMAGE_RESPONSES,
+    description=(
+        "Upload a chat-attached image to a specific past state via OpenAI file references. "
+        "Pass the image attached in the ChatGPT conversation as `openaiFileIdRefs`. "
+        "The runtime injects download URLs automatically. "
+        "Requires the piece to be in editable mode."
+    ),
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@traced
+def upload_image_from_refs_to_past_state(
+    request: Request, piece_id, state_id
+) -> Response:
+    """Upload a chat-attached image to a specific past piece state."""
+    piece = get_object_or_404(piece_queryset(request), pk=piece_id)
+    if not piece.is_editable:
+        return Response(
+            {"detail": "Piece is not in editable mode."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    piece_state = get_object_or_404(piece.states, pk=state_id)
+    return _upload_image_from_refs_to_piece_state(request, piece_state)
+
+
+@extend_schema(
+    operation_id="pieces_current_state_upload_image_from_refs",
+    request=_OPENAI_FILE_REFS_REQUEST,
+    responses=_UPLOAD_IMAGE_RESPONSES,
+    description=(
+        "Upload a chat-attached image to the current unsealed state via OpenAI file references. "
+        "Pass the image attached in the ChatGPT conversation as `openaiFileIdRefs`. "
+        "The runtime injects download URLs automatically."
+    ),
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@traced
+def upload_image_from_refs_to_current_state(request: Request, piece_id) -> Response:
+    """Upload a chat-attached image to the piece's current (unsealed) state."""
+    piece = get_object_or_404(piece_queryset(request), pk=piece_id)
+    piece_state = piece.current_state
+    if piece_state is None:
+        return Response(
+            {"detail": "Piece has no current state."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    return _upload_image_from_refs_to_piece_state(request, piece_state)
 
 
 @extend_schema(

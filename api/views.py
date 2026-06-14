@@ -41,6 +41,8 @@ from .import_views import admin_manual_square_crop_import
 from .piece.image_views import (
     patch_image_crop,
     piece_image_detail,
+    upload_image_from_refs_to_current_state,
+    upload_image_from_refs_to_past_state,
     upload_image_to_current_state,
     upload_image_to_past_state,
 )
@@ -94,6 +96,8 @@ __all__ = [
     "piece_current_state",
     "piece_current_state_detail",
     "patch_image_crop",
+    "upload_image_from_refs_to_current_state",
+    "upload_image_from_refs_to_past_state",
     "upload_image_to_current_state",
     "upload_image_to_past_state",
     "piece_detail",

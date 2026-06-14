@@ -16,6 +16,11 @@ _EXCLUDED_PREFIXES = (
 _EXCLUDED_IMAGE_PATHS = (
     "/api/images/{image_id}/piece_state/{piece_state_id}/",
     "/api/images/{image_id}/crop-runs/",
+    # crop excluded: actions cannot return images; workflow is inherently visual
+    "/api/images/{image_id}/crop/",
+    # multipart upload excluded: ChatGPT cannot bind chat attachments to multipart fields
+    "/api/pieces/{piece_id}/state/upload-image/",
+    "/api/pieces/{piece_id}/states/{state_id}/upload-image/",
 )
 
 _EXPECTED_PATHS = (
@@ -23,7 +28,8 @@ _EXPECTED_PATHS = (
     "/api/pieces/{piece_id}/states/",
     "/api/pieces/{piece_id}/current_state/",
     "/api/pieces/{piece_id}/state/",
-    "/api/images/{image_id}/crop/",
+    "/api/pieces/{piece_id}/state/upload-image-refs/",
+    "/api/pieces/{piece_id}/states/{state_id}/upload-image-refs/",
 )
 
 
