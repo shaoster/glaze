@@ -6,7 +6,6 @@ from potterdoc_mcp.server import mcp
 
 
 def _build_http_app():
-    import uvicorn  # noqa: F401 (imported for side-effects / availability check)
     from starlette.applications import Starlette
     from starlette.middleware import Middleware
     from starlette.middleware.base import BaseHTTPMiddleware
