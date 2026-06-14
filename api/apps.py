@@ -9,12 +9,10 @@ def _fail_running_tasks_on_startup() -> int:
     """
     from .models import AsyncTask
 
-    tasks = list(AsyncTask.objects.filter(status=AsyncTask.Status.RUNNING))
-    for task in tasks:
-        task.status = AsyncTask.Status.FAILURE
-        task.error = "Server restarted while task was running."
-        task.save(update_fields=["status", "error"])
-    return len(tasks)
+    return AsyncTask.objects.filter(status=AsyncTask.Status.RUNNING).update(
+        status=AsyncTask.Status.FAILURE,
+        error="Server restarted while task was running.",
+    )
 
 
 class ApiConfig(AppConfig):

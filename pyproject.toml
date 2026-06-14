@@ -13,7 +13,6 @@ dependencies = [
     "attrs==26.1.0",
     "av>=17.0.1",
     "brotli==1.2.0",
-    "celery>=5.6.3",
     "certifi==2026.4.22",
     "cffi==2.0.0",
     "charset-normalizer==3.4.7",
@@ -108,7 +107,6 @@ dependencies = [
     "strawberry-graphql-django>=0.86.1",
     "boto3>=1.43.27",
     "modal>=1.5.0",
-    "gevent>=26.5.0",
 ]
 
 [tool.uv]

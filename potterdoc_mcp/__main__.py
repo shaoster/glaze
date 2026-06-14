@@ -111,7 +111,10 @@ def _build_http_app():
         client_redirect_uri = request.query_params.get("redirect_uri", "")
         if not any(client_redirect_uri.startswith(p) for p in allowed_prefixes):
             return JSONResponse(
-                {"error": "invalid_request", "error_description": "redirect_uri not allowed"},
+                {
+                    "error": "invalid_request",
+                    "error_description": "redirect_uri not allowed",
+                },
                 status_code=400,
             )
 

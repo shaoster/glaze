@@ -1,4 +1,4 @@
-"""Tests for the convert_image_to_jpeg Celery task and its HTTP endpoints."""
+"""Tests for the convert_image_to_jpeg background task and its HTTP endpoints."""
 
 import io
 import re
@@ -131,25 +131,6 @@ class TestConvertImageToJpegTask:
         )
         with pytest.raises(ValueError, match="Missing key"):
             convert_image_to_jpeg(task)
-
-    def test_succeeds_when_asyncio_run_is_unavailable(self, user, r2_env, monkeypatch):
-        """asyncio.run() raises RuntimeError under gevent; task must use .remote() directly."""
-        import asyncio
-
-        from api.tasks import convert_image_to_jpeg
-
-        def _raise(_):
-            raise RuntimeError(
-                "asyncio.run() cannot be called from a running event loop"
-            )
-
-        key = f"images/{user.id}/{uuid.uuid4()}.png"
-        self._mock_modal(monkeypatch)
-        monkeypatch.setattr(asyncio, "run", _raise)
-        task = self._make_task(user, key)
-        result = convert_image_to_jpeg(task)
-        assert result["status"] == "success"
-        assert result["key"].endswith(".jpg")
 
     def test_creates_jpeg_image_row_with_lineage_when_image_id_provided(
         self, user, r2_env, monkeypatch

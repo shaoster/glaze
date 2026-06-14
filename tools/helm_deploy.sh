@@ -36,7 +36,7 @@ $SSH "${DEPLOY_HOST}" << 'ENDSSH'
   # helm upgrade so Kubernetes accepts the new spec without immediately
   # starting pods, then resumed one at a time to avoid concurrent memory
   # spikes on the single-core node.
-  SEQUENTIAL_DEPLOYMENTS="glaze-web glaze-worker"
+  SEQUENTIAL_DEPLOYMENTS="glaze-web"
 
   rollout_sequential() {
     echo "==> Pausing deployments before upgrade..."

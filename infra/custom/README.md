@@ -2,7 +2,6 @@
 
 This directory contains configuration files and instructions to deploy a self-hosted instance of PotterDoc (`glaze`) using **Docker Compose**. This setup is a completely self-contained deployment target containing:
 - **`web`**: The Django ASGI backend application, which also serves the Vite React frontend static assets via WhiteNoise.
-- **`worker`**: The Celery async task worker.
 - **`db`**: A PostgreSQL 17 database container with persistent volume storage.
 - **`redis`**: A Redis 7 cache and broker container.
 - **`nginx`**: An Nginx reverse proxy serving HTTPS and static files.
@@ -125,7 +124,7 @@ This script:
 4. Reloads Nginx with the newly acquired certificates.
 
 ### Step 4: Run the Complete Stack
-Start the remaining containers (database, cache, web application, celery worker, and certbot renewal loop):
+Start the remaining containers (database, cache, web application, and certbot renewal loop):
 
 ```bash
 docker compose up -d

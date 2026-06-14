@@ -349,43 +349,6 @@ class TestShowcaseVideoApi:
         assert status_body["artifact"]["url"].endswith(".mp4")
         assert status_body["artifact"]["download_url"] == status_body["artifact"]["url"]
 
-    def test_render_task_succeeds_when_asyncio_run_is_unavailable(
-        self, client, user, tmp_path, monkeypatch
-    ):
-        """asyncio.run() raises RuntimeError under gevent; task must use .remote() directly."""
-        import asyncio
-
-        _set_r2_env(monkeypatch)
-        piece = _make_piece_with_terminal_state(user)
-        cover_path = tmp_path / "cover.png"
-        piece.thumbnail = _attach_image(
-            piece,
-            url=_make_local_png(cover_path, (200, 120, 80)),
-            caption="Cover",
-        )
-        piece.save()
-
-        def _raise(_):
-            raise RuntimeError(
-                "asyncio.run() cannot be called from a running event loop"
-            )
-
-        _mock_modal_render(monkeypatch)
-        monkeypatch.setattr(asyncio, "run", _raise)
-
-        client.force_authenticate(user=user)
-        url = reverse("piece-showcase-video", kwargs={"piece_id": piece.id})
-        with patch(
-            "api.tasks.InMemoryTaskInterface.submit",
-            autospec=True,
-            side_effect=lambda self_obj, task_obj: _execute_task(task_obj.id),
-        ):
-            response = client.post(url, {}, format="json")
-
-        assert response.status_code == 202
-        task = AsyncTask.objects.get(id=response.json()["task_id"])
-        assert task.status == AsyncTask.Status.SUCCESS
-
     def test_task_uses_storyboard_snapshot_even_if_piece_changes_before_execution(
         self, client, user, tmp_path, monkeypatch
     ):

@@ -5,7 +5,6 @@ py_library(
     srcs = [
         "__init__.py",
         "asgi.py",
-        "celery.py",
         "middleware.py",
         "otel.py",
         "settings.py",
@@ -42,7 +41,6 @@ py_library(
         "@pypi//opentelemetry_instrumentation_psycopg",
         "@pypi//opentelemetry_instrumentation_redis",
         "@pypi//opentelemetry_exporter_otlp_proto_grpc",
-        "@pypi//celery",
         "@pypi//redis",
         "@pypi//django_redis",
     ],
@@ -60,7 +58,6 @@ filegroup(
     srcs = [
         "__init__.py",
         "asgi.py",
-        "celery.py",
         "middleware.py",
         "otel.py",
         "settings.py",
