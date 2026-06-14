@@ -128,3 +128,13 @@ class TestLLMSchemaFiltering:
     def test_schema_title_is_agent_api(self, client):
         schema = _get_llm_schema(client)
         assert schema["info"]["title"] == "PotterDoc Agent API"
+
+    def test_servers_contains_absolute_url(self, client):
+        # GPT Builder rejects schemas where `servers` is absent or contains only
+        # a relative URL. The postprocessing hook must inject an absolute origin.
+        schema = _get_llm_schema(client)
+        assert "servers" in schema, "servers block is missing from LLM schema"
+        urls = [s.get("url", "") for s in schema["servers"]]
+        assert any(url.startswith("http") for url in urls), (
+            f"No absolute URL in servers: {urls}"
+        )

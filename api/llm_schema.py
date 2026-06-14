@@ -42,6 +42,12 @@ def llm_schema_preprocessing_hook(endpoints, **kwargs):
 
 def llm_schema_postprocessing_hook(result, generator, request, public, **kwargs):
     """Replace all security schemes with agentAuth and normalize per-op security."""
+    # GPT Builder rejects schemas where `servers` is absent or contains only a
+    # relative URL ("/"). Inject the absolute origin derived from the request so
+    # the schema is importable regardless of whether SERVERS is set in settings.
+    if request is not None:
+        result["servers"] = [{"url": request.build_absolute_uri("/").rstrip("/")}]
+
     result.setdefault("components", {})
     result["components"]["securitySchemes"] = {"agentAuth": _AGENT_AUTH_SCHEME}
     result["security"] = [{"agentAuth": []}]
