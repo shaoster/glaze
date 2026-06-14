@@ -1,6 +1,6 @@
 # ChatGPT Custom GPT Action for PotterDoc
 
-Connect a Custom GPT to your PotterDoc account for hands-free voice control via ChatGPT Mobile. Once configured, you can create pieces, log progress notes, transition workflow states, manage metadata, and adjust image crops entirely through conversation.
+Connect a Custom GPT to your PotterDoc account for hands-free voice control via ChatGPT Mobile. Once configured, you can create pieces, log progress notes, transition workflow states, manage metadata, and upload and crop images entirely through conversation.
 
 ---
 
@@ -116,9 +116,14 @@ To attach an existing global to the current state, use `PATCH /api/pieces/{piece
 
 ## Image and Crop Control
 
-Image file uploads require a multipart form upload, which is not supported by ChatGPT Actions. Direct the user to upload images via the PotterDoc web app.
+Upload images by providing a publicly accessible URL — the server fetches and stores the image itself:
 
-Once an image has been uploaded, you can adjust its crop coordinates: `PATCH /api/images/{image_id}/crop/` with `{"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 1.0}` where values are fractions of image dimensions (0.0–1.0).
+- **Current state:** `POST /api/pieces/{piece_id}/state/upload-image/` with `{"url": "<image_url>", "caption": "optional caption"}`
+- **Past state:** `POST /api/pieces/{piece_id}/states/{state_id}/upload-image/` with the same body
+
+When the user shares a photo link or a URL they have copied, pass it directly as `url`. The server accepts JPEG, PNG, WebP, and HEIC; images over 10 MB are rejected. If the image needs format conversion a background task ID is returned in `background_tasks.conversion_task_id` — you can ignore it unless the user asks about processing status.
+
+Adjust crop coordinates on an uploaded image: `PATCH /api/images/{image_id}/crop/` with `{"left": 0.0, "top": 0.0, "right": 1.0, "bottom": 1.0}` where values are fractions of image dimensions (0.0–1.0).
 
 ## Voice Interaction Guidelines
 
@@ -126,6 +131,7 @@ Once an image has been uploaded, you can adjust its crop coordinates: `PATCH /ap
 - When the user says "next state" or "advance" without specifying a target, list the available successors and ask which one they want.
 - When a required field is ambiguous (e.g., a glaze type name that partially matches multiple options), list the candidates and ask the user to choose.
 - If you do not recognize a piece name, search for it before reporting it as not found.
+- When the user says "add a photo" or "upload this image", ask them to share a direct URL to the image (e.g. from their camera roll via a sharing service, or a web URL).
 ```
 
 ---
@@ -134,7 +140,7 @@ Once an image has been uploaded, you can adjust its crop coordinates: `PATCH /ap
 
 | Limitation | Workaround |
 |---|---|
-| Image file uploads are not supported via ChatGPT Actions | Upload images in the PotterDoc web app; crop them by voice afterward |
+| Image uploads require a public URL — direct camera capture is not supported via ChatGPT Actions | Share the photo to a service that provides a direct link (e.g. iCloud shared link, Google Photos, Imgur), then tell the GPT the URL |
 | Public library objects (clay bodies, glaze types, firing temperatures) cannot be created or edited by agents | Request additions from your PotterDoc administrator |
 | Agent tokens cannot revoke themselves | Revoke tokens from Settings → Agent Tokens in the web UI |
 | State transitions are permanent (append-only history) | The assistant will always ask for confirmation before transitioning |
@@ -150,4 +156,5 @@ After completing setup, confirm each item works in the GPT Builder preview pane:
 - [ ] "What states can my Test piece move to?" → GPT fetches the piece and lists `successors`
 - [ ] "Transition Test to wheel_thrown" → GPT asks for confirmation, then executes the transition
 - [ ] "What clay bodies are available?" → GPT fetches `GET /api/globals/clay_body/` and lists results
-- [ ] "Upload an image" → GPT explains that uploads require the web app
+- [ ] "Add this photo: https://example.com/bowl.jpg" → GPT calls the upload endpoint and confirms the image was added
+- [ ] "Crop the image to show just the top half" → GPT calls `PATCH /api/images/{id}/crop/` with appropriate coordinates
