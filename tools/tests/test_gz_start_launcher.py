@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import signal
+import subprocess as _subprocess
 from pathlib import Path
+
+import pytest
 
 from tools import gz_start_launcher as launcher
 
@@ -448,3 +451,98 @@ def test_ensure_local_web_node_modules_replaces_shared_symlink(
     assert not local_nm.is_symlink()
     assert local_nm.exists()
     assert install_calls == [(["npm", "install"], str(local_web))]
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for issue #930
+# ---------------------------------------------------------------------------
+
+
+def test_start_backend_suppresses_output_when_fake_initial_fails(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """migrate --fake-initial failure must be silent; fallback resets the db quietly."""
+    db = tmp_path / "db.sqlite3"
+    db.write_bytes(b"")
+    roots = launcher.Roots(workspace=tmp_path, shared=tmp_path)
+
+    run_calls: list[dict] = []
+
+    def fake_run(cmd, *, cwd, env, check, capture_output=False, **kwargs):
+        run_calls.append({"cmd": list(cmd), "capture_output": capture_output})
+        if "--fake-initial" in cmd:
+            raise _subprocess.CalledProcessError(1, cmd)
+
+    class MockPopen:
+        pid = 42
+
+    monkeypatch.setattr(launcher, "ensure_running", lambda _: (None, False))
+    monkeypatch.setattr(launcher, "rotate_log", lambda _: None)
+    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+    monkeypatch.setattr(launcher, "launch_child", lambda *a, **kw: MockPopen())
+
+    pid = launcher.start_backend(
+        roots,
+        {},
+        tmp_path / "backend.pid",
+        tmp_path / "backend.port",
+        tmp_path / "backend.log",
+        8080,
+        5173,
+    )
+
+    assert pid == 42
+
+    fake_initial_calls = [c for c in run_calls if "--fake-initial" in c["cmd"]]
+    assert len(fake_initial_calls) == 1, "expected exactly one --fake-initial call"
+    assert fake_initial_calls[0]["capture_output"] is True, (
+        "--fake-initial call must use capture_output=True to suppress the Django traceback"
+    )
+
+    fresh_migrate_calls = [
+        c
+        for c in run_calls
+        if "migrate" in c["cmd"] and "--fake-initial" not in c["cmd"]
+    ]
+    assert len(fresh_migrate_calls) >= 1, "fallback must run a fresh migrate"
+
+    assert not db.exists(), "original db must have been moved to a backup path"
+    backups = list(tmp_path.glob("db.bak.*.sqlite3"))
+    assert len(backups) == 1, "expected exactly one backup file"
+
+
+def test_start_backend_does_not_reset_shared_db_when_fake_initial_fails(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """When --fake-initial fails on the shared db, the fallback must not destroy it."""
+    workspace = tmp_path / "worktree"
+    shared = tmp_path / "repo"
+    workspace.mkdir()
+    shared.mkdir()
+    shared_db = shared / "db.sqlite3"
+    shared_db.write_bytes(b"")
+    roots = launcher.Roots(workspace=workspace, shared=shared)
+
+    def fake_run(cmd, *, cwd, env, check, capture_output=False, **kwargs):
+        if "--fake-initial" in cmd:
+            raise _subprocess.CalledProcessError(1, cmd)
+
+    monkeypatch.setattr(launcher, "ensure_running", lambda _: (None, False))
+    monkeypatch.setattr(launcher, "rotate_log", lambda _: None)
+    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+
+    with pytest.raises(_subprocess.CalledProcessError):
+        launcher.start_backend(
+            roots,
+            {},
+            workspace / "backend.pid",
+            workspace / "backend.port",
+            workspace / "backend.log",
+            8080,
+            5173,
+        )
+
+    assert shared_db.exists(), "shared db must not have been deleted or moved"
+    assert not list(shared.glob("db.bak.*.sqlite3")), (
+        "shared db must not have been backed up (backup implies deletion)"
+    )
