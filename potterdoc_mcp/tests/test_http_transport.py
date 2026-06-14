@@ -33,11 +33,15 @@ def test_mcp_missing_token_returns_401() -> None:
 
 
 def test_mcp_with_bearer_token_passes_auth() -> None:
-    """MCP request with a Bearer token passes the auth middleware (not 401)."""
-    http_client = TestClient(_build_http_app(), raise_server_exceptions=False)
-    response = http_client.post(
-        "/mcp",
-        json=_INITIALIZE_PAYLOAD,
-        headers={"Authorization": "Bearer pdagent_testtoken"},
-    )
-    assert response.status_code != 401
+    """MCP request with a Bearer token passes the auth middleware and reaches MCP app."""
+    with TestClient(
+        _build_http_app(),
+        base_url="http://localhost:8080",
+        raise_server_exceptions=True,
+    ) as http_client:
+        response = http_client.post(
+            "/mcp",
+            json=_INITIALIZE_PAYLOAD,
+            headers={"Authorization": "Bearer pdagent_testtoken"},
+        )
+        assert response.status_code == 406

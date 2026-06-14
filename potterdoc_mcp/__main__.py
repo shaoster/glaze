@@ -109,7 +109,10 @@ def _build_http_app():
             body = await request.json()
         except Exception:
             return JSONResponse(
-                {"error": "invalid_client_metadata", "error_description": "Request body must be valid JSON."},
+                {
+                    "error": "invalid_client_metadata",
+                    "error_description": "Request body must be valid JSON.",
+                },
                 status_code=400,
             )
         redirect_uris = body.get("redirect_uris", [])
@@ -143,7 +146,10 @@ def _build_http_app():
         client_redirect_uri = request.query_params.get("redirect_uri", "")
         if not any(client_redirect_uri.startswith(p) for p in allowed_prefixes):
             return JSONResponse(
-                {"error": "invalid_request", "error_description": "redirect_uri not allowed"},
+                {
+                    "error": "invalid_request",
+                    "error_description": "redirect_uri not allowed",
+                },
                 status_code=400,
             )
 
@@ -268,6 +274,15 @@ def _build_http_app():
             }
         )
 
+    from contextlib import asynccontextmanager
+
+    mcp_app = mcp.streamable_http_app()
+
+    @asynccontextmanager
+    async def lifespan(app: Starlette):
+        async with mcp_app.router.lifespan_context(mcp_app):
+            yield
+
     return Starlette(
         middleware=[Middleware(BearerAuthMiddleware)],
         routes=[
@@ -281,8 +296,9 @@ def _build_http_app():
             Route("/oauth/authorize", oauth_authorize),
             Route("/oauth/callback", oauth_callback),
             Route("/oauth/token", oauth_token, methods=["POST"]),
-            Mount("/", mcp.streamable_http_app()),
+            Mount("/", mcp_app),
         ],
+        lifespan=lifespan,
     )
 
 
