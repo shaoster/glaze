@@ -3,18 +3,27 @@
 from __future__ import annotations
 
 import contextlib
+import os
 from collections.abc import AsyncIterator
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
 from potterdoc_mcp.client import PotterDocClient
 
-# Module-level client; initialized during lifespan.
+# Module-level client; initialized during lifespan (stdio mode only).
 _client: PotterDocClient | None = None
 
 
-def _get_client() -> PotterDocClient:
+def _get_client(ctx: Context | None = None) -> PotterDocClient:
+    if ctx is not None:
+        req = ctx.request_context.request
+        if req is not None:
+            auth = req.headers.get("authorization", "")
+            token = auth.removeprefix("Bearer ").removeprefix("bearer ").strip()
+            if token:
+                base_url = os.environ.get("POTTERDOC_API_URL", "https://potterdoc.com")
+                return PotterDocClient(base_url, token)
     if _client is None:
         raise RuntimeError("PotterDocClient not initialized. Is the server running?")
     return _client
@@ -23,6 +32,9 @@ def _get_client() -> PotterDocClient:
 @contextlib.asynccontextmanager
 async def _lifespan(server: FastMCP) -> AsyncIterator[None]:  # noqa: ARG001
     global _client  # noqa: PLW0603
+    if not os.environ.get("POTTERDOC_API_TOKEN"):
+        yield
+        return
     _client = PotterDocClient.from_env()
     try:
         yield
@@ -40,6 +52,7 @@ mcp = FastMCP(
         "the firing workflow."
     ),
     lifespan=_lifespan,
+    stateless_http=True,
 )
 
 
@@ -55,6 +68,7 @@ async def list_pieces(
     tag_ids: list[int] | None = None,
     limit: int = 20,
     offset: int = 0,
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Search and filter the user's pottery pieces.
 
@@ -68,7 +82,7 @@ async def list_pieces(
     Returns a dict with ``count`` (total matches) and ``results`` (list of pieces
     with id, name, currentState, and tags).
     """
-    return await _get_client().list_pieces(
+    return await _get_client(ctx).list_pieces(
         search=search,
         state=state,
         tag_ids=tag_ids,
@@ -78,7 +92,9 @@ async def list_pieces(
 
 
 @mcp.tool()
-async def get_piece_details(piece_id: str) -> dict[str, Any]:
+async def get_piece_details(
+    piece_id: str, ctx: Context | None = None
+) -> dict[str, Any]:
     """Retrieve full details of a specific pottery piece.
 
     Returns the piece's properties, current workflow state, all custom fields,
@@ -87,11 +103,13 @@ async def get_piece_details(piece_id: str) -> dict[str, Any]:
     Args:
         piece_id: The piece UUID.
     """
-    return await _get_client().get_piece(piece_id)
+    return await _get_client(ctx).get_piece(piece_id)
 
 
 @mcp.tool()
-async def create_piece(name: str, notes: str = "") -> dict[str, Any]:
+async def create_piece(
+    name: str, notes: str = "", ctx: Context | None = None
+) -> dict[str, Any]:
     """Initialize a new pottery piece.
 
     The backend automatically places the new piece in the 'designed' entry state.
@@ -102,7 +120,7 @@ async def create_piece(name: str, notes: str = "") -> dict[str, Any]:
 
     Returns the newly created piece detail.
     """
-    return await _get_client().create_piece(name=name, notes=notes)
+    return await _get_client(ctx).create_piece(name=name, notes=notes)
 
 
 # ------------------------------------------------------------------
@@ -111,7 +129,7 @@ async def create_piece(name: str, notes: str = "") -> dict[str, Any]:
 
 
 @mcp.tool()
-async def get_workflow_schema() -> dict[str, Any]:
+async def get_workflow_schema(ctx: Context | None = None) -> dict[str, Any]:
     """Fetch the dynamic workflow schema.
 
     Returns the complete workflow definition: all states, allowed transitions
@@ -122,11 +140,13 @@ async def get_workflow_schema() -> dict[str, Any]:
     the target state. Then call list_global_entries with the relevant global name
     to get the actual IDs to supply in custom_fields.
     """
-    return await _get_client().get_workflow_schema()
+    return await _get_client(ctx).get_workflow_schema()
 
 
 @mcp.tool()
-async def list_global_entries(global_name: str) -> list[dict]:
+async def list_global_entries(
+    global_name: str, ctx: Context | None = None
+) -> list[dict]:
     """List all entries for a global library type (clay bodies, glaze types, etc.).
 
     Use this to discover the numeric IDs needed when filling custom_fields for a
@@ -140,7 +160,7 @@ async def list_global_entries(global_name: str) -> list[dict]:
     Returns a list of global entry objects, each with at least ``id`` and a
     display name field.
     """
-    return await _get_client().list_global_entries(global_name)
+    return await _get_client(ctx).list_global_entries(global_name)
 
 
 # ------------------------------------------------------------------
@@ -153,6 +173,7 @@ async def transition_piece(
     piece_id: str,
     target_state: str,
     custom_fields: dict[str, Any] | None = None,
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Transition a pottery piece to a new workflow state.
 
@@ -167,7 +188,7 @@ async def transition_piece(
 
     Returns the newly created PieceState record.
     """
-    return await _get_client().transition_piece(
+    return await _get_client(ctx).transition_piece(
         piece_id=piece_id,
         target_state=target_state,
         custom_fields=custom_fields,
@@ -185,6 +206,7 @@ async def update_piece_metadata(
     name: str | None = None,
     shared: bool | None = None,
     tags: list[str] | None = None,
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Update piece metadata — name, sharing flag, or tags.
 
@@ -201,7 +223,7 @@ async def update_piece_metadata(
 
     Returns the updated piece summary.
     """
-    return await _get_client().update_piece_metadata(
+    return await _get_client(ctx).update_piece_metadata(
         piece_id=piece_id,
         name=name,
         shared=shared,
@@ -219,6 +241,7 @@ async def upload_piece_image(
     piece_id: str,
     url: str,
     caption: str = "",
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Attach an image to a piece's current workflow state.
 
@@ -233,7 +256,7 @@ async def upload_piece_image(
     Returns the created PieceStateImage object and background task IDs for
     async JPEG conversion.
     """
-    return await _get_client().upload_piece_image(
+    return await _get_client(ctx).upload_piece_image(
         piece_id=piece_id,
         url=url,
         caption=caption,
@@ -247,6 +270,7 @@ async def crop_piece_image(
     y: float,
     width: float,
     height: float,
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Update the crop bounds of a piece's image.
 
@@ -261,7 +285,7 @@ async def crop_piece_image(
 
     Returns the updated image object.
     """
-    return await _get_client().crop_piece_image(
+    return await _get_client(ctx).crop_piece_image(
         image_id=image_id,
         x=x,
         y=y,
