@@ -39,7 +39,7 @@ To revoke the token later, return to Settings → Agent Tokens and delete it fro
 
 1. Scroll to the **Actions** section and click **Create new action**.
 2. Click **Import from URL**.
-3. Enter: `https://app.potterdoc.com/api/schema/llm/`
+3. Enter: `https://potterdoc.com/api/schema/llm/`
 4. Click **Import**. GPT Builder will parse the schema and list available operations.
 
 ### 5. Configure Authentication
@@ -54,7 +54,7 @@ In the same Actions panel:
 
 ### 6. Confirm the Server URL
 
-The server URL should be pre-filled as `https://app.potterdoc.com` from the imported schema. Verify this is correct before saving.
+The server URL should be pre-filled as `https://potterdoc.com` from the imported schema. Verify this is correct before saving.
 
 ### 7. Add Custom Instructions
 
@@ -142,10 +142,10 @@ The OpenAPI schema is imported once during setup and is not updated automaticall
 
 1. Go to [chat.openai.com](https://chat.openai.com) → **Explore GPTs → My GPTs** → click your PotterDoc Assistant → **Edit**.
 2. In the **Configure** tab, scroll to **Actions** and click the action name.
-3. Click **Import from URL**, re-enter `https://app.potterdoc.com/api/schema/llm/`, and click **Import**.
+3. Click **Import from URL**, re-enter `https://potterdoc.com/api/schema/llm/`, and click **Import**.
 4. Review any new or changed operations, then click **Update** to save.
 
-You can also preview the current schema at any time by opening `https://app.potterdoc.com/api/schema/llm/` in a browser — it returns the live OpenAPI JSON.
+You can also preview the current schema at any time by opening `https://potterdoc.com/api/schema/llm/` in a browser — it returns the live OpenAPI JSON.
 
 ---
 
