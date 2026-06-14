@@ -34,4 +34,15 @@ class ApiConfig(AppConfig):
             from .logging import setup_logging
 
             setup_logging()
-            _fail_running_tasks_on_startup()
+
+            # We are running under a server's event loop (e.g. uvicorn).
+            # Temporarily allow async unsafe database access for startup initialization.
+            was_unsafe = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+            os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+            try:
+                _fail_running_tasks_on_startup()
+            finally:
+                if was_unsafe is None:
+                    os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+                else:
+                    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = was_unsafe
