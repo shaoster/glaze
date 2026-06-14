@@ -1,6 +1,22 @@
 from django.apps import AppConfig
 
 
+def _fail_running_tasks_on_startup() -> int:
+    """Mark every RUNNING AsyncTask as FAILURE.
+
+    Called on web server startup so tasks stranded by a pod restart don't block
+    the frontend spinner forever. Returns the count of tasks updated.
+    """
+    from .models import AsyncTask
+
+    tasks = list(AsyncTask.objects.filter(status=AsyncTask.Status.RUNNING))
+    for task in tasks:
+        task.status = AsyncTask.Status.FAILURE
+        task.error = "Server restarted while task was running."
+        task.save(update_fields=["status", "error"])
+    return len(tasks)
+
+
 class ApiConfig(AppConfig):
     name = "api"
 
@@ -20,3 +36,4 @@ class ApiConfig(AppConfig):
             from .logging import setup_logging
 
             setup_logging()
+            _fail_running_tasks_on_startup()

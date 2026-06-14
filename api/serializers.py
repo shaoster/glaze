@@ -591,7 +591,9 @@ class PieceSummarySerializer(serializers.ModelSerializer):
             cropped_url = obj.get_thumbnail_cropped_url()
         r2_key = thumbnail.get("r2_key")
         crop_task_failed = (
-            _is_crop_task_failed(obj.thumbnail_id, r2_key)
+            _is_crop_task_failed(
+                obj.thumbnail_id, r2_key, crop if isinstance(crop, dict) else None
+            )
             if crop and not cropped_url
             else False
         )

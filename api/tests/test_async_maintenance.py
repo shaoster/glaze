@@ -4,6 +4,7 @@ import pytest
 from django.core.management import call_command
 from django.utils import timezone
 
+from api.apps import _fail_running_tasks_on_startup
 from api.models import AsyncTask
 from api.tasks import fail_stuck_tasks
 
@@ -76,3 +77,29 @@ class TestAsyncMaintenance:
 
         t1.refresh_from_db()
         assert t1.status == AsyncTask.Status.RUNNING  # Unchanged
+
+
+@pytest.mark.django_db
+class TestStartupRecovery:
+    def test_marks_running_tasks_as_failure_on_startup(self, user):
+        """Bug regression: RUNNING tasks stranded by a web pod restart must be failed."""
+        running = AsyncTask.objects.create(
+            user=user, task_type="ping", status=AsyncTask.Status.RUNNING
+        )
+        pending = AsyncTask.objects.create(
+            user=user, task_type="ping", status=AsyncTask.Status.PENDING
+        )
+        success = AsyncTask.objects.create(
+            user=user, task_type="ping", status=AsyncTask.Status.SUCCESS
+        )
+
+        _fail_running_tasks_on_startup()
+
+        running.refresh_from_db()
+        pending.refresh_from_db()
+        success.refresh_from_db()
+
+        assert running.status == AsyncTask.Status.FAILURE
+        assert "restarted" in running.error.lower()
+        assert pending.status == AsyncTask.Status.PENDING
+        assert success.status == AsyncTask.Status.SUCCESS
