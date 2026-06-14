@@ -516,7 +516,7 @@ def start_backend(
         else roots.workspace / "db.sqlite3"
     )
 
-    def run_migrate(extra_args: list[str]) -> None:
+    def run_migrate(extra_args: list[str], *, capture_output: bool = False) -> None:
         migrate_cmd = [
             sys.executable,
             str(manage_script_path(roots)),
@@ -528,15 +528,34 @@ def start_backend(
             cwd=str(roots.workspace),
             env=backend_env,
             check=True,
+            capture_output=capture_output,
         )
 
     try:
         if db_path.exists():
-            run_migrate(["--fake-initial", "--no-input"])
+            # Suppress output: if --fake-initial fails the fallback handles it
+            # silently, so there is no need to show Django's traceback.
+            run_migrate(["--fake-initial", "--no-input"], capture_output=True)
         else:
             run_migrate(["--no-input"])
     except subprocess.CalledProcessError:
         if not db_path.exists():
+            raise
+        # Don't auto-reset the shared checkout's db — it may contain dev data
+        # for other worktrees. Re-raise with a clear diagnostic instead.
+        # Also require that db_path is NOT inside roots.workspace: in the
+        # .agent-worktrees layout, workspace is a subdir of shared, so a
+        # worktree-local db would satisfy is_relative_to(roots.shared) too.
+        if (
+            roots.workspace != roots.shared
+            and db_path.is_relative_to(roots.shared)
+            and not db_path.is_relative_to(roots.workspace)
+        ):
+            print(
+                f"backend: migrate --fake-initial failed on shared db {db_path}; "
+                "cannot auto-reset. Delete it manually or run migrate directly.",
+                file=sys.stderr,
+            )
             raise
         backup_path = db_path.with_name(
             f"{db_path.stem}.bak.{datetime.now().strftime('%Y%m%dT%H%M%S')}{db_path.suffix}"
