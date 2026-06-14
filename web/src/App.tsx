@@ -954,6 +954,36 @@ function AuthenticatedApp({
               }
             />
             <Route
+              path="/about"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <AboutPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/privacy-policy"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <PrivacyPolicyPage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/terms-of-service"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><CircularProgress /></Box>}>
+                    <TermsOfServicePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
               path="/preferences"
               element={<Box sx={{ minHeight: "100dvh" }} />}
             />
