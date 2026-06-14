@@ -601,6 +601,9 @@ jobs:
           bazel run --config=ci --stamp //:push_worker -- \
             --tag latest \
             --tag ${{ github.sha }}
+          bazel run --config=ci --stamp //potterdoc_mcp:push_mcp -- \
+            --tag latest \
+            --tag ${{ github.sha }}
 
   record-fingerprint:
     name: Record successful fingerprint

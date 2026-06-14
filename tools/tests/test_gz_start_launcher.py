@@ -590,6 +590,10 @@ def test_start_backend_resets_worktree_local_db_when_workspace_is_under_shared(
     backups = list(workspace.glob("db.bak.*.sqlite3"))
     assert len(backups) == 1, "expected exactly one backup file in the workspace"
     fresh_migrate_calls = [
-        c for c in run_calls if "migrate" in c["cmd"] and "--fake-initial" not in c["cmd"]
+        c
+        for c in run_calls
+        if "migrate" in c["cmd"] and "--fake-initial" not in c["cmd"]
     ]
-    assert len(fresh_migrate_calls) >= 1, "fallback must run a fresh migrate after backup"
+    assert len(fresh_migrate_calls) >= 1, (
+        "fallback must run a fresh migrate after backup"
+    )

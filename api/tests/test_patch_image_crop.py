@@ -179,7 +179,9 @@ class TestPatchImageCrop:
     ],
 )
 class TestPatchImageCropValidation:
-    def test_out_of_bounds_crop_returns_400(self, client, image_in_editable_piece, crop):
+    def test_out_of_bounds_crop_returns_400(
+        self, client, image_in_editable_piece, crop
+    ):
         image = image_in_editable_piece
         response = client.patch(
             f"/api/images/{image.id}/crop/",

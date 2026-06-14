@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: mcp
-          image: "{{ .Values.mcp.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.mcp.image.repository }}:{{ .Values.mcp.image.tag | default .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
