@@ -29,18 +29,28 @@ spec:
           env:
             - name: POTTERDOC_API_URL
               value: "{{ .Values.mcp.apiUrl }}"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            failureThreshold: 12
+            periodSeconds: 5
+            timeoutSeconds: 3
           livenessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 5
+            initialDelaySeconds: 0
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 5
+            initialDelaySeconds: 0
             periodSeconds: 10
+            timeoutSeconds: 3
           resources:
             {{- toYaml .Values.mcp.resources | nindent 12 }}
 ---
