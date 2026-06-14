@@ -43,4 +43,5 @@ mcp:
   apiUrl: "${APP_ORIGIN}"
   image:
     repository: "ghcr.io/shaoster/glaze-mcp"
+    tag: "${IMAGE_TAG}"
 EOF

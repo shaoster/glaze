@@ -515,6 +515,9 @@ source = { registry = "third_party/python" }
 dependencies = [
     { name = "django" },
 ]
+# DO NOT MODIFY the wheels entry below — uv rewrites the url to a relative
+# path which breaks aspect_rules_py's lockfile parser. See:
+# https://github.com/shaoster/glaze/issues/792
 wheels = [
     { url = "https://raw.githubusercontent.com/shaoster/glaze/7e899ff17dc550446652fa813f38ab5331e6db1f/third_party/python/django_bootstrap4_form-4.0.2-py3-none-any.whl", hash = "sha256:ed4bcfc1246e449d61b6d946c8c918e48b6d239c504fcf03cd711108c20c5555", size = 7071 },
 ]

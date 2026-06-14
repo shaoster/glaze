@@ -49,8 +49,10 @@ genrule(
     outs = ["mcp_python_layer.tar"],
     cmd = """
         set -e
-        tmp=$$(mktemp -d)
-        dest=$$(mktemp -d)
+        tmp="$$PWD/$(RULEDIR)/mcp_tmp"
+        dest="$$PWD/$(RULEDIR)/mcp_dest"
+        rm -rf "$$tmp" "$$dest"
+        mkdir -p "$$tmp" "$$dest"
         for layer in $(locations :mcp_python_layer); do
             tar -xf "$$layer" -C "$$tmp"
         done
@@ -69,7 +71,6 @@ genrule(
         tar -C "$$dest" -cf "$$OUT_TAR" app/site-packages
         rm -rf "$$tmp" "$$dest"
     """,
-    tags = ["no-sandbox"],
 )
 
 pkg_tar(
