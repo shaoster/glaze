@@ -174,8 +174,6 @@ class TestPatchImageCrop:
         {"x": 0.0, "y": 0.0, "width": 0.5, "height": 1.1},
         {"x": 0.0, "y": 0.0, "width": 0.0, "height": 0.5},
         {"x": 0.0, "y": 0.0, "width": 0.5, "height": 0.0},
-        {"x": 0.6, "y": 0.0, "width": 0.5, "height": 0.5},  # x + width > 1
-        {"x": 0.0, "y": 0.6, "width": 0.5, "height": 0.5},  # y + height > 1
     ],
 )
 class TestPatchImageCropValidation:
@@ -192,12 +190,12 @@ class TestPatchImageCropValidation:
 
 
 @pytest.mark.django_db
-class TestPatchImageCropEpsilonTolerance:
+class TestPatchImageCropClamp:
     def test_floating_point_sum_just_over_one_is_accepted(
         self, client, image_in_editable_piece
     ):
         # 0.9/23 + 22.1/23 produces a sum slightly above 1.0 due to float division;
-        # the endpoint must tolerate this rather than returning 400.
+        # the endpoint must accept this (pixel-level rounding from the crop UI).
         x = 0.9 / 23
         width = 22.1 / 23
         assert x + width > 1.0, "precondition: sum exceeds 1.0 due to float round-off"
@@ -207,3 +205,27 @@ class TestPatchImageCropEpsilonTolerance:
             format="json",
         )
         assert response.status_code == 200
+
+    def test_width_clamped_to_one_minus_x(self, client, image_in_editable_piece):
+        # x=0.6 + width=0.5 = 1.1; width should be clamped to 0.4.
+        image = image_in_editable_piece
+        response = client.patch(
+            f"/api/images/{image.id}/crop/",
+            {"x": 0.6, "y": 0.0, "width": 0.5, "height": 0.5},
+            format="json",
+        )
+        assert response.status_code == 200
+        link = PieceStateImage.objects.get(image=image)
+        assert link.crop["width"] == pytest.approx(0.4)
+
+    def test_height_clamped_to_one_minus_y(self, client, image_in_editable_piece):
+        # y=0.6 + height=0.5 = 1.1; height should be clamped to 0.4.
+        image = image_in_editable_piece
+        response = client.patch(
+            f"/api/images/{image.id}/crop/",
+            {"x": 0.0, "y": 0.6, "width": 0.5, "height": 0.5},
+            format="json",
+        )
+        assert response.status_code == 200
+        link = PieceStateImage.objects.get(image=image)
+        assert link.crop["height"] == pytest.approx(0.4)

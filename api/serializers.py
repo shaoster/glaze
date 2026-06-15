@@ -279,10 +279,6 @@ class ImageCropInputSerializer(ImageCropSerializer):
     only as the direct request body for PATCH /api/images/{image_id}/crop/.
     """
 
-    # Tolerance for floating-point round-off when the client computes x and width
-    # independently from pixel coordinates (e.g. 0.9/23 + 22.1/23 ≈ 1.0 + ε).
-    _EPSILON = 1e-9
-
     def validate(self, data):
         errors = {}
         for field in ("x", "y", "width", "height"):
@@ -293,12 +289,15 @@ class ImageCropInputSerializer(ImageCropSerializer):
                 errors["width"] = "Must be greater than 0."
             if data["height"] <= 0:
                 errors["height"] = "Must be greater than 0."
-            if data["x"] + data["width"] > 1.0 + self._EPSILON:
-                errors["width"] = "x + width must not exceed 1.0."
-            if data["y"] + data["height"] > 1.0 + self._EPSILON:
-                errors["height"] = "y + height must not exceed 1.0."
         if errors:
             raise serializers.ValidationError(errors)
+        # Clamp the sum to 1.0 rather than reject. The crop UI computes
+        # coordinates as pixel/imageDimension; a single-pixel rounding error
+        # pushes the sum above 1.0 by up to ~1/imageDimension (e.g. 1e-3 for
+        # a 1000px image), which is larger than any fixed epsilon can safely
+        # allow without becoming meaningless.
+        data["width"] = min(data["width"], 1.0 - data["x"])
+        data["height"] = min(data["height"], 1.0 - data["y"])
         return data
 
 
