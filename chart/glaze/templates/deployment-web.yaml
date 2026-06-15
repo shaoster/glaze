@@ -87,6 +87,16 @@ spec:
                   name: glaze-secrets
                   key: EMAIL_HOST_PASSWORD
                   optional: true
+            - name: MODAL_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: MODAL_TOKEN_ID
+            - name: MODAL_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: glaze-secrets
+                  key: MODAL_TOKEN_SECRET
             - name: MODAL_AUTH_TOKEN
               valueFrom:
                 secretKeyRef:

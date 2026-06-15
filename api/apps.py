@@ -2,16 +2,20 @@ from django.apps import AppConfig
 
 
 def _fail_running_tasks_on_startup() -> int:
-    """Mark every RUNNING AsyncTask as FAILURE.
+    """Mark every RUNNING or PENDING AsyncTask as FAILURE.
 
     Called on web server startup so tasks stranded by a pod restart don't block
-    the frontend spinner forever. Returns the count of tasks updated.
+    the frontend spinner forever. PENDING tasks are also stranded because the
+    in-memory thread pool they were submitted to no longer exists. Returns the
+    count of tasks updated.
     """
     from .models import AsyncTask
 
-    return AsyncTask.objects.filter(status=AsyncTask.Status.RUNNING).update(
+    return AsyncTask.objects.filter(
+        status__in=[AsyncTask.Status.RUNNING, AsyncTask.Status.PENDING]
+    ).update(
         status=AsyncTask.Status.FAILURE,
-        error="Server restarted while task was running.",
+        error="Server restarted while task was pending or running.",
     )
 
 
