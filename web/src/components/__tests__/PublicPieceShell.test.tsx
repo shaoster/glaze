@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import CircularProgress from "@mui/material/CircularProgress";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -8,9 +8,13 @@ import { ShowcasePage } from "../PublicPieceShell";
 import ErrorBoundary from "../ErrorBoundary";
 import * as api from "../../util/api";
 
-vi.mock("../../util/api", () => ({
-  fetchPiece: vi.fn(),
-}));
+vi.mock("../../util/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../util/api")>();
+  return {
+    ...actual,
+    fetchPiece: vi.fn(),
+  };
+});
 
 vi.mock("../../../workflow.yml", () => ({
   default: {
@@ -184,5 +188,40 @@ describe("ShowcasePage", () => {
 
     await screen.findByText("Beautiful Bowl");
     expect(screen.queryByAltText("PotterDoc")).toBeNull();
+  });
+
+  it("redirects to / when fetchPiece returns 403", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const error = Object.assign(new Error("Forbidden"), {
+      isAxiosError: true,
+      response: { status: 403 },
+    });
+    vi.mocked(api.fetchPiece).mockRejectedValue(error);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/pieces/piece-1/showcase"]}>
+          <Routes>
+            <Route path="/" element={<div>Landing Page</div>} />
+            <Route
+              path="/pieces/:id/showcase"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<CircularProgress />}>
+                    <ShowcasePage />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Landing Page")).toBeInTheDocument();
+    });
   });
 });

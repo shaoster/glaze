@@ -1,22 +1,28 @@
-import { useParams, Link as RouterLink } from "react-router-dom";
+import { useParams, Link as RouterLink, Navigate } from "react-router-dom";
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Typography,
   alpha,
 } from "@mui/material";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { fetchPiece } from "../util/api";
+import { useQuery } from "@tanstack/react-query";
+import { fetchPiece, isAuthError } from "../util/api";
 import { type PieceDetail } from "../util/types";
 import AppImage from "./AppImage";
 
 export function ShowcasePage({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const { id } = useParams<{ id: string }>();
-  const { data: piece } = useSuspenseQuery<PieceDetail>({
+  const { data: piece, error, isPending } = useQuery<PieceDetail>({
     queryKey: ["piece", id],
     queryFn: () => fetchPiece(id!),
+    throwOnError: (err) => !isAuthError(err),
   });
+
+  if (isAuthError(error)) return <Navigate to="/" replace />;
+  if (isPending) return <CircularProgress sx={{ display: "block", mx: "auto", mt: 4 }} />;
+  if (!piece) return null;
 
   return (
     <Container
