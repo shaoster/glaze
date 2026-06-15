@@ -534,9 +534,7 @@ const PieceList = (props: PieceListProps) => {
     [positioner],
   );
 
-  // Must be stable: masonic's trieMemoize keys on the render function reference;
-  // a new reference on each forceUpdate causes PieceCard to unmount/remount and
-  // re-fires onLoad on cached images, creating an infinite update loop.
+  // Stable ref required: trieMemoize keys on render function; a new ref unmounts/remounts PieceCard and re-fires onLoad.
   const renderPieceCard = useCallback(
     ({
       data,
