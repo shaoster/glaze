@@ -464,6 +464,47 @@ describe("PieceList", () => {
         Number(cards[0].getAttribute("data-estimated-height")),
       ).toBeGreaterThan(DEFAULT_CARD_HEIGHT_ESTIMATE);
     });
+
+    it("calls positioner.update() with actual height when a tall image loads without stored dimensions", () => {
+      // Regression: without this fix, the masonic container's height CSS stayed at
+      // the pre-seeded 4:3 estimate until the ResizeObserver fired (~16ms later),
+      // letting tall cards overflow and overlap the "End of pieces" footer.
+      const piece = makePiece({
+        thumbnail: { url: "https://cdn.example.com/img.jpg" },
+      });
+      const { container } = renderPieceList([piece]);
+
+      const img = container.querySelector("img")!;
+      Object.defineProperty(img, "naturalWidth", { value: 100 });
+      Object.defineProperty(img, "naturalHeight", { value: 300 });
+      fireEvent.load(img);
+
+      // positioner.update([index, height]) must fire so that the masonic container
+      // height and the card's aspect ratio update in the same React commit.
+      const expectedHeight =
+        Math.round((mockPositioner.columnWidth * 300) / 100) +
+        CARD_CHROME_HEIGHT;
+      expect(mockPositioner.update).toHaveBeenCalledWith([0, expectedHeight]);
+    });
+
+    it("does not call positioner.update() on image load when stored dimensions are present", () => {
+      // When dimensions are stored, the pre-seeded height is already correct.
+      const piece = makePiece({
+        thumbnail: {
+          url: "https://cdn.example.com/img.jpg",
+          width: 100,
+          height: 300,
+        },
+      });
+      const { container } = renderPieceList([piece]);
+
+      const img = container.querySelector("img")!;
+      Object.defineProperty(img, "naturalWidth", { value: 100 });
+      Object.defineProperty(img, "naturalHeight", { value: 300 });
+      fireEvent.load(img);
+
+      expect(mockPositioner.update).not.toHaveBeenCalled();
+    });
   });
 
   describe("estimateCardHeight", () => {
