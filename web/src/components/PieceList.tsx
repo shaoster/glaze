@@ -530,14 +530,39 @@ const PieceList = (props: PieceListProps) => {
         Math.round((positioner.columnWidth * naturalHeight) / naturalWidth) +
         CARD_CHROME_HEIGHT;
       positioner.update([idx, newHeight]);
-      // Defer the re-render to a separate task so it doesn't batch with
-      // setThumbnailAspectRatio. Batching both would cause masonic to re-render
-      // with updated positions in the same commit as the card growing, shifting
-      // items below the changed card out of the virtual viewport range and
-      // causing them to be unmounted mid-click by Playwright.
-      setTimeout(forceUpdate, 0);
+      forceUpdate();
     },
     [positioner],
+  );
+
+  // Stable render prop — must be memoized so createRenderElement (trieMemoize)
+  // gets a consistent function reference across forceUpdate re-renders.
+  // A changing reference causes React to see a type mismatch on the inner
+  // element, unmounting and remounting PieceCard, which re-fires onLoad on
+  // cached images and creates an infinite re-render loop.
+  const renderPieceCard = useCallback(
+    ({
+      data,
+      index,
+      width,
+    }: {
+      data: PieceSummary;
+      index: number;
+      width: number;
+    }) => (
+      <PieceCard
+        piece={data}
+        index={index}
+        width={width}
+        onDimensionsLoaded={onCardDimensionsLoaded}
+        returnTo={{
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash,
+        }}
+      />
+    ),
+    [onCardDimensionsLoaded, location.pathname, location.search, location.hash],
   );
 
   const toggleFilter = useCallback(
@@ -940,27 +965,7 @@ const PieceList = (props: PieceListProps) => {
                 positioner={positioner}
                 resizeObserver={resizeObserver}
                 items={pieces}
-                render={({
-                  data,
-                  index,
-                  width,
-                }: {
-                  data: PieceSummary;
-                  index: number;
-                  width: number;
-                }) => (
-                  <PieceCard
-                    piece={data}
-                    index={index}
-                    width={width}
-                    onDimensionsLoaded={onCardDimensionsLoaded}
-                    returnTo={{
-                      pathname: location.pathname,
-                      search: location.search,
-                      hash: location.hash,
-                    }}
-                  />
-                )}
+                render={renderPieceCard}
                 itemKey={(piece) => piece.id}
                 itemHeightEstimate={DEFAULT_CARD_HEIGHT_ESTIMATE}
                 offset={masonryOffset}
