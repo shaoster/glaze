@@ -22,7 +22,7 @@ export function ShowcasePage({ isAuthenticated = false }: { isAuthenticated?: bo
 
   if (isAuthError(error)) return <Navigate to="/" replace />;
   if (isPending) return <CircularProgress sx={{ display: "block", mx: "auto", mt: 4 }} />;
-  if (!piece) return null;
+  if (!piece) return null; // non-auth errors throw via throwOnError; this guard is unreachable in practice
 
   return (
     <Container

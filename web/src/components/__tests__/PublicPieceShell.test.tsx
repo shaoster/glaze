@@ -190,13 +190,13 @@ describe("ShowcasePage", () => {
     expect(screen.queryByAltText("PotterDoc")).toBeNull();
   });
 
-  it("redirects to / when fetchPiece returns 403", async () => {
+  it.each([403, 401])("redirects to / when fetchPiece returns %i", async (status) => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const error = Object.assign(new Error("Forbidden"), {
+    const error = Object.assign(new Error("Unauthorized"), {
       isAxiosError: true,
-      response: { status: 403 },
+      response: { status },
     });
     vi.mocked(api.fetchPiece).mockRejectedValue(error);
 
