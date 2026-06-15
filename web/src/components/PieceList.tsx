@@ -522,8 +522,7 @@ const PieceList = (props: PieceListProps) => {
   const resizeObserver = useResizeObserver(positioner);
 
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
-  // masonic always passes positioner.columnWidth as the card's width prop, so
-  // using positioner.columnWidth here matches the rendered card width exactly.
+  // positioner.columnWidth matches the width masonic passes to each card.
   const onCardDimensionsLoaded = useCallback(
     (idx: number, naturalWidth: number, naturalHeight: number) => {
       const newHeight =
@@ -535,11 +534,9 @@ const PieceList = (props: PieceListProps) => {
     [positioner],
   );
 
-  // Stable render prop — must be memoized so createRenderElement (trieMemoize)
-  // gets a consistent function reference across forceUpdate re-renders.
-  // A changing reference causes React to see a type mismatch on the inner
-  // element, unmounting and remounting PieceCard, which re-fires onLoad on
-  // cached images and creates an infinite re-render loop.
+  // Must be stable: masonic's trieMemoize keys on the render function reference;
+  // a new reference on each forceUpdate causes PieceCard to unmount/remount and
+  // re-fires onLoad on cached images, creating an infinite update loop.
   const renderPieceCard = useCallback(
     ({
       data,
