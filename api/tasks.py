@@ -137,11 +137,42 @@ class InMemoryTaskInterface:
 
 
 # Global interface instance.
+# Cached Modal client built from explicit credentials so it works in
+# ThreadPoolExecutor threads where the ambient env-var lookup can fail
+# (see modal.com/docs/guide/troubleshooting#connection-issues-in-forked-processes).
+_modal_client: Any = None
+
+
+def _get_modal_client() -> Any:
+    """Return a Modal client authenticated with MODAL_TOKEN_ID/MODAL_TOKEN_SECRET.
+
+    Builds from explicit credentials rather than relying on Client.from_env(),
+    which uses a shared async lock that can misbehave in background threads.
+    Cached process-wide after the first call.
+    """
+    import os  # noqa: PLC0415
+
+    import modal  # noqa: PLC0415
+
+    global _modal_client
+    if _modal_client is not None:
+        return _modal_client
+
+    token_id = os.environ.get("MODAL_TOKEN_ID", "")
+    token_secret = os.environ.get("MODAL_TOKEN_SECRET", "")
+    if not token_id or not token_secret:
+        raise RuntimeError(
+            "MODAL_TOKEN_ID and MODAL_TOKEN_SECRET must be set to call Modal functions."
+        )
+    _modal_client = modal.Client.from_credentials(token_id, token_secret)
+    return _modal_client
+
+
 def _modal_function(app_name: str, fn_name: str) -> Any:
     """Thin wrapper around modal.Function.from_name — mock this in tests."""
     import modal  # noqa: PLC0415
 
-    return modal.Function.from_name(app_name, fn_name)
+    return modal.Function.from_name(app_name, fn_name, client=_get_modal_client())
 
 
 def get_task_interface() -> TaskInterface:
