@@ -522,6 +522,8 @@ const PieceList = (props: PieceListProps) => {
   const resizeObserver = useResizeObserver(positioner);
 
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  // masonic always passes positioner.columnWidth as the card's width prop, so
+  // using positioner.columnWidth here matches the rendered card width exactly.
   const onCardDimensionsLoaded = useCallback(
     (idx: number, naturalWidth: number, naturalHeight: number) => {
       const newHeight =
