@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
@@ -34,6 +35,7 @@ import {
   useResizeObserver,
 } from "masonic";
 import {
+  CARD_CHROME_HEIGHT,
   DEFAULT_CARD_HEIGHT_ESTIMATE,
   getPieceCardLayout,
 } from "./pieceCardHeight";
@@ -118,10 +120,16 @@ function daysSince(date: Date): number {
 interface PieceCardProps {
   piece: PieceSummary;
   width: number;
+  index: number;
   returnTo: { pathname: string; search: string; hash: string } | null;
+  onDimensionsLoaded?: (
+    index: number,
+    naturalWidth: number,
+    naturalHeight: number,
+  ) => void;
 }
 
-const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
+const PieceCard = ({ piece, width, index, returnTo, onDimensionsLoaded }: PieceCardProps) => {
   const theme = useTheme();
   const isTerminal = isTerminalState(piece.current_state.state);
   const days = daysSince(new Date(piece.last_modified));
@@ -198,6 +206,7 @@ const PieceCard = ({ piece, width, returnTo }: PieceCardProps) => {
               setThumbnailAspectRatio(
                 `${img.naturalWidth} / ${img.naturalHeight}`,
               );
+              onDimensionsLoaded?.(index, img.naturalWidth, img.naturalHeight);
             }
           }}
         />
@@ -511,6 +520,45 @@ const PieceList = (props: PieceListProps) => {
     return nextPositioner;
   }, [pieces, masonryWidth, columnWidth, isMobile]);
   const resizeObserver = useResizeObserver(positioner);
+
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  // positioner.columnWidth matches the width masonic passes to each card.
+  const onCardDimensionsLoaded = useCallback(
+    (idx: number, naturalWidth: number, naturalHeight: number) => {
+      const newHeight =
+        Math.round((positioner.columnWidth * naturalHeight) / naturalWidth) +
+        CARD_CHROME_HEIGHT;
+      positioner.update([idx, newHeight]);
+      forceUpdate();
+    },
+    [positioner],
+  );
+
+  // Stable ref required: trieMemoize keys on render function; a new ref unmounts/remounts PieceCard and re-fires onLoad.
+  const renderPieceCard = useCallback(
+    ({
+      data,
+      index,
+      width,
+    }: {
+      data: PieceSummary;
+      index: number;
+      width: number;
+    }) => (
+      <PieceCard
+        piece={data}
+        index={index}
+        width={width}
+        onDimensionsLoaded={onCardDimensionsLoaded}
+        returnTo={{
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash,
+        }}
+      />
+    ),
+    [onCardDimensionsLoaded, location.pathname, location.search, location.hash],
+  );
 
   const toggleFilter = useCallback(
     (filter: FilterCategory) => {
@@ -912,24 +960,7 @@ const PieceList = (props: PieceListProps) => {
                 positioner={positioner}
                 resizeObserver={resizeObserver}
                 items={pieces}
-                render={({
-                  data,
-                  width,
-                }: {
-                  data: PieceSummary;
-                  index: number;
-                  width: number;
-                }) => (
-                  <PieceCard
-                    piece={data}
-                    width={width}
-                    returnTo={{
-                      pathname: location.pathname,
-                      search: location.search,
-                      hash: location.hash,
-                    }}
-                  />
-                )}
+                render={renderPieceCard}
                 itemKey={(piece) => piece.id}
                 itemHeightEstimate={DEFAULT_CARD_HEIGHT_ESTIMATE}
                 offset={masonryOffset}
