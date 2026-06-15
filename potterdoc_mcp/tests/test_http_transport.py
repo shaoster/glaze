@@ -37,11 +37,23 @@ def test_mcp_with_bearer_token_passes_auth() -> None:
     with TestClient(
         _build_http_app(),
         base_url="http://localhost:8080",
-        raise_server_exceptions=True,
+        raise_server_exceptions=False,
     ) as http_client:
+        # 1. Localhost header (should pass auth and return 406 from MCP app)
         response = http_client.post(
             "/mcp",
             json=_INITIALIZE_PAYLOAD,
             headers={"Authorization": "Bearer pdagent_testtoken"},
         )
         assert response.status_code == 406
+
+        # 2. Custom host header (should also pass auth and not be rejected by DNS rebinding checks)
+        response_custom = http_client.post(
+            "/mcp",
+            json=_INITIALIZE_PAYLOAD,
+            headers={
+                "Authorization": "Bearer pdagent_testtoken",
+                "Host": "mcp.potterdoc.com",
+            },
+        )
+        assert response_custom.status_code == 406

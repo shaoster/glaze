@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import Icon
 
 from potterdoc_mcp.client import PotterDocClient
@@ -60,6 +61,9 @@ mcp = FastMCP(
     ],
     lifespan=_lifespan,
     stateless_http=True,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+    ),
 )
 
 
