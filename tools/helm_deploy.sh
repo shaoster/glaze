@@ -14,6 +14,9 @@ SSH="ssh -o StrictHostKeyChecking=no"
 SCP="scp -o StrictHostKeyChecking=no"
 
 echo "==> Copying chart and values to ${DEPLOY_HOST}..."
+# Replace the chart directory wholesale so deleted templates don't persist
+# across deploys (scp -r merges rather than replacing).
+$SSH "${DEPLOY_HOST}" "rm -rf ~/glaze-chart-deploy/"
 $SCP -r "${CHART_DIR}" "${DEPLOY_HOST}":~/glaze-chart-deploy/
 $SCP "${VALUES_FILE}" "${DEPLOY_HOST}":~/glaze-values-override.yaml
 
