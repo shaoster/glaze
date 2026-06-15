@@ -14,9 +14,13 @@ SSH="ssh -o StrictHostKeyChecking=no"
 SCP="scp -o StrictHostKeyChecking=no"
 
 echo "==> Copying chart and values to ${DEPLOY_HOST}..."
-# Replace the chart directory wholesale so deleted templates don't persist
-# across deploys (scp -r merges rather than replacing).
-$SSH "${DEPLOY_HOST}" "rm -rf ~/glaze-chart-deploy/"
+# Keep the parent directory but delete only the chart subdirectory so that
+# deleted templates don't persist across deploys. Deleting the parent would
+# cause `scp -r chart/glaze host:~/glaze-chart-deploy/` to treat the missing
+# path as the chart's new name, placing chart contents at ~/glaze-chart-deploy/
+# instead of ~/glaze-chart-deploy/glaze/ — breaking the helm path.
+CHART_NAME="$(basename "${CHART_DIR}")"
+$SSH "${DEPLOY_HOST}" "mkdir -p ~/glaze-chart-deploy && rm -rf ~/glaze-chart-deploy/${CHART_NAME}"
 $SCP -r "${CHART_DIR}" "${DEPLOY_HOST}":~/glaze-chart-deploy/
 $SCP "${VALUES_FILE}" "${DEPLOY_HOST}":~/glaze-values-override.yaml
 
@@ -48,17 +52,27 @@ $SSH "${DEPLOY_HOST}" << 'ENDSSH'
     done
 
     echo "==> Applying Helm chart (no wait — rollouts are paused)..."
+    # Always resume deployments, even on helm failure, so paused pods don't
+    # get stuck. Capture helm's exit code explicitly — set -e doesn't
+    # propagate into background subshells so we must track it ourselves.
+    helm_exit=0
     helm upgrade --install glaze ~/glaze-chart-deploy/glaze/ \
       -f ~/glaze-values-override.yaml \
-      --timeout 5m
+      --timeout 5m || helm_exit=$?
 
     echo "==> Rolling deployments sequentially..."
     for dep in $SEQUENTIAL_DEPLOYMENTS; do
       echo "--- resuming $dep ---"
       kubectl rollout resume deployment/$dep -n default
-      kubectl rollout status deployment/$dep -n default --timeout=5m
-      echo "--- $dep ready ---"
+      if [ "$helm_exit" -eq 0 ]; then
+        kubectl rollout status deployment/$dep -n default --timeout=5m
+        echo "--- $dep ready ---"
+      else
+        echo "--- skipping rollout status: helm failed (exit $helm_exit) ---"
+      fi
     done
+
+    return $helm_exit
   }
 
   helm_upgrade() {
