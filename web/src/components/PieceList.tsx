@@ -530,7 +530,12 @@ const PieceList = (props: PieceListProps) => {
         Math.round((positioner.columnWidth * naturalHeight) / naturalWidth) +
         CARD_CHROME_HEIGHT;
       positioner.update([idx, newHeight]);
-      forceUpdate();
+      // Defer the re-render to a separate task so it doesn't batch with
+      // setThumbnailAspectRatio. Batching both would cause masonic to re-render
+      // with updated positions in the same commit as the card growing, shifting
+      // items below the changed card out of the virtual viewport range and
+      // causing them to be unmounted mid-click by Playwright.
+      setTimeout(forceUpdate, 0);
     },
     [positioner],
   );
