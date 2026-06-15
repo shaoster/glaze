@@ -1072,6 +1072,7 @@ function AppContent() {
     refreshSuppressed.current = true;
     refreshAttempted.current = false;
     await logoutUser();
+    queryClient.removeQueries({ queryKey: ["piece"] });
     queryClient.setQueryData(["appInit"], (prev: typeof init) => ({ ...prev!, user: null }));
   }, [queryClient]);
 

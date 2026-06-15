@@ -452,6 +452,11 @@ export async function loginWithGoogle(
   return normalizeAuthUser(data);
 }
 
+export function isAuthError(error: unknown): boolean {
+  return axios.isAxiosError(error) &&
+    (error.response?.status === 401 || error.response?.status === 403);
+}
+
 export async function logoutUser(): Promise<void> {
   await ensureCsrfCookie();
   await client.post("auth/token/revoke/", {});
