@@ -81,8 +81,12 @@ class TestAsyncMaintenance:
 
 @pytest.mark.django_db
 class TestStartupRecovery:
-    def test_marks_running_tasks_as_failure_on_startup(self, user):
-        """Bug regression: RUNNING tasks stranded by a web pod restart must be failed."""
+    def test_marks_running_and_pending_tasks_as_failure_on_startup(self, user):
+        """RUNNING and PENDING tasks stranded by a web pod restart must both be failed.
+
+        PENDING tasks are stranded too: the in-memory thread pool they were submitted
+        to no longer exists after a restart, so they will never be picked up.
+        """
         running = AsyncTask.objects.create(
             user=user, task_type="ping", status=AsyncTask.Status.RUNNING
         )
@@ -101,5 +105,6 @@ class TestStartupRecovery:
 
         assert running.status == AsyncTask.Status.FAILURE
         assert "restarted" in running.error.lower()
-        assert pending.status == AsyncTask.Status.PENDING
+        assert pending.status == AsyncTask.Status.FAILURE
+        assert "restarted" in pending.error.lower()
         assert success.status == AsyncTask.Status.SUCCESS
