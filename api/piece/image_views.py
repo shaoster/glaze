@@ -98,7 +98,7 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
 
 # Maps each accepted content type to the set of file extensions it accepts.
 # The first element of each tuple is the canonical extension used when writing new files.
-_IMAGE_CONTENT_TYPE_TO_EXTSS: dict[str, tuple[str, ...]] = {
+_IMAGE_CONTENT_TYPE_TO_EXTS: dict[str, tuple[str, ...]] = {
     "image/jpeg": ("jpg", "jpeg"),
     "image/png": ("png",),
     "image/webp": ("webp",),
@@ -108,14 +108,14 @@ _IMAGE_CONTENT_TYPE_TO_EXTSS: dict[str, tuple[str, ...]] = {
     "image/avif": ("avif",),
 }
 _ALL_IMAGE_EXTENSIONS: frozenset[str] = frozenset(
-    ext for exts in _IMAGE_CONTENT_TYPE_TO_EXTSS.values() for ext in exts
+    ext for exts in _IMAGE_CONTENT_TYPE_TO_EXTS.values() for ext in exts
 )
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 def _ext_for_content_type(content_type: str) -> str:
     base = content_type.split(";")[0].strip().lower()
-    exts = _IMAGE_CONTENT_TYPE_TO_EXTSS.get(base)
+    exts = _IMAGE_CONTENT_TYPE_TO_EXTS.get(base)
     return exts[0] if exts else "jpg"
 
 
