@@ -96,26 +96,30 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
     return Response(serialize_piece_detail(piece, request))
 
 
-_IMAGE_CONTENT_TYPE_TO_EXT = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/gif": "gif",
-    "image/heic": "heic",
-    "image/heif": "heif",
-    "image/avif": "avif",
+# Maps each accepted content type to the set of file extensions it accepts.
+# The first element of each tuple is the canonical extension used when writing new files.
+_IMAGE_CONTENT_TYPE_TO_EXTS: dict[str, tuple[str, ...]] = {
+    "image/jpeg": ("jpg", "jpeg"),
+    "image/png": ("png",),
+    "image/webp": ("webp",),
+    "image/gif": ("gif",),
+    "image/heic": ("heic",),
+    "image/heif": ("heif",),
+    "image/avif": ("avif",),
 }
-_ALL_IMAGE_EXTENSIONS = set(_IMAGE_CONTENT_TYPE_TO_EXT.values()) | {"jpeg"}  # jpg+jpeg both valid
+_ALL_IMAGE_EXTENSIONS: frozenset[str] = frozenset(
+    ext for exts in _IMAGE_CONTENT_TYPE_TO_EXTS.values() for ext in exts
+)
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 def _ext_for_content_type(content_type: str) -> str:
     base = content_type.split(";")[0].strip().lower()
-    return _IMAGE_CONTENT_TYPE_TO_EXT.get(base, "jpg")
+    exts = _IMAGE_CONTENT_TYPE_TO_EXTS.get(base)
+    return exts[0] if exts else "jpg"
 
 
 def _needs_jpeg_conversion(key: str) -> bool:
-    # JPEG included: bakes in EXIF orientation so AI crop coords match stored bytes.
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
     return ext in _ALL_IMAGE_EXTENSIONS
 
