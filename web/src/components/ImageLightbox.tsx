@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
+  CircularProgress,
   IconButton,
   Modal,
   Typography,
 } from "@mui/material";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import CheckIcon from "@mui/icons-material/Check";
 import { useSwipeable } from "react-swipeable";
 import type { CaptionedImage, ImageCrop } from "../util/types";
 import { SuspenseAppImage } from "./AppImage";
@@ -67,13 +69,37 @@ export default function ImageLightbox({
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [cropMode, setCropMode] = useState(false);
-  const [pendingSaveCrop, setPendingSaveCrop] = useState<ImageCrop | null>(null);
+  const [optimisticCroppedUrl, setOptimisticCroppedUrl] = useState<string | null>(null);
+  // "pending" = spinner shown while backend task runs; "done" = checkmark shown briefly
+  const [cropSaveStatus, setCropSaveStatus] = useState<"pending" | "done" | null>(null);
 
   const image = images[index];
 
   useEffect(() => {
-    setPendingSaveCrop(null);
+    setOptimisticCroppedUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setCropSaveStatus(null);
   }, [image.image_id]);
+
+  // When the real cropped_url arrives, transition spinner → checkmark → cleanup.
+  // cropSaveStatus is intentionally read from the closure of the current render
+  // (not added to deps) — it will be current when image.cropped_url changes.
+  useEffect(() => {
+    if (!image.cropped_url) return;
+    // Guard: only act if we're tracking an in-flight save (canvas may have failed,
+    // leaving optimisticCroppedUrl null but cropSaveStatus still "pending").
+    if (!optimisticCroppedUrl && cropSaveStatus !== "pending") return;
+    if (optimisticCroppedUrl) {
+      URL.revokeObjectURL(optimisticCroppedUrl);
+      setOptimisticCroppedUrl(null);
+    }
+    setCropSaveStatus("done");
+    const t = setTimeout(() => setCropSaveStatus(null), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image.cropped_url]);
 
   const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
 
@@ -184,11 +210,35 @@ export default function ImageLightbox({
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
               setCropMode(false);
-              setPendingSaveCrop(crop);
+              setCropSaveStatus("pending");
+              try {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = image.url;
+                await img.decode();
+                const srcX = crop.x * img.naturalWidth;
+                const srcY = crop.y * img.naturalHeight;
+                const srcW = crop.width * img.naturalWidth;
+                const srcH = crop.height * img.naturalHeight;
+                const canvas = document.createElement("canvas");
+                canvas.width = srcW;
+                canvas.height = srcH;
+                canvas.getContext("2d")!.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+                const blob = await new Promise<Blob>((res) =>
+                  canvas.toBlob(res as BlobCallback, "image/jpeg", 0.92)
+                );
+                setOptimisticCroppedUrl(URL.createObjectURL(blob));
+              } catch {
+                // CORS failure or canvas unavailable — no optimistic preview
+              }
               try {
                 await onCropSave?.(image, crop);
-              } finally {
-                setPendingSaveCrop(null);
+              } catch (err) {
+                // API save failed — revoke blob and clear optimistic state so
+                // the spinner doesn't stay stuck with no real crop incoming
+                setOptimisticCroppedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+                setCropSaveStatus(null);
+                throw err;
               }
             }}
             onCancel={() => setCropMode(false)}
@@ -212,8 +262,8 @@ export default function ImageLightbox({
               <SuspenseAppImage
                 key={index}
                 url={image.url}
-                croppedUrl={pendingSaveCrop ? null : image.cropped_url}
-                crop={pendingSaveCrop ?? image.crop}
+                croppedUrl={optimisticCroppedUrl ?? image.cropped_url}
+                crop={image.crop}
                 r2Key={image.r2_key}
                 cropTaskFailed={image.crop_task_failed}
                 alt={image.caption || "Pottery image"}
@@ -227,6 +277,27 @@ export default function ImageLightbox({
                   pointerEvents: "none",
                 }}
               />
+              {cropSaveStatus && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: 8,
+                    right: 8,
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                  }}
+                >
+                  {cropSaveStatus === "pending"
+                    ? <CircularProgress size={16} sx={{ color: "white" }} />
+                    : <CheckIcon sx={{ fontSize: 16, color: "white" }} />}
+                </Box>
+              )}
             </Box>
           </Box>
         )}
@@ -300,4 +371,3 @@ export default function ImageLightbox({
     </Modal>
   );
 }
-
