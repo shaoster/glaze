@@ -44,9 +44,9 @@ class Command(BaseCommand):
             Image.objects.filter(
                 Q(r2_key__endswith=".jpg") | Q(r2_key__endswith=".jpeg"),
                 derived_from__isnull=True,
-                r2_key__isnull=False,
                 user__isnull=False,
             )
+            .exclude(derivatives__derived_type="jpeg_conversion")
             .select_related("user")
             .order_by("id")
         )
@@ -78,7 +78,7 @@ class Command(BaseCommand):
         for img in images:
             try:
                 task = AsyncTask.objects.create(
-                    user=img.user,
+                    user=img.user,  # type: ignore[misc]  # queryset filtered user__isnull=False
                     task_type="convert_image_to_jpeg",
                     input_params={"key": img.r2_key, "image_id": str(img.id)},
                 )
