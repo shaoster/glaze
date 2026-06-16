@@ -105,7 +105,7 @@ _IMAGE_CONTENT_TYPE_TO_EXT = {
     "image/heif": "heif",
     "image/avif": "avif",
 }
-_ALL_IMAGE_EXTENSIONS = set(_IMAGE_CONTENT_TYPE_TO_EXT.values()) | {"jpeg"}
+_ALL_IMAGE_EXTENSIONS = set(_IMAGE_CONTENT_TYPE_TO_EXT.values()) | {"jpeg"}  # jpg+jpeg both valid
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
@@ -115,9 +115,7 @@ def _ext_for_content_type(content_type: str) -> str:
 
 
 def _needs_jpeg_conversion(key: str) -> bool:
-    # All image uploads go through convert_image_to_jpeg to bake in EXIF orientation
-    # (e.g. tag 6 = Rotate 90 CW). Without this, AI-specified crop coordinates computed
-    # from raw bytes are applied to the exif_transpose'd canvas, producing wrong crops.
+    # JPEG included: bakes in EXIF orientation so AI crop coords match stored bytes.
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
     return ext in _ALL_IMAGE_EXTENSIONS
 
