@@ -15,12 +15,12 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
 from api.models import AsyncTask, Image
-from api.tasks import get_task_interface
+from api.tasks import convert_image_to_jpeg
 
 
 class Command(BaseCommand):
     help = (
-        "Enqueue convert_image_to_jpeg tasks for existing JPEG images that were "
+        "Run convert_image_to_jpeg synchronously for existing JPEG images that were "
         "uploaded before EXIF normalization was enforced."
     )
 
@@ -28,7 +28,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Print a summary without enqueuing any tasks.",
+            help="Print a summary without converting any images.",
         )
         parser.add_argument(
             "--user-id",
@@ -60,7 +60,7 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"Dry run: would enqueue {total} convert_image_to_jpeg task(s)."
+                    f"Dry run: would convert {total} image(s)."
                 )
             )
             for img in images:
@@ -71,8 +71,7 @@ class Command(BaseCommand):
             self.stdout.write("No qualifying images found.")
             return
 
-        interface = get_task_interface()
-        enqueued = 0
+        done = 0
         failed = 0
 
         for img in images:
@@ -82,20 +81,20 @@ class Command(BaseCommand):
                     task_type="convert_image_to_jpeg",
                     input_params={"key": img.r2_key, "image_id": str(img.id)},
                 )
-                interface.submit(task)
-                enqueued += 1
-                self.stdout.write(f"\rQueued {enqueued} / {total}...", ending="")
-                self.stdout.flush()
+                result = convert_image_to_jpeg(task)
+                done += 1
+                self.stdout.write(
+                    f"[{done}/{total}] {img.r2_key} → {result.get('key', '?')}"
+                )
             except Exception as exc:  # noqa: BLE001
-                self.stderr.write(f"\n  Failed for {img.id} ({img.r2_key}): {exc}")
+                self.stderr.write(f"  FAILED {img.id} ({img.r2_key}): {exc}")
                 failed += 1
 
-        self.stdout.write("")
         if failed:
             raise CommandError(
-                f"Enqueued {enqueued} task(s); {failed} failed. "
+                f"Converted {done} image(s); {failed} failed. "
                 "Check stderr for details."
             )
         self.stdout.write(
-            self.style.SUCCESS(f"Enqueued {enqueued} convert_image_to_jpeg task(s).")
+            self.style.SUCCESS(f"Converted {done} image(s).")
         )
