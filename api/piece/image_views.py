@@ -120,6 +120,7 @@ def _ext_for_content_type(content_type: str) -> str:
 
 
 def _needs_jpeg_conversion(key: str) -> bool:
+    # Includes JPEG: bakes in EXIF orientation so stored bytes match the displayed image.
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
     return ext in _ALL_IMAGE_EXTENSIONS
 
