@@ -67,8 +67,13 @@ export default function ImageLightbox({
   const [dragDeltaX, setDragDeltaX] = useState(0);
   const [dragDeltaY, setDragDeltaY] = useState(0);
   const [cropMode, setCropMode] = useState(false);
+  const [pendingSaveCrop, setPendingSaveCrop] = useState<ImageCrop | null>(null);
 
   const image = images[index];
+
+  useEffect(() => {
+    setPendingSaveCrop(null);
+  }, [image.image_id]);
 
   const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
 
@@ -179,7 +184,12 @@ export default function ImageLightbox({
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
               setCropMode(false);
-              await onCropSave?.(image, crop);
+              setPendingSaveCrop(crop);
+              try {
+                await onCropSave?.(image, crop);
+              } finally {
+                setPendingSaveCrop(null);
+              }
             }}
             onCancel={() => setCropMode(false)}
           />
@@ -202,8 +212,8 @@ export default function ImageLightbox({
               <SuspenseAppImage
                 key={index}
                 url={image.url}
-                croppedUrl={image.cropped_url}
-                crop={image.crop}
+                croppedUrl={pendingSaveCrop ? null : image.cropped_url}
+                crop={pendingSaveCrop ?? image.crop}
                 r2Key={image.r2_key}
                 cropTaskFailed={image.crop_task_failed}
                 alt={image.caption || "Pottery image"}
