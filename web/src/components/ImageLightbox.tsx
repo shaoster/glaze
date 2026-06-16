@@ -83,15 +83,20 @@ export default function ImageLightbox({
     setCropSaveStatus(null);
   }, [image.image_id]);
 
-  // When the real cropped_url arrives, transition spinner → checkmark → cleanup
+  // When the real cropped_url arrives, transition spinner → checkmark → cleanup.
+  // cropSaveStatus is intentionally read from the closure of the current render
+  // (not added to deps) — it will be current when image.cropped_url changes.
   useEffect(() => {
-    if (!image.cropped_url || !optimisticCroppedUrl) return;
-    setCropSaveStatus("done");
-    const t = setTimeout(() => {
+    if (!image.cropped_url) return;
+    // Guard: only act if we're tracking an in-flight save (canvas may have failed,
+    // leaving optimisticCroppedUrl null but cropSaveStatus still "pending").
+    if (!optimisticCroppedUrl && cropSaveStatus !== "pending") return;
+    if (optimisticCroppedUrl) {
       URL.revokeObjectURL(optimisticCroppedUrl);
       setOptimisticCroppedUrl(null);
-      setCropSaveStatus(null);
-    }, 1200);
+    }
+    setCropSaveStatus("done");
+    const t = setTimeout(() => setCropSaveStatus(null), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [image.cropped_url]);
@@ -205,6 +210,7 @@ export default function ImageLightbox({
             initialCrop={image.crop ?? null}
             onSave={async (crop) => {
               setCropMode(false);
+              setCropSaveStatus("pending");
               try {
                 const img = new Image();
                 img.crossOrigin = "anonymous";
@@ -222,7 +228,6 @@ export default function ImageLightbox({
                   canvas.toBlob(res as BlobCallback, "image/jpeg", 0.92)
                 );
                 setOptimisticCroppedUrl(URL.createObjectURL(blob));
-                setCropSaveStatus("pending");
               } catch {
                 // CORS failure or canvas unavailable — no optimistic preview
               }
