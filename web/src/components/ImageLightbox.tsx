@@ -226,7 +226,15 @@ export default function ImageLightbox({
               } catch {
                 // CORS failure or canvas unavailable — no optimistic preview
               }
-              await onCropSave?.(image, crop);
+              try {
+                await onCropSave?.(image, crop);
+              } catch (err) {
+                // API save failed — revoke blob and clear optimistic state so
+                // the spinner doesn't stay stuck with no real crop incoming
+                setOptimisticCroppedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+                setCropSaveStatus(null);
+                throw err;
+              }
             }}
             onCancel={() => setCropMode(false)}
           />
