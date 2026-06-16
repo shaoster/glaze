@@ -96,28 +96,33 @@ def piece_image_detail(request: Request, image_id, piece_state_id):
     return Response(serialize_piece_detail(piece, request))
 
 
-_IMAGE_CONTENT_TYPE_TO_EXT = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/gif": "gif",
-    "image/heic": "heic",
-    "image/heif": "heif",
-    "image/avif": "avif",
+# Maps each accepted content type to the set of file extensions it accepts.
+# The first element of each tuple is the canonical extension used when writing new files.
+_IMAGE_CONTENT_TYPE_TO_EXTS: dict[str, tuple[str, ...]] = {
+    "image/jpeg": ("jpg", "jpeg"),
+    "image/png": ("png",),
+    "image/webp": ("webp",),
+    "image/gif": ("gif",),
+    "image/heic": ("heic",),
+    "image/heif": ("heif",),
+    "image/avif": ("avif",),
 }
-_JPEG_EXTENSIONS = {"jpg", "jpeg"}
-_NON_JPEG_IMAGE_EXTENSIONS = set(_IMAGE_CONTENT_TYPE_TO_EXT.values()) - _JPEG_EXTENSIONS
+_ALL_IMAGE_EXTENSIONS: frozenset[str] = frozenset(
+    ext for exts in _IMAGE_CONTENT_TYPE_TO_EXTS.values() for ext in exts
+)
 _MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 def _ext_for_content_type(content_type: str) -> str:
     base = content_type.split(";")[0].strip().lower()
-    return _IMAGE_CONTENT_TYPE_TO_EXT.get(base, "jpg")
+    exts = _IMAGE_CONTENT_TYPE_TO_EXTS.get(base)
+    return exts[0] if exts else "jpg"
 
 
 def _needs_jpeg_conversion(key: str) -> bool:
+    # Includes JPEG: bakes in EXIF orientation so stored bytes match the displayed image.
     ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
-    return ext in _NON_JPEG_IMAGE_EXTENSIONS
+    return ext in _ALL_IMAGE_EXTENSIONS
 
 
 def _fetch_url_to_r2(url: str, user_id: "int | None") -> "tuple[str, str] | Response":
@@ -140,7 +145,7 @@ def _fetch_url_to_r2(url: str, user_id: "int | None") -> "tuple[str, str] | Resp
             status=status.HTTP_400_BAD_REQUEST,
         )
     content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
-    if content_type not in _IMAGE_CONTENT_TYPE_TO_EXT:
+    if content_type not in _IMAGE_CONTENT_TYPE_TO_EXTS:
         return Response(
             {"detail": f"Unsupported image type: {content_type}."},
             status=status.HTTP_400_BAD_REQUEST,
@@ -229,7 +234,7 @@ def _upload_image_to_piece_state(request: Request, piece_state) -> Response:
     file_obj = validated["file"]
 
     content_type = file_obj.content_type or "image/jpeg"
-    if content_type not in _IMAGE_CONTENT_TYPE_TO_EXT:
+    if content_type not in _IMAGE_CONTENT_TYPE_TO_EXTS:
         return Response(
             {"detail": f"Unsupported image type: {content_type}."},
             status=status.HTTP_400_BAD_REQUEST,

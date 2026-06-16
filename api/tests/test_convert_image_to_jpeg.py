@@ -9,6 +9,33 @@ from unittest.mock import MagicMock
 import pytest
 from PIL import Image as PILImage
 
+# ---------------------------------------------------------------------------
+# _needs_jpeg_conversion unit tests
+# ---------------------------------------------------------------------------
+
+
+from api.piece.image_views import _needs_jpeg_conversion
+
+
+class TestNeedsJpegConversion:
+    """Regression for #966: JPEG uploads must trigger EXIF normalization."""
+
+    def test_returns_true_for_jpg(self):
+        assert _needs_jpeg_conversion("images/2/abc.jpg") is True
+
+    def test_returns_true_for_jpeg(self):
+        assert _needs_jpeg_conversion("images/2/abc.jpeg") is True
+
+    def test_returns_true_for_heic(self):
+        assert _needs_jpeg_conversion("images/2/abc.heic") is True
+
+    def test_returns_true_for_png(self):
+        assert _needs_jpeg_conversion("images/2/abc.png") is True
+
+    def test_returns_false_for_unknown_extension(self):
+        assert _needs_jpeg_conversion("images/2/abc.txt") is False
+
+
 R2_ENV = {
     "R2_ACCOUNT_ID": "test-account",
     "R2_ACCESS_KEY_ID": "test-key",

@@ -32,7 +32,9 @@ vi.mock("../AppImage", async (importOriginal) => {
   return {
     ...actual,
     SuspenseAppImage: (props: any) => {
-      if (props.url === "suspending-url") {
+      const cropPending =
+        !!props.crop && !props.croppedUrl?.trim() && !!props.r2Key && !props.cropTaskFailed;
+      if (props.url === "suspending-url" || cropPending) {
         return <actual.ImageSkeleton context={props.context} crop={props.crop} />;
       }
       return <img src={props.url} alt={props.alt} role="img" style={props.style} />;
@@ -443,6 +445,34 @@ describe("ImageLightbox", () => {
       await waitFor(() => {
         expect(screen.getByTestId("mock-cropper")).toBeInTheDocument();
       });
+    });
+
+    it("shows crop skeleton immediately after Save Crop without waiting for API", async () => {
+      // Regression for #966: the spinner must appear before onCropSave resolves.
+      // onCropSave is a promise that never settles to simulate API in-flight.
+      const onCropSave = vi.fn().mockReturnValue(new Promise(() => {}));
+      const croppableR2Image: CaptionedImage = {
+        ...CROPPABLE_IMAGE,
+        r2_key: "images/1/abc.jpg",
+      };
+      render(
+        <ImageLightbox
+          images={[croppableR2Image]}
+          initialIndex={0}
+          onClose={vi.fn()}
+          onCropSave={onCropSave}
+          canEditImage={() => true}
+          footerActions={cropFooter}
+        />,
+      );
+      fireEvent.click(screen.getByLabelText("Edit crop"));
+      await waitFor(() =>
+        expect(screen.getByTestId("mock-cropper")).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getByRole("button", { name: /save crop/i }));
+      await waitFor(() =>
+        expect(screen.getByRole("progressbar")).toBeInTheDocument(),
+      );
     });
   });
 });

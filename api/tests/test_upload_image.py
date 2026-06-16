@@ -48,12 +48,15 @@ class TestUploadImageEndpoints:
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
     @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PUBLIC_URL)
-    def test_jpeg_upload_no_conversion_task(
+    def test_jpeg_upload_enqueues_conversion_task(
         self, mock_upload, mock_r2, auth_client, piece_with_state
     ):
+        # Regression for #966: JPEG uploads must go through convert_image_to_jpeg
+        # so that EXIF orientation is baked in before crop coordinates are applied.
         piece, _ = piece_with_state
 
-        with patch("api.tasks.get_task_interface"):
+        with patch("api.tasks.get_task_interface") as mock_iface:
+            mock_iface.return_value.submit = MagicMock()
             response = auth_client.post(
                 self._current_url(piece.id),
                 {"file": _jpeg_file()},
@@ -62,8 +65,10 @@ class TestUploadImageEndpoints:
         assert response.status_code == 201
         data = response.json()
         assert "piece_state_image" in data
-        assert data["background_tasks"]["conversion_task_id"] is None
-        assert not AsyncTask.objects.filter(task_type="convert_image_to_jpeg").exists()
+        assert data["background_tasks"]["conversion_task_id"] is not None
+        task = AsyncTask.objects.get(id=data["background_tasks"]["conversion_task_id"])
+        assert task.task_type == "convert_image_to_jpeg"
+        mock_iface.return_value.submit.assert_called_once()
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
     @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PNG_URL)
@@ -240,13 +245,16 @@ class TestUploadImageFromRefsEndpoints:
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
     @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PUBLIC_URL)
     @patch("api.piece.image_views.httpx.get")
-    def test_jpeg_ref_succeeds(
+    def test_jpeg_ref_enqueues_conversion_task(
         self, mock_get, mock_upload, mock_r2, auth_client, piece_with_state
     ):
+        # Regression for #966: JPEG refs must also go through convert_image_to_jpeg
+        # to bake in EXIF orientation before crop coordinates are applied.
         mock_get.return_value = _mock_httpx_response()
         piece, _ = piece_with_state
 
-        with patch("api.tasks.get_task_interface"):
+        with patch("api.tasks.get_task_interface") as mock_iface:
+            mock_iface.return_value.submit = MagicMock()
             response = auth_client.post(
                 self._current_url(piece.id), self._refs_payload(), format="json"
             )
@@ -254,7 +262,9 @@ class TestUploadImageFromRefsEndpoints:
         assert response.status_code == 201
         data = response.json()
         assert "piece_state_image" in data
-        assert data["background_tasks"]["conversion_task_id"] is None
+        assert data["background_tasks"]["conversion_task_id"] is not None
+        task = AsyncTask.objects.get(id=data["background_tasks"]["conversion_task_id"])
+        assert task.task_type == "convert_image_to_jpeg"
 
     @patch("api.piece.image_views.r2.is_r2_configured", return_value=True)
     @patch("api.piece.image_views.r2.upload_bytes", return_value=_FAKE_PNG_URL)
