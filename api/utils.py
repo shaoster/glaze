@@ -314,7 +314,13 @@ def normalize_image_payload(payload: object, user=None):
     if not created and image.r2_key is None and defaults["r2_key"]:
         image.r2_key = defaults["r2_key"]
         image.save(update_fields=["r2_key"])
-    return image
+    # Always resolve to the jpeg_conversion derivative when one exists so that
+    # crop lookups (which join on thumbnail_id / image_id) remain valid after
+    # JPEG normalization redirects PieceStateImage rows to the derivative.
+    jpeg_derivative = (
+        image.derivatives.filter(derived_type="jpeg_conversion").order_by("id").first()
+    )
+    return jpeg_derivative if jpeg_derivative is not None else image
 
 
 def _is_crop_task_failed(image_id, r2_key: str | None, crop: dict | None) -> bool:

@@ -13,6 +13,7 @@ from api.models import (
 from api.utils import (
     _is_crop_task_failed,
     crop_to_dict,
+    normalize_image_payload,
     replace_piece_state_images,
     sync_glaze_type_singleton_combination,
 )
@@ -279,3 +280,40 @@ class TestIsCropTaskFailed:
         image = self._make_image(user)
         self._make_task(user, image, CROP_A, AsyncTask.Status.FAILURE)
         assert not _is_crop_task_failed(image.id, image.r2_key, None)
+
+
+@pytest.mark.django_db
+class TestNormalizeImagePayload:
+    def test_resolves_to_jpeg_conversion_derivative(self, user, monkeypatch):
+        """normalize_image_payload must return the jpeg_conversion derivative, not the source."""
+        monkeypatch.setattr("api.r2.key_for_public_url", lambda url: None)
+
+        source = Image.objects.create(
+            user=user, url="https://media.example.com/images/1/orig.jpg"
+        )
+        derivative = Image.objects.create(
+            user=user,
+            url="https://media.example.com/images/1/new.jpg",
+            derived_from=source,
+            derived_type="jpeg_conversion",
+        )
+
+        result = normalize_image_payload(source.url, user=user)
+        assert result.id == derivative.id
+
+    def test_does_not_resolve_non_jpeg_derivative(self, user, monkeypatch):
+        """normalize_image_payload must NOT resolve crop or other derivative types."""
+        monkeypatch.setattr("api.r2.key_for_public_url", lambda url: None)
+
+        source = Image.objects.create(
+            user=user, url="https://media.example.com/images/1/orig.jpg"
+        )
+        Image.objects.create(
+            user=user,
+            url="https://media.example.com/images/1/crop.jpg",
+            derived_from=source,
+            derived_type="crop",
+        )
+
+        result = normalize_image_payload(source.url, user=user)
+        assert result.id == source.id
