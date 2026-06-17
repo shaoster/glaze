@@ -485,6 +485,32 @@ class TestPieceDetail:
         }
         assert piece.thumbnail == {"url": thumbnail["url"], "r2_key": None}
 
+    def test_patch_thumbnail_resolves_to_jpeg_derivative(self, client, piece, monkeypatch):
+        """Sending the pre-normalization URL must result in thumbnail pointing at the derivative."""
+        from api.models import Image
+
+        monkeypatch.setattr("api.r2.key_for_public_url", lambda url: None)
+
+        source = Image.objects.create(
+            user=piece.user, url="https://media.example.com/images/1/orig.jpg"
+        )
+        derivative = Image.objects.create(
+            user=piece.user,
+            url="https://media.example.com/images/1/new.jpg",
+            derived_from=source,
+            derived_type="jpeg_conversion",
+        )
+
+        response = client.patch(
+            f"/api/pieces/{piece.id}/",
+            {"thumbnail": {"url": source.url}},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        piece.refresh_from_db()
+        assert piece.thumbnail_id == derivative.id
+
     def test_owner_can_share_completed_piece(self, client, piece):
         PieceState.objects.create(
             user=piece.user,
