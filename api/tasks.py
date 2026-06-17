@@ -394,7 +394,11 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
     )
     # Redirect any existing PSI rows that reference the HEIC/AVIF/non-JPEG
     # source to the new JPEG so they immediately serve a browser-renderable URL.
-    PieceStateImage.objects.filter(image=source_image).update(image=jpeg_image)
+    # Clear cropped_image so that stale crop derivatives (computed from the old
+    # EXIF-intact source) are not served after normalization (#974).
+    PieceStateImage.objects.filter(image=source_image).update(
+        image=jpeg_image, cropped_image=None
+    )
 
     return {
         "status": "success",

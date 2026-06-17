@@ -191,6 +191,61 @@ class TestConvertImageToJpegTask:
         assert jpeg_image.derived_from_id == source_image.id
         assert jpeg_image.derived_type == "jpeg_conversion"
 
+    def test_clears_cropped_image_when_redirecting_psi_to_jpeg(
+        self, user, r2_env, monkeypatch
+    ):
+        """Regression for #974: stale crop derivatives must be cleared on redirect.
+
+        convert_image_to_jpeg redirects PSI.image to the new JPEG but must also
+        clear PSI.cropped_image so that the stale crop (derived from the old
+        EXIF-intact source) is not served after normalization.
+        """
+        from api.crops import crop_key_for
+        from api.models import AsyncTask, Image, Piece, PieceState, PieceStateImage
+        from api.tasks import convert_image_to_jpeg
+        from api.workflow import ENTRY_STATE
+
+        source_image = Image.objects.create(
+            user=user,
+            url=f"https://media.example.com/images/{user.id}/orig.jpg",
+            r2_key=f"images/{user.id}/orig.jpg",
+        )
+        # Simulate a pre-existing crop derivative computed from the old source.
+        crop_def = {"x": 0.1, "y": 0.2, "width": 0.6, "height": 0.5}
+        stale_crop = Image.objects.create(
+            user=user,
+            url=f"https://media.example.com/{crop_key_for(source_image.r2_key, crop_def)}",
+            r2_key=crop_key_for(source_image.r2_key, crop_def),
+            derived_from=source_image,
+            derived_type="crop",
+        )
+        piece = Piece.objects.create(user=user, name="Test", is_editable=True)
+        state = PieceState.objects.create(
+            piece=piece, user=user, state=ENTRY_STATE, order=1
+        )
+        psi = PieceStateImage.objects.create(
+            piece_state=state,
+            image=source_image,
+            crop=crop_def,
+            cropped_image=stale_crop,
+            order=0,
+        )
+        assert psi.cropped_image_id == stale_crop.id  # sanity
+
+        self._mock_modal(monkeypatch)
+        task = AsyncTask.objects.create(
+            user=user,
+            task_type="convert_image_to_jpeg",
+            input_params={"key": source_image.r2_key, "image_id": str(source_image.id)},
+        )
+        convert_image_to_jpeg(task)
+
+        psi.refresh_from_db()
+        assert psi.cropped_image_id is None, (
+            "stale crop derivative must be cleared when PSI is redirected to the "
+            "normalized JPEG"
+        )
+
 
 # ---------------------------------------------------------------------------
 # POST /api/uploads/r2/convert-image/
