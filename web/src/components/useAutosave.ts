@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 
 export type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
 type UseAutosaveOptions = {
   dirty: boolean;
-  saveKey: string;
   save: () => Promise<void>;
   delayMs?: number;
+  mutationKey: unknown[];
 };
 
 type UseAutosaveResult = {
@@ -20,68 +21,46 @@ const DEFAULT_AUTOSAVE_DELAY_MS = 700;
 
 export function useAutosave({
   dirty,
-  saveKey,
   save,
   delayMs = DEFAULT_AUTOSAVE_DELAY_MS,
+  mutationKey,
 }: UseAutosaveOptions): UseAutosaveResult {
-  const [status, setStatus] = useState<AutosaveStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [lastSavedKey, setLastSavedKey] = useState<string | null>(null);
-  const [failedKey, setFailedKey] = useState<string | null>(null);
-  const saveRef = useRef(save);
-  const runIdRef = useRef(0);
 
-  useEffect(() => {
-    saveRef.current = save;
-  }, [save]);
-
-  const saveNow = useCallback(async () => {
-    if (!dirty) {
-      setError(null);
-      return;
-    }
-    const runId = runIdRef.current + 1;
-    runIdRef.current = runId;
-    setStatus("saving");
-    setError(null);
-    try {
-      await saveRef.current();
-      if (runIdRef.current !== runId) return;
-      setLastSavedKey(saveKey);
-      setFailedKey(null);
-      setLastSavedAt(new Date());
-      setStatus("saved");
-    } catch {
-      if (runIdRef.current !== runId) return;
-      setFailedKey(saveKey);
-      setStatus("error");
-      setError("Autosave failed. Your changes are still here.");
-    }
-  }, [dirty, saveKey]);
+  const { mutate, mutateAsync, status } = useMutation({
+    mutationFn: save,
+    mutationKey,
+    onSuccess: () => setLastSavedAt(new Date()),
+  });
 
   useEffect(() => {
     if (!dirty) return;
+    const timer = window.setTimeout(() => mutate(), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [dirty, delayMs, mutate]);
 
-    const timeoutId = window.setTimeout(() => {
-      void saveNow();
-    }, delayMs);
+  const displayStatus: AutosaveStatus =
+    dirty && status === "idle"
+      ? "pending"
+      : status === "pending"
+        ? "saving"
+        : status === "success"
+          ? "saved"
+          : status === "error"
+            ? "error"
+            : lastSavedAt
+              ? "saved"
+              : "idle";
 
-    return () => window.clearTimeout(timeoutId);
-  }, [delayMs, dirty, saveNow]);
+  const saveNow = useCallback(() => mutateAsync(), [mutateAsync]);
 
-  let displayStatus: AutosaveStatus = lastSavedAt ? "saved" : "idle";
-  if (dirty) {
-    if (status === "saving") {
-      displayStatus = "saving";
-    } else if (failedKey === saveKey) {
-      displayStatus = "error";
-    } else if (lastSavedKey === saveKey) {
-      displayStatus = "saved";
-    } else {
-      displayStatus = "pending";
-    }
-  }
-
-  return { status: displayStatus, error, lastSavedAt, saveNow };
+  return {
+    status: displayStatus,
+    error:
+      status === "error"
+        ? "Autosave failed. Your changes are still here."
+        : null,
+    lastSavedAt,
+    saveNow,
+  };
 }

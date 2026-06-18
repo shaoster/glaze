@@ -139,8 +139,8 @@ function EditablePieceStateListItem({
 
   const { status } = useAutosave({
     dirty: localDate !== (ps.created ? toDatetimeLocal(ps.created) : ""),
-    saveKey: localDate,
     save,
+    mutationKey: ["autosave", pieceId, ps.id],
   });
 
   return (

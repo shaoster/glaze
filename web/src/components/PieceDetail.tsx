@@ -32,7 +32,7 @@ import { useBlocker, useLocation, useNavigate, Link as RouterLink } from "react-
 import type { PieceDetail as PieceDetailType, PieceState } from "../util/types";
 import { DEFAULT_TRACK_ID } from "../util/music";
 import { formatState, isTerminalState, getCustomFieldDefinitions } from "../util/workflow";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchPieceShowcaseVideo,
   requestPieceShowcaseVideo,
@@ -104,8 +104,13 @@ function PieceDetailContent({
   refetchHistory,
   onPieceUpdated,
 }: PieceDetailProps) {
-  const [isDirty, setIsDirty] = useState(false);
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
+  const isSaving = useIsMutating({ mutationKey: ["autosave"] }) > 0;
+  const hasSaveError =
+    useMutationState({
+      filters: { mutationKey: ["autosave"], status: "error" },
+    }).length > 0;
+  const pendingTransitionRef = useRef<string | null>(null);
 
   const currentState = piece.current_state;
   const isTerminal = isTerminalState(currentState.state);
@@ -163,7 +168,7 @@ function PieceDetailContent({
   const blocker = useBlocker(
     useCallback(
       ({ nextLocation }: { nextLocation: { pathname: string } }) => {
-        if (!canEdit || !isDirty) return false;
+        if (!canEdit || !hasSaveError) return false;
         const next = nextLocation.pathname;
         const base = `/pieces/${piece.id}`;
         if (next === base) return false;
@@ -173,17 +178,37 @@ function PieceDetailContent({
         if (next.startsWith(`${base}/state/fields/`)) return false;
         return true;
       },
-      [canEdit, isDirty, piece.id],
+      [canEdit, hasSaveError, piece.id],
     ),
   );
 
 
 
-  const { mutate: handleTransition, isPending: transitioning, error: rawTransitionError } = useMutation({
+  const { mutate: transitionMutate, isPending: transitioning, error: rawTransitionError } = useMutation({
     mutationFn: (nextState: string) =>
       addPieceState(piece.id, { state: nextState as PieceDetailType["current_state"]["state"] }),
-    onSuccess: (updated) => { onPieceUpdated(updated); setIsDirty(false); },
+    onSuccess: (updated) => onPieceUpdated(updated),
   });
+
+  // If a save is in progress when the user clicks a transition button, defer
+  // the transition until the save completes rather than prompting the user.
+  useEffect(() => {
+    if (!isSaving && pendingTransitionRef.current) {
+      transitionMutate(pendingTransitionRef.current);
+      pendingTransitionRef.current = null;
+    }
+  }, [isSaving, transitionMutate]);
+
+  const handleTransition = useCallback(
+    (nextState: string) => {
+      if (isSaving) {
+        pendingTransitionRef.current = nextState;
+      } else {
+        transitionMutate(nextState);
+      }
+    },
+    [isSaving, transitionMutate],
+  );
   const transitionError = rawTransitionError
     ? extractErrorMessage(rawTransitionError, "Failed to transition state. Please try again.")
     : null;
@@ -287,11 +312,13 @@ function PieceDetailContent({
               <Box sx={{ mt: 2, mb: 1.5 }}>
                 <StateTransition
                   currentStateName={currentState.state}
-                  disabled={isDirty || piece.is_editable}
+                  disabled={hasSaveError || piece.is_editable}
                   disabledHint={
                     piece.is_editable
                       ? "Seal edit mode before transitioning to a new state."
-                      : undefined
+                      : hasSaveError
+                        ? "Auto-save failed. Your changes may not be saved."
+                        : undefined
                   }
                   transitioning={transitioning}
                   transitionError={transitionError}
@@ -461,7 +488,6 @@ function PieceDetailContent({
               initialPieceState={currentState}
               pieceId={piece.id}
               onSaved={onPieceUpdated}
-              onDirtyChange={setIsDirty}
               readOnly={!canEdit}
               hideNotes={!canEdit}
             />
