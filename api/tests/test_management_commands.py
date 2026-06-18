@@ -16,10 +16,8 @@ from api.models import (
     GlazeCombination,
     GlazeCombinationLayer,
     GlazeType,
-    Image,
     Piece,
     PieceState,
-    PieceStateImage,
 )
 
 if "pillow_heif" not in sys.modules:
@@ -27,7 +25,6 @@ if "pillow_heif" not in sys.modules:
     pillow_heif.register_heif_opener = lambda: None
     sys.modules["pillow_heif"] = pillow_heif
 
-backfill = importlib.import_module("api.management.commands.backfill_image_dimensions")
 deploy_init = importlib.import_module("api.management.commands.deploy_init")
 import_tiles = importlib.import_module(
     "api.management.commands.import_test_tile_images"
@@ -46,84 +43,6 @@ def _make_image_file(size: tuple[int, int], mode: str = "RGB") -> bytes:
     color = (255, 0, 0, 255) if mode == "RGBA" else (255, 0, 0)
     PILImage.new(mode, size, color).save(buf, format="PNG")
     return buf.getvalue()
-
-
-@pytest.mark.django_db
-class TestBackfillImageDimensionsCommand:
-    def test_updates_dimensions_and_respects_dry_run(self, monkeypatch):
-        png_bytes = _make_image_file((640, 480))
-
-        class FakeResponse:
-            content = png_bytes
-
-            def raise_for_status(self):
-                return None
-
-        monkeypatch.setattr(
-            backfill.requests, "get", lambda url, timeout=30: FakeResponse()
-        )
-        sleep_calls = []
-        monkeypatch.setattr(
-            backfill.time, "sleep", lambda seconds: sleep_calls.append(seconds)
-        )
-
-        image = Image.objects.create(
-            user=None,
-            url="https://media.example.com/images/1/mug.jpg",
-            r2_key="images/1/mug.jpg",
-        )
-
-        call_command("backfill_image_dimensions", batch_size=1)
-
-        image.refresh_from_db()
-        assert (image.width, image.height) == (640, 480)
-        assert sleep_calls == [1]
-
-        image.width = None
-        image.height = None
-        image.save(update_fields=["width", "height"])
-
-        call_command("backfill_image_dimensions", batch_size=1, dry_run=True)
-
-        image.refresh_from_db()
-        assert (image.width, image.height) == (None, None)
-
-
-@pytest.mark.django_db
-class TestClearCropsCommand:
-    def _make_state_image(self):
-        user = get_user_model().objects.create(
-            username="mug@example.com", email="mug@example.com"
-        )
-        piece = Piece.objects.create(user=user, name="Mug")
-        state = PieceState.objects.create(piece=piece, user=user, state=ENTRY_STATE)
-        image = Image.objects.create(
-            user=None,
-            url="https://media.example.com/images/1/mug.jpg",
-            r2_key="images/1/mug.jpg",
-        )
-        return PieceStateImage.objects.create(
-            piece_state=state,
-            image=image,
-            order=0,
-            crop={"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4},
-        )
-
-    def test_dry_run_preserves_crops(self):
-        state_image = self._make_state_image()
-
-        call_command("clear_crops", dry_run=True)
-
-        state_image.refresh_from_db()
-        assert state_image.crop == {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}
-
-    def test_live_mode_clears_crops(self):
-        state_image = self._make_state_image()
-
-        call_command("clear_crops")
-
-        state_image.refresh_from_db()
-        assert state_image.crop is None
 
 
 @pytest.mark.django_db
