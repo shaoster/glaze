@@ -381,6 +381,7 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
             defaults={"r2_key": source_key, "user": task.user},
         )
 
+    from .crops import enqueue_generate_cropped_image  # noqa: PLC0415
     from .models import PieceStateImage  # noqa: PLC0415
 
     jpeg_image = Image.objects.create(
@@ -392,9 +393,27 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
         derived_from=source_image,
         derived_type="jpeg_conversion",
     )
+    # Collect distinct crop values from affected PSIs before the bulk update so
+    # we can re-enqueue generate_cropped_image tasks after the redirect.  Doing
+    # this before the update avoids a second query on the now-redirected rows.
+    crops_to_reenqueue = list(
+        PieceStateImage.objects.filter(image=source_image)
+        .exclude(crop=None)
+        .values_list("crop", flat=True)
+        .distinct()
+    )
     # Redirect any existing PSI rows that reference the HEIC/AVIF/non-JPEG
     # source to the new JPEG so they immediately serve a browser-renderable URL.
-    PieceStateImage.objects.filter(image=source_image).update(image=jpeg_image)
+    # Clear cropped_image so that stale crop derivatives (computed from the old
+    # EXIF-intact source) are not served after normalization (#974).
+    PieceStateImage.objects.filter(image=source_image).update(
+        image=jpeg_image, cropped_image=None
+    )
+    # Re-enqueue a crop task for each affected (jpeg_image, crop) pair so the
+    # correct derivative is materialized from the normalized JPEG pixel data.
+    for crop in crops_to_reenqueue:
+        if isinstance(crop, dict):
+            enqueue_generate_cropped_image(jpeg_image, crop, user=task.user)
 
     return {
         "status": "success",
