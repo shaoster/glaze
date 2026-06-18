@@ -166,7 +166,7 @@ jobs:
           source env.sh
           gz_test --coverage
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: bazel-out/_coverage/_coverage_report.dat
           flags: code
