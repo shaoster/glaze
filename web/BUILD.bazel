@@ -1466,6 +1466,15 @@ vitest_test(
     ],
 )
 
+vitest_test(
+    name = "web_vite_config_test",
+    srcs = ["src/vite-config.test.ts"],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":web_prod_lib",
+    ],
+)
+
 # ── Web test suite ────────────────────────────────────────────────────────────
 # Aggregate target: `bazel test //web:web_test` runs all web tests.
 # Individual targets above run only when their inputs change.
@@ -1474,6 +1483,7 @@ test_suite(
     name = "web_test",
     tests = [
         ":web_storybook_smoke_test",
+        ":web_vite_config_test",
         ":web_admin_test",
         ":web_analysis_test",
         ":web_coverage_audit_test",
