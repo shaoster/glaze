@@ -412,7 +412,8 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
     # Re-enqueue a crop task for each affected (jpeg_image, crop) pair so the
     # correct derivative is materialized from the normalized JPEG pixel data.
     for crop in crops_to_reenqueue:
-        enqueue_generate_cropped_image(jpeg_image, crop, user=task.user)
+        if isinstance(crop, dict):
+            enqueue_generate_cropped_image(jpeg_image, crop, user=task.user)
 
     return {
         "status": "success",
