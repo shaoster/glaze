@@ -78,7 +78,7 @@ jobs:
 
       - id: lookup
         name: Check for prior successful PR validation
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           ARTIFACT_KEY: ${{ steps.fingerprint.outputs.artifact_key }}
         with:
@@ -199,7 +199,7 @@ jobs:
           buildbuddy-api-key: ${{ secrets.BAZEL_REMOTE_API_KEY }}
           workdir: ${{ steps.worktree.outputs.path }}
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
@@ -333,7 +333,7 @@ jobs:
         run: |
           printf '\n# macOS runner overrides\nbuild --jobs=4\nbuild --local_resources=cpu=HOST_CPUS*0.75\nbuild --local_resources=memory=HOST_RAM*0.6\n' >> .bazelrc
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/Library/Caches/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
@@ -613,7 +613,7 @@ jobs:
         run: |
           printf '%s\n' '${{ needs.preflight.outputs.fingerprint }}' > ci-fingerprint.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ci-fingerprint-${{ needs.preflight.outputs.artifact_key }}
           path: ci-fingerprint.txt
