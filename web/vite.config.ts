@@ -25,8 +25,17 @@ export default defineConfig(() => {
         axios: path.resolve(root, "node_modules/axios"),
       },
     },
-    plugins: [yaml(), react(), babel({ presets: [reactCompilerPreset()] })],
+    plugins: [
+      yaml(),
+      react(),
+      // sourceMap:false prevents @rolldown/plugin-babel (which defaults to true)
+      // from passing source maps back to Rolldown and embedding a
+      // //# sourceMappingURL= reference in the production bundle. The .map
+      // files are not deployed, so that reference causes a 404 (#809).
+      babel({ presets: [reactCompilerPreset()], sourceMap: false }),
+    ],
     build: {
+      sourcemap: false,
       // root is the real (symlink-resolved) path; write output to the sandbox
       // CWD so Bazel's declared output tree artifact is populated correctly.
       outDir: path.resolve(process.cwd(), "dist"),
