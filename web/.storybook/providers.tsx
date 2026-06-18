@@ -39,21 +39,26 @@ export const DARK_THEME = createTheme({
 
 interface StorybookProvidersProps {
   children: React.ReactNode;
+  /** When true, omit the RouterProvider wrapper. Use for stories that create their own data router. */
+  skipRouter?: boolean;
 }
 
 /**
  * Wraps children with all providers required by Glaze's Storybook stories.
  * Used by preview.tsx and storybook-smoke.test.tsx.
+ *
+ * Set skipRouter={true} for stories whose decorator already creates a data router
+ * (e.g. PiecePhotoGallery) to prevent the "nested Router" error.
  */
-export function StorybookProviders({ children }: StorybookProvidersProps) {
-  const router = createMemoryRouter([{ path: "/", element: <>{children}</> }], {
+export function StorybookProviders({ children, skipRouter }: StorybookProvidersProps) {
+  const router = createMemoryRouter([{ path: "/*", element: <>{children}</> }], {
     initialEntries: ["/"],
   });
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={DARK_THEME}>
         <CssBaseline />
-        <RouterProvider router={router} />
+        {skipRouter ? children : <RouterProvider router={router} />}
       </ThemeProvider>
     </QueryClientProvider>
   );

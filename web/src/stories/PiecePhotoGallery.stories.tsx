@@ -38,6 +38,7 @@ const meta = {
   parameters: {
     layout: "centered",
     docs: { inlineStories: false, iframeHeight: 600 },
+    noGlobalRouter: true,
   },
   tags: ["autodocs"],
   decorators: [
@@ -196,18 +197,7 @@ export const SinglePhotoAutoLightbox: Story = {
  * hero, always mounted) owns the Dialog and Lightbox.
  */
 export const ButtonStandalone: StoryObj<typeof PiecePhotoGalleryButton> = {
-  render: (args) => {
-    const router = createMemoryRouter(
-      [
-        {
-          path: "/pieces/:id/*",
-          element: <PiecePhotoGalleryButton {...args} />,
-        },
-      ],
-      { initialEntries: ["/pieces/p1"] },
-    );
-    return <RouterProvider router={router} />;
-  },
+  render: (args) => <PiecePhotoGalleryButton {...args} />,
   args: {
     images: mockImages,
     pieceId: "p1",

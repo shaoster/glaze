@@ -373,4 +373,24 @@ describe("GlazeCombinationGallery", () => {
       );
     });
   });
+
+  describe("regression #975 — missing glaze_types", () => {
+    it("renders without crashing when glaze_types is absent from the API response", async () => {
+      const entryWithoutGlazeTypes = {
+        ...MOCK_COMBO_ENTRY,
+        glaze_combination: {
+          ...MOCK_COMBO_ENTRY.glaze_combination,
+          glaze_types: undefined,
+        },
+      };
+      vi.mocked(api.fetchGlazeCombinationImages).mockResolvedValue([
+        entryWithoutGlazeTypes as any,
+      ]);
+      renderGallery();
+      await waitFor(() =>
+        expect(screen.getByText("Ash ! Shino")).toBeInTheDocument(),
+      );
+      expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
+    });
+  });
 });
