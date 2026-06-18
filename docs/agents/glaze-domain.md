@@ -647,6 +647,28 @@ When a piece has `is_editable=true`, users can "rewind" to a past state by click
 
 ---
 
+## Image GC
+
+Derived Image rows (`derived_from IS NOT NULL`) can become orphaned when no longer referenced by any piece:
+
+- A `jpeg_conversion` source Image is orphaned when the user never saves the HEIC URL to a piece — the JPEG URL is propagated instead, leaving the source unreferenced.
+- A `crop` derivative is orphaned when a user re-crops; the old crop Image row remains in DB and R2 but no `PieceStateImage.cropped_image` FK points to it.
+
+**Orphan definition:** a derived Image is orphaned when none of these FKs point to it:
+- `PieceStateImage.image` (via `related_name="piece_state_links"`)
+- `PieceStateImage.cropped_image` (via `related_name="crop_links"`)
+- `Piece.thumbnail` (via `related_name="thumbnail_for_pieces"`)
+
+**Command:** `python manage.py gc_derived_images [--dry-run] [--limit N]`
+
+- `--dry-run` prints what would be deleted without making changes.
+- `--limit N` caps the number of deletions in a single run.
+- Safe to run repeatedly (idempotent).
+
+**CronJob:** runs daily at 03:00 UTC via `chart/glaze/templates/cronjob-gc-derived-images.yaml`. Controlled by `values.gcDerivedImages.enabled/schedule`.
+
+---
+
 ## Key Constraints
 
 - `workflow.yml` is the single source of truth for states and transitions. Both backend validation and web UI must derive from it — never duplicate the state list.

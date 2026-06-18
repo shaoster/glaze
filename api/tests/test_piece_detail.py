@@ -485,7 +485,9 @@ class TestPieceDetail:
         }
         assert piece.thumbnail == {"url": thumbnail["url"], "r2_key": None}
 
-    def test_patch_thumbnail_resolves_to_jpeg_derivative(self, client, piece, monkeypatch):
+    def test_patch_thumbnail_resolves_to_jpeg_derivative(
+        self, client, piece, monkeypatch
+    ):
         """Sending the pre-normalization URL must result in thumbnail pointing at the derivative."""
         from api.models import Image
 
