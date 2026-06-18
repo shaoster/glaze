@@ -135,11 +135,12 @@ export default function PrivacyPolicyPage() {
           </Typography>
 
           <Typography variant="body1">
-            Images are externally hosted. The moment you delete your account or
-            remove an image from a piece, the link from your account to the
-            image is immediately severed. Removal of the image from the external
-            host is best-effort and may not happen immediately. If you need a
-            specific image deleted promptly, email us at{" "}
+            Images are hosted on our storage service. The moment you delete
+            your account or remove an image from a piece, the link from your
+            account to the image is immediately severed. The image file itself
+            is permanently deleted from storage within 25 hours by an automated
+            daily cleanup process. If you need a specific image deleted sooner,
+            email us at{" "}
             <Box
               component="a"
               href="mailto:admin@potterdoc.com"
