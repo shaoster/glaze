@@ -67,7 +67,7 @@ export const Default: Story = {
         http.get("/api/analysis/glaze-combination-images/", () => {
           return HttpResponse.json(
             mockCombos.map((c) => ({
-              glaze_combination: { id: c.id, name: c.name, is_public: true },
+              glaze_combination: { id: c.id, name: c.name, is_public: true, glaze_types: c.glaze_types },
               pieces: c.pieces.map((p) => ({
                 ...p,
                 state: "completed",

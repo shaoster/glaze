@@ -99,7 +99,7 @@ const preview: Preview = {
     },
   },
   decorators: [
-    (Story) => {
+    (Story, context) => {
       const [{ layoutMode }] = useGlobals();
       const [viewportReady, setViewportReady] = useState(false);
 
@@ -117,7 +117,7 @@ const preview: Preview = {
       if (!viewportReady) return null;
 
       return (
-        <StorybookProviders>
+        <StorybookProviders skipRouter={!!context.parameters.noGlobalRouter}>
           <Story />
         </StorybookProviders>
       );

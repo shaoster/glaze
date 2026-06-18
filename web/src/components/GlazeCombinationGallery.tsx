@@ -159,7 +159,7 @@ function ComboCard({
         }
         subheader={
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 0.5 }}>
-            {combo.glaze_types.map((gt) => (
+            {(combo.glaze_types ?? []).map((gt) => (
               <Chip
                 key={gt.id}
                 label={gt.name}

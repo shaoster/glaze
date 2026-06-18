@@ -26,19 +26,24 @@ const storyModules = import.meta.glob<StoryModule>("./*.stories.tsx", {
   eager: true,
 });
 
-const allStories: [string, React.ComponentType][] = Object.entries(storyModules)
+type ComposedStory = React.ComponentType & { parameters?: Record<string, unknown> };
+
+const allStories: [string, ComposedStory][] = Object.entries(storyModules)
   .filter(([path]) => !path.includes("ErrorBoundary"))
   .flatMap(([path, module]) => {
     const group = path.replace(/^\.\//, "").replace(/\.stories\.tsx$/, "");
     const composed = composeStories(module);
     return Object.entries(composed).map(([name, Story]) => [
       `${group}/${name}`,
-      Story as React.ComponentType,
+      Story as ComposedStory,
     ]);
   });
 
 describe("Storybook smoke tests — no story should trigger ErrorBoundary", () => {
   it.each(allStories)("%s renders without error boundary", async (_, Story) => {
+    // Stories that provide their own data router set noGlobalRouter: true to
+    // avoid "You cannot render a <Router> inside another <Router>" errors.
+    const skipRouter = !!Story.parameters?.noGlobalRouter;
     const consoleSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
@@ -46,7 +51,7 @@ describe("Storybook smoke tests — no story should trigger ErrorBoundary", () =
     try {
       await act(async () => {
         ({ container } = render(
-          <StorybookProviders>
+          <StorybookProviders skipRouter={skipRouter}>
             <Story />
           </StorybookProviders>,
         ));
@@ -56,6 +61,9 @@ describe("Storybook smoke tests — no story should trigger ErrorBoundary", () =
     }
     expect(container!.textContent).not.toContain(
       "Something went wrong. Please reload the page.",
+    );
+    expect(container!.textContent).not.toContain(
+      "Unexpected Application Error!",
     );
   });
 });
