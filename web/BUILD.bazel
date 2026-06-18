@@ -1319,6 +1319,75 @@ vitest_test(
     ],
 )
 
+vitest_test(
+    name = "web_optional_values_test",
+    srcs = [
+        "src/util/__tests__/optionalValues.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/optionalValues*",
+    ],
+)
+
+vitest_test(
+    name = "web_piece_filters_test",
+    srcs = [
+        "src/util/__tests__/pieceFilters.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/pieceFilters*",
+    ],
+)
+
+vitest_test(
+    name = "web_graphql_pieces_test",
+    srcs = [
+        "src/util/__tests__/graphqlPieces.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/graphqlPieces*",
+    ],
+)
+
+vitest_test(
+    name = "web_music_test",
+    srcs = [
+        "src/util/__tests__/music.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/music*",
+    ],
+)
+
+vitest_test(
+    name = "web_preferences_test",
+    srcs = [
+        "src/util/__tests__/preferences.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/preferences*",
+    ],
+)
 
 vitest_test(
     name = "web_analysis_test",
@@ -1482,6 +1551,11 @@ test_suite(
         ":web_app_image_test",
         ":web_app_test",
         ":web_format_test",
+        ":web_optional_values_test",
+        ":web_piece_filters_test",
+        ":web_graphql_pieces_test",
+        ":web_music_test",
+        ":web_preferences_test",
         ":web_glaze_gallery_test",
         ":web_glaze_import_test",
         ":web_crop_overlay_test",
