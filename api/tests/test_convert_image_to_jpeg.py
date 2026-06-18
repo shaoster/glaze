@@ -12,8 +12,6 @@ from PIL import Image as PILImage
 # ---------------------------------------------------------------------------
 # _needs_jpeg_conversion unit tests
 # ---------------------------------------------------------------------------
-
-
 from api.piece.image_views import _needs_jpeg_conversion
 
 
@@ -247,7 +245,9 @@ class TestConvertImageToJpegTask:
         )
         # A generate_cropped_image task must be enqueued for the new JPEG so
         # the correct crop is materialized rather than left pending indefinitely.
-        jpeg_image = Image.objects.get(url__endswith=".jpg", derived_type="jpeg_conversion")
+        jpeg_image = Image.objects.get(
+            url__endswith=".jpg", derived_type="jpeg_conversion"
+        )
         assert AsyncTask.objects.filter(
             task_type="generate_cropped_image",
             input_params__image_id=str(jpeg_image.id),

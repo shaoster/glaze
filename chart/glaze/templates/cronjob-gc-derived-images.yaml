@@ -1,0 +1,59 @@
+{{- if .Values.gcDerivedImages.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "glaze.fullname" . }}-gc-derived-images
+  labels:
+    {{- include "glaze.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.gcDerivedImages.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            {{- include "glaze.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: gc-derived-images
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: gc-derived-images
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - python
+                - manage.py
+                - gc_derived_images
+              envFrom:
+                - configMapRef:
+                    name: {{ include "glaze.fullname" . }}-env
+              env:
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: POSTGRES_PASSWORD
+                - name: SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: SECRET_KEY
+                - name: DATABASE_URL
+                  value: "postgres://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ include "glaze.fullname" . }}-postgres:5432/{{ .Values.postgres.database }}"
+                - name: R2_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: R2_ACCESS_KEY_ID
+                - name: R2_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: glaze-secrets
+                      key: R2_SECRET_ACCESS_KEY
+              resources:
+                {{- toYaml .Values.gcDerivedImages.resources | nindent 16 }}
+{{- end }}
