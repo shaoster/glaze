@@ -65,11 +65,8 @@ describe("uploadImageToR2 — browser-decodable JPEG within size cap", () => {
         drawImage: vi.fn(),
       }),
       toBlob: vi.fn(
-        (
-          cb: (b: Blob | null) => void,
-          _type: string,
-          _quality: number,
-        ) => cb(new Blob(["img"], { type: "image/jpeg" })),
+        (cb: (b: Blob | null) => void) =>
+          cb(new Blob(["img"], { type: "image/jpeg" })),
       ),
     };
     vi.stubGlobal(
