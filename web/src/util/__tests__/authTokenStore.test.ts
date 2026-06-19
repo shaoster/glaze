@@ -58,4 +58,25 @@ describe("authTokenStore", () => {
 
     expect(getAccessToken()).toBeNull();
   });
+
+  it("notifies subscribers when the access token changes", async () => {
+    const { setAccessToken, subscribeAccessToken } = await loadStore();
+    const listener = vi.fn();
+    subscribeAccessToken(listener);
+
+    setAccessToken("new-token");
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops notifying after unsubscribe", async () => {
+    const { setAccessToken, subscribeAccessToken } = await loadStore();
+    const listener = vi.fn();
+    const unsubscribe = subscribeAccessToken(listener);
+    unsubscribe();
+
+    setAccessToken("another-token");
+
+    expect(listener).not.toHaveBeenCalled();
+  });
 });

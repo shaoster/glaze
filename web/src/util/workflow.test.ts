@@ -123,6 +123,7 @@ vi.mock("../../../workflow.yml", () => ({
                 ],
               },
             },
+            { label: "Unrecognized summary item type" },
           ],
         },
       ],
@@ -234,6 +235,27 @@ vi.mock("../../../workflow.yml", () => ({
           cyclic_b: {
             $ref: "edge_cases.cyclic_a",
           },
+          thumbnail_image: {
+            type: "image",
+          },
+          concat_label: {
+            compute: {
+              op: "concat",
+              args: ["edge_cases.required_notes", "edge_cases.required_notes"],
+            },
+          },
+          bool_flag: {
+            compute: { constant: true },
+          },
+          string_const: {
+            compute: { constant: "fixed" },
+          },
+          field_ref_known: {
+            compute: { field: "wheel_thrown.clay_weight_lbs" },
+          },
+          field_ref_unknown: {
+            compute: { field: "nonexistent_state.some_field" },
+          },
         },
       },
       {
@@ -341,6 +363,7 @@ import {
   isTaggableGlobal,
   insertableStatesBetween,
   getDefinitionsFromSchema,
+  validateHistorySequence,
 } from "./workflow";
 
 describe("getDefinitionsFromSchema", () => {
@@ -868,6 +891,34 @@ describe("getProcessSummaryFieldOptions", () => {
       options.find((option) => option.ref === "piece.thumbnail"),
     ).toBeUndefined();
   });
+
+  it("excludes image-type state fields from options", () => {
+    const options = getProcessSummaryFieldOptions();
+    expect(
+      options.find((option) => option.ref === "edge_cases.thumbnail_image"),
+    ).toBeUndefined();
+  });
+
+  it("includes non-arithmetic compute fields with string type", () => {
+    const options = getProcessSummaryFieldOptions();
+    expect(
+      options.find((option) => option.ref === "edge_cases.concat_label"),
+    ).toBeDefined();
+  });
+});
+
+describe("getProcessSummaryDefinition without process_summary", () => {
+  it("returns [] when workflow has no process_summary", async () => {
+    vi.resetModules();
+    vi.doMock("../../../workflow.yml", () => ({
+      default: { version: "0.0.2", globals: {}, states: [] },
+    }));
+    const { getProcessSummaryDefinition: getSummary } = await import(
+      "./workflow"
+    );
+    expect(getSummary()).toEqual([]);
+    vi.resetModules();
+  });
 });
 
 describe("getFilterableFields", () => {
@@ -979,5 +1030,29 @@ describe("insertableStatesBetween", () => {
       new Set(["designed", "completed"]),
     );
     expect(result).toEqual([]);
+  });
+});
+
+describe("validateHistorySequence", () => {
+  it("returns null for a valid state history", () => {
+    const history = [
+      { state: "designed" as const },
+      { state: "wheel_thrown" as const },
+      { state: "trimmed" as const },
+    ];
+    expect(validateHistorySequence(history)).toBeNull();
+  });
+
+  it("returns an error string when a transition is invalid", () => {
+    const history = [
+      { state: "designed" as const },
+      { state: "trimmed" as const },
+    ];
+    const result = validateHistorySequence(history);
+    expect(result).toMatch(/not a valid successor/);
+  });
+
+  it("returns null for a single-state history", () => {
+    expect(validateHistorySequence([{ state: "designed" as const }])).toBeNull();
   });
 });

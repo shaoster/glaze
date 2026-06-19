@@ -1,5 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockSpanEnd = vi.fn();
+const mockRecordException = vi.fn();
+const mockSetStatus = vi.fn();
+const mockSetAttribute = vi.fn();
+const mockStartSpan = vi.fn(() => ({
+  end: mockSpanEnd,
+  recordException: mockRecordException,
+  setStatus: mockSetStatus,
+  setAttribute: mockSetAttribute,
+}));
+
+vi.mock("@opentelemetry/api", () => ({
+  trace: { getTracer: vi.fn(() => ({ startSpan: mockStartSpan })) },
+  SpanStatusCode: { ERROR: 2 },
+}));
+
 const mockRegister = vi.fn();
 const mockRegisterInstrumentations = vi.fn();
 const mockWebTracerProvider = vi.fn(function WebTracerProvider() {
@@ -150,5 +166,78 @@ describe("initializeFrontendTelemetry", () => {
 
     expect(mockWebTracerProvider).toHaveBeenCalledTimes(1);
     expect(mockRegisterInstrumentations).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits the CSRF header when the cookie is not set", async () => {
+    document.cookie =
+      "potterdoc_csrftoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+    const { initializeFrontendTelemetry } = await loadTelemetryModule();
+
+    initializeFrontendTelemetry();
+
+    expect(mockOTLPTraceExporter).toHaveBeenCalledWith(
+      expect.objectContaining({ headers: undefined }),
+    );
+  });
+
+  it("forwards window.error events to reportFrontendError", async () => {
+    const { initializeFrontendTelemetry } = await loadTelemetryModule();
+    initializeFrontendTelemetry();
+
+    const err = new Error("uncaught");
+    window.dispatchEvent(Object.assign(new Event("error"), { error: err }));
+
+    expect(mockStartSpan).toHaveBeenCalledWith("frontend.error");
+    expect(mockRecordException).toHaveBeenCalledWith(err);
+  });
+
+  it("forwards unhandledrejection events to reportFrontendError", async () => {
+    const { initializeFrontendTelemetry } = await loadTelemetryModule();
+    initializeFrontendTelemetry();
+
+    window.dispatchEvent(
+      Object.assign(new Event("unhandledrejection"), {
+        reason: new Error("unhandled promise"),
+      }),
+    );
+
+    expect(mockStartSpan).toHaveBeenCalledWith("frontend.error");
+  });
+});
+
+describe("reportFrontendError", () => {
+  it("records an Error instance as an exception span", async () => {
+    const { reportFrontendError } = await loadTelemetryModule();
+    const err = new Error("test failure");
+
+    reportFrontendError(err);
+
+    expect(mockStartSpan).toHaveBeenCalledWith("frontend.error");
+    expect(mockRecordException).toHaveBeenCalledWith(err);
+    expect(mockSetStatus).toHaveBeenCalledWith({ code: 2 });
+    expect(mockSpanEnd).toHaveBeenCalled();
+  });
+
+  it("coerces non-Error values to string before recording", async () => {
+    const { reportFrontendError } = await loadTelemetryModule();
+
+    reportFrontendError("something went wrong");
+
+    expect(mockRecordException).toHaveBeenCalledWith("something went wrong");
+    expect(mockSetStatus).toHaveBeenCalledWith({ code: 2 });
+  });
+
+  it("attaches context key-value pairs as span attributes", async () => {
+    const { reportFrontendError } = await loadTelemetryModule();
+
+    reportFrontendError(new Error("ctx error"), {
+      "error.source": "window.onerror",
+    });
+
+    expect(mockSetAttribute).toHaveBeenCalledWith(
+      "error.source",
+      "window.onerror",
+    );
+    expect(mockSpanEnd).toHaveBeenCalled();
   });
 });
