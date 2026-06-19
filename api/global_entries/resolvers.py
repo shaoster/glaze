@@ -49,7 +49,14 @@ def resolve_create_global(global_name: str, data: dict, request) -> dict:
     )
 
     if response.status_code in (200, 201):
-        return response.data
+        data = dict(response.data)
+        # Inject the original HTTP status so the REST bridge can propagate 200 vs 201
+        # (200 = already existed, 201 = newly created) without losing that distinction.
+        data["_http_status"] = response.status_code
+        return data
+    from rest_framework.exceptions import MethodNotAllowed
+    if response.status_code == 405:
+        raise MethodNotAllowed(method="POST", detail=response.data.get("detail"))
     detail = response.data.get("detail", "Failed to create global entry.")
     raise ValidationError(detail)
 

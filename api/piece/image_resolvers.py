@@ -47,7 +47,7 @@ def resolve_upload_image(piece_id: str, url: str, caption: str, request) -> dict
 
 
 def resolve_crop_image(
-    image_id: str, x: float, y: float, width: float, height: float, request
+    image_id: str, x: float | None, y: float | None, width: float | None, height: float | None, request
 ) -> dict:
     """Update crop bounds for image, returns serialized PieceDetail dict."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)
@@ -100,7 +100,8 @@ def resolve_move_image(image_id: str, target_state_id: str, request) -> dict:
         if piece.user_id != request.user.pk:
             raise Http404
         if not piece.is_editable:
-            raise ValidationError("Piece is not in editable mode.")
+            from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+            raise DjangoPermissionDenied("Piece is not in editable mode.")
 
         if validated_target and validated_target != link.piece_state_id:
             to_state = get_object_or_404(piece.states, pk=validated_target)

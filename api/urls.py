@@ -3,6 +3,34 @@ from rest_framework.routers import DefaultRouter
 
 from . import views
 from .global_entries.views import _FAVORITES_REGISTRY
+from .graphql.rest_bridge import (
+    RestRoute,
+    GLAZE_COMBINATION_IMAGES_GET,
+    GLOBAL_ENTRIES_GET,
+    GLOBAL_ENTRIES_POST,
+    GLOBAL_FAVORITE_ADD,
+    GLOBAL_FAVORITE_REMOVE,
+    IMAGE_CROP,
+    IMAGE_MOVE,
+    PIECE_CURRENT_STATE_PATCH,
+    PIECE_DETAIL_GET,
+    PIECE_DETAIL_PATCH,
+    PIECE_PAST_STATE_DELETE,
+    PIECE_PAST_STATE_PATCH,
+    PIECE_STATES_POST,
+    PIECES_CREATE,
+    PIECES_LIST,
+    WORKFLOW_SCHEMA_GET,
+    WORKFLOW_STATE_SCHEMA_GET,
+    make_multi_route_view,
+    make_rest_view,
+)
+from .piece.image_views import (
+    upload_image_from_refs_to_current_state,
+    upload_image_from_refs_to_past_state,
+    upload_image_to_current_state,
+    upload_image_to_past_state,
+)
 from .graphql.views import graphql_view
 from .workflow import get_global_model_and_field, get_global_names
 
@@ -15,12 +43,12 @@ urlpatterns = [
     path("graphql/", graphql_view(), name="graphql"),
     path(
         "images/<uuid:image_id>/piece_state/<uuid:piece_state_id>/",
-        views.piece_image_detail,
+        make_rest_view(IMAGE_MOVE),
         name="piece-image-detail",
     ),
     path(
         "images/<uuid:image_id>/crop/",
-        views.patch_image_crop,
+        make_rest_view(IMAGE_CROP),
         name="image-crop-update",
     ),
     path(
@@ -30,7 +58,7 @@ urlpatterns = [
     ),
     path(
         "analysis/glaze-combination-images/",
-        views.glaze_combination_images,
+        make_rest_view(GLAZE_COMBINATION_IMAGES_GET),
         name="analysis-glaze-combination-images",
     ),
     path(
@@ -76,33 +104,37 @@ urlpatterns = [
         name="tasks-progress",
     ),
     path("telemetry/traces/", views.browser_traces, name="telemetry-traces"),
-    path("pieces/", views.pieces, name="pieces"),
-    path("pieces/<uuid:piece_id>/", views.piece_detail, name="piece-detail"),
+    path("pieces/", make_multi_route_view(PIECES_LIST, PIECES_CREATE), name="pieces"),
+    path(
+        "pieces/<uuid:piece_id>/",
+        make_multi_route_view(PIECE_DETAIL_GET, PIECE_DETAIL_PATCH),
+        name="piece-detail",
+    ),
     path("pieces/<uuid:piece_id>/history/", views.piece_history, name="piece-history"),
-    path("pieces/<uuid:piece_id>/states/", views.piece_states, name="piece-states"),
+    path("pieces/<uuid:piece_id>/states/", make_rest_view(PIECE_STATES_POST), name="piece-states"),
     path(
         "pieces/<uuid:piece_id>/states/<uuid:state_id>/",
-        views.piece_past_state,
+        make_multi_route_view(PIECE_PAST_STATE_PATCH, PIECE_PAST_STATE_DELETE),
         name="piece-past-state",
     ),
     path(
         "pieces/<uuid:piece_id>/states/<uuid:state_id>/upload-image/",
-        views.upload_image_to_past_state,
+        upload_image_to_past_state,
         name="piece-past-state-upload-image",
     ),
     path(
         "pieces/<uuid:piece_id>/states/<uuid:state_id>/upload-image-refs/",
-        views.upload_image_from_refs_to_past_state,
+        upload_image_from_refs_to_past_state,
         name="piece-past-state-upload-image-refs",
     ),
     path(
         "pieces/<uuid:piece_id>/state/upload-image/",
-        views.upload_image_to_current_state,
+        upload_image_to_current_state,
         name="piece-current-state-upload-image",
     ),
     path(
         "pieces/<uuid:piece_id>/state/upload-image-refs/",
-        views.upload_image_from_refs_to_current_state,
+        upload_image_from_refs_to_current_state,
         name="piece-current-state-upload-image-refs",
     ),
     path(
@@ -112,7 +144,7 @@ urlpatterns = [
     ),
     path(
         "pieces/<uuid:piece_id>/state/",
-        views.piece_current_state,
+        make_rest_view(PIECE_CURRENT_STATE_PATCH),
         name="piece-current-state",
     ),
     path(
@@ -135,10 +167,10 @@ urlpatterns = [
         views.r2_convert_image_status,
         name="r2-convert-image-status",
     ),
-    path("workflow/", views.workflow_schema, name="workflow-schema"),
+    path("workflow/", make_rest_view(WORKFLOW_SCHEMA_GET), name="workflow-schema"),
     path(
         "workflow/schema/<str:state_id>/",
-        views.workflow_state_schema,
+        make_rest_view(WORKFLOW_STATE_SCHEMA_GET),
         name="workflow-state-schema",
     ),
 ]
@@ -154,19 +186,65 @@ for _global_name in get_global_names():
     # Ignoring the reassignment type error since they're placeholders.
     _model_cls, _, _ = get_global_model_and_field(_global_name)
 
+    def _make_global_entries_view(name: str):
+        get_route = RestRoute(
+            method=GLOBAL_ENTRIES_GET.method,
+            graphql_op=GLOBAL_ENTRIES_GET.graphql_op,
+            data_key=GLOBAL_ENTRIES_GET.data_key,
+            extract_vars=lambda request, kwargs, _name=name: {  # type: ignore[misc]
+                "globalName": _name,
+                "filters": request.query_params.dict() if request.query_params else None,
+            },
+        )
+        post_route = RestRoute(
+            method=GLOBAL_ENTRIES_POST.method,
+            graphql_op=GLOBAL_ENTRIES_POST.graphql_op,
+            data_key=GLOBAL_ENTRIES_POST.data_key,
+            extract_vars=lambda request, kwargs, _name=name: {  # type: ignore[misc]
+                "globalName": _name,
+                "input": dict(request.data),
+            },
+            success_status=GLOBAL_ENTRIES_POST.success_status,
+            success_status_key=GLOBAL_ENTRIES_POST.success_status_key,
+        )
+        return make_multi_route_view(get_route, post_route)
+
     urlpatterns.append(
         path(
             f"globals/{_global_name}/",
-            views.make_global_entry_view(_global_name),
+            _make_global_entries_view(_global_name),
             name=f"global-entries-{_global_name}",
         )
     )
 
     if _model_cls in _FAVORITES_REGISTRY:
+        def _make_global_favorite_view(name: str):
+            add_route = RestRoute(
+                method=GLOBAL_FAVORITE_ADD.method,
+                graphql_op=GLOBAL_FAVORITE_ADD.graphql_op,
+                data_key=GLOBAL_FAVORITE_ADD.data_key,
+                extract_vars=lambda request, kwargs, _name=name: {  # type: ignore[misc]
+                    "globalName": _name,
+                    "pk": str(kwargs["pk"]),
+                },
+                success_status=GLOBAL_FAVORITE_ADD.success_status,
+            )
+            remove_route = RestRoute(
+                method=GLOBAL_FAVORITE_REMOVE.method,
+                graphql_op=GLOBAL_FAVORITE_REMOVE.graphql_op,
+                data_key=GLOBAL_FAVORITE_REMOVE.data_key,
+                extract_vars=lambda request, kwargs, _name=name: {  # type: ignore[misc]
+                    "globalName": _name,
+                    "pk": str(kwargs["pk"]),
+                },
+                success_status=GLOBAL_FAVORITE_REMOVE.success_status,
+            )
+            return make_multi_route_view(add_route, remove_route)
+
         urlpatterns.append(
             path(
                 f"globals/{_global_name}/<str:pk>/favorite/",
-                views.make_global_entry_favorite_view(_global_name),
+                _make_global_favorite_view(_global_name),
                 name=f"global-entry-favorite-{_global_name}",
             )
         )

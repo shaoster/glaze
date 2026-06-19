@@ -68,7 +68,7 @@ def _resolve_pieces(
     request = info.context.request
     user = get_request_user(request)
     if user is None or not user.is_authenticated:
-        raise StrawberryGraphQLError("Authentication credentials were not provided.")
+        raise StrawberryGraphQLError("Authentication credentials were not provided.", extensions={"http_status": 403})
 
     qs = piece_queryset_for_user(user.pk)
 
@@ -138,9 +138,10 @@ class Query:
 
         request = info.context.request
         user = get_request_user(request)
-        if user is None or not user.is_authenticated:
-            raise StrawberryGraphQLError("Authentication required.")
-        request.user = user
+        # Allow anonymous access — resolve_piece_detail uses piece_detail_queryset
+        # which filters to owned + shared pieces, mirroring the REST AllowAny view.
+        if user is not None:
+            request.user = user
         try:
             data = resolve_piece_detail(str(id), request)
         except Http404:
@@ -157,7 +158,7 @@ class Query:
         request = info.context.request
         user = get_request_user(request)
         if user is None or not user.is_authenticated:
-            raise StrawberryGraphQLError("Authentication required.")
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
         request.user = user
         from api.workflow import build_workflow_schema
 
@@ -175,7 +176,7 @@ class Query:
         request = info.context.request
         user = get_request_user(request)
         if user is None or not user.is_authenticated:
-            raise StrawberryGraphQLError("Authentication required.")
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
         request.user = user
         from api.global_entries.logic import global_entries_impl
 
@@ -184,15 +185,17 @@ class Query:
 
             qd = QueryDict(mutable=True)
             for k, v in filters.items():
-                qd[k] = str(v)
+                # apply_global_filters reads m2m_id filters as comma-separated strings.
+                qd[k] = ",".join(str(i) for i in v) if isinstance(v, list) else str(v)
             request.GET = qd
 
         # global_entries_impl dispatches on request.method; GraphQL uses POST,
         # so we explicitly set GET to activate the list branch.
         # apply_global_filters reads request.query_params (a DRF attribute); raw
-        # Django HttpRequests only have .GET, so alias it here.
-        if not hasattr(request, "query_params"):
-            request.query_params = request.GET  # type: ignore[attr-defined]
+        # Django HttpRequests only have .GET, so alias it here. Always reassign so
+        # filters set above are visible (avoids stale ref if request already had
+        # query_params pointing to an earlier GET dict).
+        request.query_params = request.GET
         original_method = request.method
         request.method = "GET"
         try:
@@ -207,7 +210,7 @@ class Query:
     def state_schema(self, info: strawberry.Info, state_id: str) -> JSON:
         user = get_request_user(info.context.request)
         if user is None or not user.is_authenticated:
-            raise StrawberryGraphQLError("Authentication required.")
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
         info.context.request.user = user
         from api.workflow import build_ui_schema
 
@@ -223,7 +226,7 @@ class Query:
         request = info.context.request
         user = get_request_user(request)
         if user is None or not user.is_authenticated:
-            raise StrawberryGraphQLError("Authentication required.")
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
         request.user = user
         from api.analysis_views import glaze_combination_images as _view
 

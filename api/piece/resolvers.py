@@ -29,10 +29,13 @@ def resolve_piece_detail(piece_id: str, request) -> dict:
     return serialize_piece_detail(piece, request)
 
 
-def resolve_create_piece(name: str, notes: str, request) -> dict:
+def resolve_create_piece(name: str, notes: str, request, current_location: str | None = None) -> dict:
     """Creates piece in entry state, returns serialized PieceDetail dict."""
+    data: dict = {"name": name, "notes": notes}
+    if current_location is not None:
+        data["current_location"] = current_location
     serializer = PieceCreateSerializer(
-        data={"name": name, "notes": notes},
+        data=data,
         context={"request": request},
     )
     serializer.is_valid(raise_exception=True)
@@ -54,11 +57,15 @@ def resolve_update_piece(piece_id: str, data: dict, request) -> dict:
 
 
 def resolve_transition_piece(
-    piece_id: str, target_state: str, custom_fields: dict | None, request
+    piece_id: str, target_state: str, notes: str | None, images: list | None, custom_fields: dict | None, request
 ) -> dict:
     """Transitions piece to new state, returns serialized PieceDetail dict."""
     piece = get_object_or_404(piece_queryset(request), pk=piece_id)
     payload: dict = {"state": target_state}
+    if notes is not None:
+        payload["notes"] = notes
+    if images is not None:
+        payload["images"] = images
     if custom_fields:
         payload["custom_fields"] = custom_fields
     serializer = PieceStateCreateSerializer(data=payload, context={"piece": piece})

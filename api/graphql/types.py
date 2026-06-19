@@ -233,6 +233,18 @@ class PieceDetailType:
     photo_count: int = strawberry.field(
         description="Total number of photos attached to this piece across all states."
     )
+    current_location: str | None = strawberry.field(
+        default=None,
+        description="Human-readable label of the kiln or shelf where the piece currently resides, if any.",
+    )
+    showcase_video_url: str | None = strawberry.field(
+        default=None,
+        description="URL of the showcase video artifact, if generated. Null for private or editable pieces.",
+    )
+    owner_alias: str | None = strawberry.field(
+        default=None,
+        description="Display alias of the piece owner, or null if not set.",
+    )
     current_state: CurrentStateType = strawberry.field(
         description="The piece's current workflow state."
     )
@@ -258,6 +270,9 @@ class PieceDetailType:
             created=_to_iso(data.get("created")),
             last_modified=_to_iso(data.get("last_modified")),
             photo_count=int(data.get("photo_count") or 0),
+            current_location=data.get("current_location"),
+            showcase_video_url=data.get("showcase_video_url"),
+            owner_alias=data.get("owner_alias"),
             current_state=CurrentStateType(state=current_state.get("state", "")),
             thumbnail=ThumbnailType.from_dict(data.get("thumbnail")),
             tags=[TagType.from_dict(t) for t in (data.get("tags") or [])],
@@ -267,13 +282,13 @@ class PieceDetailType:
 
 @strawberry.input
 class ImageCropInput:
-    x: float = strawberry.field(description="Left edge as fraction of width (0-1).")
-    y: float = strawberry.field(description="Top edge as fraction of height (0-1).")
-    width: float = strawberry.field(
-        description="Crop width as fraction of image width (0-1)."
+    x: float | None = strawberry.field(default=None, description="Left edge as fraction of width (0-1).")
+    y: float | None = strawberry.field(default=None, description="Top edge as fraction of height (0-1).")
+    width: float | None = strawberry.field(
+        default=None, description="Crop width as fraction of image width (0-1)."
     )
-    height: float = strawberry.field(
-        description="Crop height as fraction of image height (0-1)."
+    height: float | None = strawberry.field(
+        default=None, description="Crop height as fraction of image height (0-1)."
     )
 
 
@@ -281,21 +296,36 @@ class ImageCropInput:
 class CreatePieceInput:
     name: str = strawberry.field(description="Name for the new piece.")
     notes: str = strawberry.field(default="", description="Optional notes.")
+    current_location: str | None = strawberry.field(
+        default=None,
+        description="Initial location name, or null for no location.",
+    )
 
 
 @strawberry.input
 class UpdatePieceInput:
     name: str | None = strawberry.field(default=None, description="New name.")
     shared: bool | None = strawberry.field(default=None, description="Shared flag.")
+    is_editable: bool | None = strawberry.field(default=None, description="Editable mode flag.")
     tags: list[int] | None = strawberry.field(
         default=None,
         description="Tag IDs (integers). Replaces the full tag list.",
+    )
+    thumbnail: JSON | None = strawberry.field(
+        default=None,
+        description="Thumbnail object with 'url' and optional 'crop'. Null to leave unchanged.",
+    )
+    current_location: str | None = strawberry.field(
+        default=strawberry.UNSET,
+        description="Location name to set, empty string or null to clear, or omit to leave unchanged.",
     )
 
 
 @strawberry.input
 class TransitionPieceInput:
     target_state: str = strawberry.field(description="Target workflow state name.")
+    notes: str | None = strawberry.field(default=None, description="Notes for the new state.")
+    images: JSON | None = strawberry.field(default=None, description="Initial images for the new state.")
     custom_fields: JSON | None = strawberry.field(
         default=None, description="Custom fields for the new state."
     )
