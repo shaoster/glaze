@@ -1,3 +1,4 @@
+import { useMutationState } from "@tanstack/react-query";
 import {
   useCallback,
   useEffect,
@@ -51,16 +52,42 @@ export function PieceDetailSaveStatusProvider({
 }: {
   children: ReactNode;
 }) {
-  const [workflowStatus, setWorkflowStatus] =
-    useState<SaveStatusSnapshot>(defaultSnapshot);
   const [manualStatus, setManualStatus] =
     useState<SaveStatusSnapshot>(defaultSnapshot);
   const manualRunIdRef = useRef(0);
   const { clearResetTimer, scheduleReset } = useResetTimer();
 
-  const publishWorkflowStatus = useCallback((snapshot: SaveStatusSnapshot) => {
-    setWorkflowStatus(snapshot);
-  }, []);
+  // Derive workflow save status from the TanStack mutation cache so WorkflowState
+  // doesn't need to push status through a separate context channel.
+  const autosaveMutationStates = useMutationState({
+    filters: { mutationKey: ["autosave"] },
+    select: (m) => ({
+      status: m.state.status,
+      error: m.state.error,
+      submittedAt: m.state.submittedAt,
+    }),
+  });
+  const latest = autosaveMutationStates.at(-1);
+  const workflowStatus: SaveStatusSnapshot = latest
+    ? {
+        status:
+          latest.status === "pending"
+            ? "saving"
+            : latest.status === "success"
+              ? "saved"
+              : latest.status === "error"
+                ? "error"
+                : "idle",
+        error:
+          latest.status === "error"
+            ? "Autosave failed. Your changes are still here."
+            : null,
+        lastSavedAt:
+          latest.status === "success" && latest.submittedAt
+            ? new Date(latest.submittedAt)
+            : null,
+      }
+    : defaultSnapshot;
 
   const runManualSave = useCallback(
     async <T,>(save: () => Promise<T>) => {
@@ -118,10 +145,9 @@ export function PieceDetailSaveStatusProvider({
 
   const value = useMemo(
     () => ({
-      publishWorkflowStatus,
       runManualSave,
     }),
-    [publishWorkflowStatus, runManualSave],
+    [runManualSave],
   );
 
   return (

@@ -20,10 +20,11 @@ export default function NavigationBlocker({
 }: NavigationBlockerProps) {
   return (
     <Dialog open={open}>
-      <DialogTitle>Unsaved Changes</DialogTitle>
+      <DialogTitle>Save Failed</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          You have unsaved changes. Are you sure you want to leave?
+          Your recent changes couldn't be saved automatically. Leave anyway and
+          lose those changes?
         </DialogContentText>
       </DialogContent>
       <DialogActions>

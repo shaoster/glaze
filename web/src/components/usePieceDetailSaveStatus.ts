@@ -8,7 +8,6 @@ export type SaveStatusSnapshot = {
 };
 
 export type PieceDetailSaveStatusContextValue = {
-  publishWorkflowStatus: (snapshot: SaveStatusSnapshot) => void;
   runManualSave: <T>(save: () => Promise<T>) => Promise<T>;
 };
 

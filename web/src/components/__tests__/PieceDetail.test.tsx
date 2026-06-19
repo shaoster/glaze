@@ -8,7 +8,12 @@ import {
   within,
 } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useIsMutating,
+  useMutationState,
+} from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import PieceDetail from "../PieceDetail";
 import { PieceDetailSaveStatusProvider } from "../PieceDetailSaveStatusContext";
@@ -35,6 +40,17 @@ vi.mock("masonic", () => ({
     </div>
   ),
 }));
+
+// Mock the autosave-related TanStack hooks so tests can simulate save error/pending
+// states without running real mutations. Default: no active saves, no errors.
+vi.mock("@tanstack/react-query", async (importActual) => {
+  const actual = await importActual<typeof import("@tanstack/react-query")>();
+  return {
+    ...actual,
+    useIsMutating: vi.fn(() => 0),
+    useMutationState: vi.fn(() => []),
+  };
+});
 
 const { mockWorkflow } = vi.hoisted(() => ({
   mockWorkflow: {
@@ -163,11 +179,9 @@ vi.mock("../../util/api", () => ({
 // in WorkflowState.test.tsx.
 vi.mock("../WorkflowState", () => ({
   default: ({
-    onDirtyChange,
     readOnly,
     saveStateFn,
   }: {
-    onDirtyChange?: (dirty: boolean) => void;
     readOnly?: boolean;
     saveStateFn?: (payload: any) => Promise<any>;
   }) => {
@@ -179,7 +193,6 @@ vi.mock("../WorkflowState", () => ({
           <input
             aria-label="Notes"
             onChange={(e) => {
-              onDirtyChange?.(true);
               if (saveStateFn) {
                 // Simulate autosave delay
                 setTimeout(() => {
@@ -271,6 +284,9 @@ beforeEach(() => {
   vi.mocked(api.fetchGlobalEntries).mockResolvedValue([]);
   vi.mocked(api.fetchGlobalEntriesWithFilters).mockResolvedValue([]);
   vi.mocked(api.fetchPieceShowcaseVideo).mockResolvedValue(null);
+  // Reset autosave state mocks to defaults (no active saves, no errors).
+  vi.mocked(useIsMutating).mockReturnValue(0);
+  vi.mocked(useMutationState).mockReturnValue([]);
 });
 
 describe("PieceDetail", () => {
@@ -648,13 +664,16 @@ describe("PieceDetail", () => {
     expect(screen.queryByLabelText("Notes")).not.toBeInTheDocument();
   });
 
-  it("transition buttons disabled when there are unsaved changes", async () => {
+  it("transition buttons enabled during active auto-save", async () => {
+    vi.mocked(useIsMutating).mockReturnValue(1);
     await renderPieceDetail();
-    fireEvent.change(screen.getByLabelText("Notes"), {
-      target: { value: "Dirty notes" },
-    });
-    const transitionBtn = screen.getByRole("button", { name: "Throwing" });
-    expect(transitionBtn).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Throwing" })).toBeEnabled();
+  });
+
+  it("transition buttons disabled when auto-save fails", async () => {
+    vi.mocked(useMutationState).mockReturnValue([{} as any]);
+    await renderPieceDetail();
+    expect(screen.getByRole("button", { name: "Throwing" })).toBeDisabled();
   });
 
   it("clicking transition button opens confirmation dialog", async () => {
@@ -864,29 +883,36 @@ describe("PieceDetail", () => {
   });
 
   describe("navigation blocker", () => {
-    it("lets the user stay on the page when blocked navigation is canceled", async () => {
+    it("does not block navigation when auto-save is clean", async () => {
+      const { router } = await renderPieceDetail();
+      await act(async () => {
+        await router.navigate("/other");
+      });
+      expect(screen.queryByText("Save Failed")).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByText("Elsewhere")).toBeInTheDocument(),
+      );
+    });
+
+    it("lets the user stay on the page when save-failure block is canceled", async () => {
+      vi.mocked(useMutationState).mockReturnValue([{} as any]);
       const { router } = await renderPieceDetail();
 
-      fireEvent.change(screen.getByLabelText("Notes"), {
-        target: { value: "Unsaved notes" },
-      });
       await act(async () => {
         await router.navigate("/other");
       });
 
-      expect(screen.getByText("Unsaved Changes")).toBeInTheDocument();
+      expect(screen.getByText("Save Failed")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Stay" }));
 
       expect(screen.queryByText("Elsewhere")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Notes")).toBeInTheDocument();
     });
 
-    it("allows leaving after confirmation when there are unsaved changes", async () => {
+    it("allows leaving after confirmation when auto-save has failed", async () => {
+      vi.mocked(useMutationState).mockReturnValue([{} as any]);
       const { router } = await renderPieceDetail();
 
-      fireEvent.change(screen.getByLabelText("Notes"), {
-        target: { value: "Unsaved notes" },
-      });
       await act(async () => {
         await router.navigate("/other");
       });

@@ -147,37 +147,14 @@ export default function WorkflowState({
     onSaved(result);
   }, [pieceId, initialPieceState.id, onSaved, saveStateFn, currentPayload]);
 
-  const autosaveKey = useMemo(
-    () =>
-      JSON.stringify({
-        notes,
-        images,
-        custom_fields: normalizedCustomFields,
-      }),
-    [images, normalizedCustomFields, notes],
-  );
-
   const autosave = useAutosave({
     dirty: !readOnly && isDirty && !disableAutosave,
-    saveKey: autosaveKey,
     save: saveWorkflowState,
     delayMs: autosaveDelayMs,
+    mutationKey: ["autosave", pieceId],
   });
+  // Used only to suppress the standalone toast when the provider handles it.
   const pieceDetailSaveStatus = usePieceDetailSaveStatus();
-
-
-  useEffect(() => {
-    pieceDetailSaveStatus?.publishWorkflowStatus({
-      status: autosave.status,
-      error: autosave.error,
-      lastSavedAt: autosave.lastSavedAt,
-    });
-  }, [
-    autosave.error,
-    autosave.lastSavedAt,
-    autosave.status,
-    pieceDetailSaveStatus,
-  ]);
 
   function handleFieldChange(name: string, value: string) {
     dispatch({ type: "set_custom_field", name, value });
