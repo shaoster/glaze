@@ -9,7 +9,7 @@ re-deriving field logic.
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Any, NewType
+from typing import TYPE_CHECKING, Any, NewType, TypeAlias
 
 import strawberry
 
@@ -198,10 +198,10 @@ class PiecePage:
 
 
 if TYPE_CHECKING:
-    # strawberry.scalar() returns the NewType but mypy cannot infer it as a
-    # valid type alias from the call expression.  Expose the bare NewType so
-    # annotations like `field: JSON` pass mypy's valid-type check.
-    JSON = NewType("JSON", object)
+    # Under type-checking JSON is Any so that dict/list values are assignable
+    # to JSON-typed fields without casts.  At runtime the full Strawberry
+    # scalar registration runs instead.
+    JSON: TypeAlias = Any
 else:
     JSON = strawberry.scalar(
         NewType("JSON", object),
