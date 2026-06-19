@@ -367,6 +367,52 @@ class TestGlobalEntries:
             user=user, glaze_combination=combo
         ).exists()
 
+    def test_compose_from_post_creates_via_ordered_pks(self, client, user):
+        gt1 = GlazeType.objects.create(user=user, name="Tenmoku")
+        gt2 = GlazeType.objects.create(user=user, name="Clear")
+
+        response = client.post(
+            "/api/globals/glaze_combination/",
+            {"layers": [str(gt1.pk), str(gt2.pk)]},
+            format="json",
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert data["name"] == "Tenmoku!Clear"
+        combo = GlazeCombination.objects.get(pk=data["id"])
+        layer_pks = list(
+            combo.layers.order_by("order").values_list("glaze_type_id", flat=True)
+        )
+        assert layer_pks == [gt1.pk, gt2.pk]
+
+    def test_public_global_list_includes_public_library_entries(self, client, user):
+        # GlazeType has public: true in workflow.yml — admin-owned entries (user=None)
+        # are visible alongside the requesting user's private entries.
+        public_gt = GlazeType.objects.create(user=None, name="Public Stoneware")
+        private_gt = GlazeType.objects.create(user=user, name="My Earthenware")
+
+        response = client.get("/api/globals/glaze_type/")
+
+        assert response.status_code == 200
+        ids = {entry["id"] for entry in response.json()}
+        assert str(public_gt.pk) in ids
+        assert str(private_gt.pk) in ids
+
+    def test_private_global_list_excludes_other_users_entries(self, client, other_user):
+        # GlazeCombination has no public library — entries belonging to other_user
+        # must not appear in the requesting user's list.
+        other_combo = GlazeCombination.objects.create(
+            user=other_user, name="Other Combo"
+        )
+
+        response = client.get("/api/globals/glaze_combination/")
+
+        assert response.status_code == 200
+        ids = {entry["id"] for entry in response.json()}
+        assert str(other_combo.pk) not in ids
+
 
 class TestApplyGlobalFilters:
     class RecordingQuerySet:

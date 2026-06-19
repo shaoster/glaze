@@ -810,38 +810,6 @@ export type {
   TagEntry,
 };
 
-export interface GlazeCombinationFilters {
-  glazeTypeIds?: string[];
-  isFoodSafe?: boolean;
-  runs?: boolean;
-  highlightsGrooves?: boolean;
-  isDifferentOnWhiteAndBrownClay?: boolean;
-  firingTemperatureId?: string;
-}
-
-export async function fetchGlazeCombinations(
-  filters: GlazeCombinationFilters = {},
-): Promise<GlazeCombinationEntry[]> {
-  const params: Record<string, string> = {};
-  if (filters.glazeTypeIds?.length)
-    params.glaze_type_ids = filters.glazeTypeIds.join(",");
-  if (filters.isFoodSafe !== undefined)
-    params.is_food_safe = String(filters.isFoodSafe);
-  if (filters.runs !== undefined) params.runs = String(filters.runs);
-  if (filters.highlightsGrooves !== undefined)
-    params.highlights_grooves = String(filters.highlightsGrooves);
-  if (filters.isDifferentOnWhiteAndBrownClay !== undefined)
-    params.is_different_on_white_and_brown_clay = String(
-      filters.isDifferentOnWhiteAndBrownClay,
-    );
-  if (filters.firingTemperatureId !== undefined)
-    params.firing_temperature_id = filters.firingTemperatureId;
-  const { data } = await client.get<GlazeCombinationEntry[]>(
-    "globals/glaze_combination/",
-    { params },
-  );
-  return data;
-}
 
 export async function fetchGlobalEntriesWithFilters<
   T extends { id: string; name?: string; is_favorite?: boolean },

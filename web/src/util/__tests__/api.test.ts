@@ -743,42 +743,6 @@ describe("global entry endpoints", () => {
 });
 
 describe("glaze analysis endpoints", () => {
-  it("fetchGlazeCombinations omits params when no filters are provided", async () => {
-    const { fetchGlazeCombinations } = await loadApiModule();
-    mockClient.get.mockResolvedValue({ data: [] });
-
-    await fetchGlazeCombinations();
-
-    expect(mockClient.get).toHaveBeenCalledWith("globals/glaze_combination/", {
-      params: {},
-    });
-  });
-
-  it("fetchGlazeCombinations encodes filter values into query params", async () => {
-    const { fetchGlazeCombinations } = await loadApiModule();
-    mockClient.get.mockResolvedValue({ data: [] });
-
-    await fetchGlazeCombinations({
-      glazeTypeIds: ["a", "b"],
-      isFoodSafe: true,
-      runs: false,
-      highlightsGrooves: true,
-      isDifferentOnWhiteAndBrownClay: false,
-      firingTemperatureId: "cone-6",
-    });
-
-    expect(mockClient.get).toHaveBeenCalledWith("globals/glaze_combination/", {
-      params: {
-        glaze_type_ids: "a,b",
-        is_food_safe: "true",
-        runs: "false",
-        highlights_grooves: "true",
-        is_different_on_white_and_brown_clay: "false",
-        firing_temperature_id: "cone-6",
-      },
-    });
-  });
-
   it("fetchGlazeCombinationImages maps nested piece images", async () => {
     const { fetchGlazeCombinationImages } = await loadApiModule();
     mockClient.get.mockResolvedValue({
