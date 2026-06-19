@@ -6,6 +6,7 @@ from django.db.models import Max
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from ..crops import apply_crop
 from ..models import Image, PieceStateImage
@@ -28,8 +29,7 @@ def resolve_upload_image(piece_id: str, url: str, caption: str, request) -> dict
     if piece_state is None:
         raise Http404("Piece has no current state.")
     result = _fetch_url_to_r2(url, request.user.id)
-    if hasattr(result, "status_code"):
-        # It's a Response error object
+    if isinstance(result, Response):
         detail = result.data.get("detail", "Failed to fetch image.")
         raise ValidationError(detail)
     public_url, key = result

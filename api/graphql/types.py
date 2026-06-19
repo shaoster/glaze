@@ -9,9 +9,12 @@ re-deriving field logic.
 from __future__ import annotations
 
 import datetime
-from typing import Any, NewType
+from typing import TYPE_CHECKING, Any, NewType
 
 import strawberry
+
+
+
 
 
 def _to_iso(value: Any) -> str | None:
@@ -194,12 +197,18 @@ class PiecePage:
     results: list[PieceType] = strawberry.field(description="The pieces on this page.")
 
 
-JSON = strawberry.scalar(
-    NewType("JSON", object),
-    description="Arbitrary JSON value — object, array, string, number, or boolean.",
-    serialize=lambda v: v,
-    parse_value=lambda v: v,
-)
+if TYPE_CHECKING:
+    # strawberry.scalar() returns the NewType but mypy cannot infer it as a
+    # valid type alias from the call expression.  Expose the bare NewType so
+    # annotations like `field: JSON` pass mypy's valid-type check.
+    JSON = NewType("JSON", object)
+else:
+    JSON = strawberry.scalar(
+        NewType("JSON", object),
+        description="Arbitrary JSON value — object, array, string, number, or boolean.",
+        serialize=lambda v: v,
+        parse_value=lambda v: v,
+    )
 
 
 @strawberry.type

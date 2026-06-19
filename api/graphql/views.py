@@ -22,7 +22,7 @@ from strawberry.django.views import GraphQLView
 
 from .schema import schema
 
-_csrf_middleware = CsrfViewMiddleware(lambda request: None)
+_csrf_middleware = CsrfViewMiddleware(lambda request: None)  # type: ignore[arg-type]
 
 
 class _GlazeGraphQLView(GraphQLView):
@@ -32,7 +32,7 @@ class _GlazeGraphQLView(GraphQLView):
         # Bearer-token requests are CSRF-exempt (the token itself proves intent).
         has_bearer = request.META.get("HTTP_AUTHORIZATION", "").startswith("Bearer ")
         if request.method == "POST" and not has_bearer:
-            reason = _csrf_middleware.process_view(request, None, (), {})
+            reason = _csrf_middleware.process_view(request, None, (), {})  # type: ignore[arg-type]
             if reason is not None:
                 # CSRF check failed — return the 403 response Django produced.
                 return reason
