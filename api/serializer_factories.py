@@ -9,7 +9,10 @@ auto-generated entry for the same model class, so bespoke serializers always win
 from django.db import models as django_models
 from rest_framework import serializers
 
-from .serializer_registry import _GLOBAL_ENTRY_SERIALIZERS
+from .serializer_registry import (
+    _GENERATED_GLOBAL_ENTRY_SERIALIZERS,
+    _GLOBAL_ENTRY_SERIALIZERS,
+)
 from .utils import image_to_dict
 from .workflow import get_global_config
 
@@ -70,5 +73,6 @@ def make_global_entry_serializer(
     serializer_cls: type[serializers.ModelSerializer] = type(
         cls_name, (serializers.ModelSerializer,), attrs
     )
+    _GENERATED_GLOBAL_ENTRY_SERIALIZERS[model_cls] = serializer_cls
     _GLOBAL_ENTRY_SERIALIZERS[model_cls] = serializer_cls
     return serializer_cls

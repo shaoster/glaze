@@ -24,7 +24,6 @@ import {
   createGlobalEntry,
   fetchGlobalEntries,
   fetchGlobalEntriesWithFilters,
-  toggleGlobalEntryFavorite,
 } from "../util/api";
 import {
   formatWorkflowFieldLabel,
@@ -36,10 +35,10 @@ import {
   isFavoritableGlobal,
   type GlobalPickerFilter,
 } from "../util/workflow";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import AutosaveStatus from "./AutosaveStatus";
 import AppImage from "./AppImage";
-import type { AutosaveStatus as AutosaveStatusValue } from "./useAutosave";
+import { useToggleGlobalEntryFavorite } from "../util/useToggleGlobalEntryFavorite";
 
 export interface GlobalEntryDialogProps {
   globalName: string;
@@ -188,10 +187,6 @@ export default function GlobalEntryDialog({
   const [relatedOptions, setRelatedOptions] = useState<
     Record<string, NamedRef[]>
   >({});
-  const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<AutosaveStatusValue>("idle");
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [createName, setCreateName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -234,7 +229,6 @@ export default function GlobalEntryDialog({
       });
   }, [composeFieldConfig, createWithLayers, open, tab]);
 
-  const queryClient = useQueryClient();
   const entriesQueryKey = ["globalEntries", globalName, tab, filters, boolFieldNames, relatedFilterDefs] as const;
   const { data: entriesData, isLoading: loading, error: entriesAsyncError } = useQuery<GenericGlobalEntry[]>({
     queryKey: entriesQueryKey,
@@ -277,6 +271,10 @@ export default function GlobalEntryDialog({
   // false without handleClose running). Idempotent — double-reset is safe.
   useEffect(() => {
     if (!open) {
+      // Reset on close so stale filter state does not leak into the next
+      // open. Must run inside an effect because browser Back closes the
+      // dialog by flipping `open` without calling handleClose.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFilters(makeEmptyFilters(boolFieldNames, relatedFilterDefs));
       setInternalTab("browse");
       resetCreateState();
@@ -315,30 +313,13 @@ export default function GlobalEntryDialog({
     }));
   }
 
-  // Favorites mutate in place instead of forcing a full refetch so the browse
-  // list stays responsive and keeps the user's current filter context intact.
-  async function handleToggleFavorite(entry: GenericGlobalEntry) {
-    setTogglingId(entry.id);
-    setSaveStatus("saving");
-    setSaveError(null);
-    try {
-      await toggleGlobalEntryFavorite(globalName, entry.id, !entry.is_favorite);
-      queryClient.setQueryData(entriesQueryKey, (prev: GenericGlobalEntry[] | undefined) =>
-        (prev ?? []).map((candidate) =>
-          candidate.id === entry.id
-            ? { ...candidate, is_favorite: !candidate.is_favorite }
-            : candidate,
-        ),
-      );
-      setLastSavedAt(new Date());
-      setSaveStatus("saved");
-    } catch {
-      setSaveError("Failed to update favorite. Please try again.");
-      setSaveStatus("error");
-    } finally {
-      setTogglingId(null);
-    }
-  }
+  const {
+    toggleFavorite: handleToggleFavorite,
+    togglingId,
+    saveStatus,
+    saveError,
+    lastSavedAt,
+  } = useToggleGlobalEntryFavorite(globalName, entriesQueryKey);
 
   function handleSelect(entry: { id: string; name: string }) {
     onSelect(entry);

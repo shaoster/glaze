@@ -261,6 +261,7 @@ js_library(
         "src/util/queryKeys.ts",
         "src/util/r2Upload.ts",
         "src/util/telemetry.ts",
+        "src/util/useToggleGlobalEntryFavorite.ts",
         "src/util/workflow.ts",
     ],
     deps = [
