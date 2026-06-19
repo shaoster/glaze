@@ -7,10 +7,10 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 
-from ..models import Image, PieceStateImage
 from ..crops import apply_crop
+from ..models import Image, PieceStateImage
 from ..serializers import ImageCropInputSerializer
-from .helpers import piece_queryset, piece_detail_queryset, serialize_piece_detail
+from .helpers import piece_detail_queryset, piece_queryset, serialize_piece_detail
 from .image_views import (
     _fetch_url_to_r2,
     _needs_jpeg_conversion,
@@ -33,7 +33,9 @@ def resolve_upload_image(piece_id: str, url: str, caption: str, request) -> dict
         detail = result.data.get("detail", "Failed to fetch image.")
         raise ValidationError(detail)
     public_url, key = result
-    _attach_image_to_piece_state_plain(piece_state, public_url, key, caption, request.user)
+    _attach_image_to_piece_state_plain(
+        piece_state, public_url, key, caption, request.user
+    )
     piece = get_object_or_404(piece_detail_queryset(request), pk=piece.pk)
     return serialize_piece_detail(piece, request)
 

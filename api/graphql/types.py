@@ -255,7 +255,7 @@ class PieceDetailType:
             current_state=CurrentStateType(state=current_state.get("state", "")),
             thumbnail=ThumbnailType.from_dict(data.get("thumbnail")),
             tags=[TagType.from_dict(t) for t in (data.get("tags") or [])],
-            states=data.get("states") or [],
+            states=data.get("history") or [],
         )
 
 
@@ -281,8 +281,10 @@ class CreatePieceInput:
 class UpdatePieceInput:
     name: str | None = strawberry.field(default=None, description="New name.")
     shared: bool | None = strawberry.field(default=None, description="Shared flag.")
-    tags: list[int] | None = strawberry.field(default=None, description="Tag IDs.")
-    notes: str | None = strawberry.field(default=None, description="Notes text.")
+    tags: list[int] | None = strawberry.field(
+        default=None,
+        description="Tag IDs (integers). Replaces the full tag list.",
+    )
 
 
 @strawberry.input
@@ -296,7 +298,6 @@ class TransitionPieceInput:
 @strawberry.input
 class UpdateStateInput:
     notes: str | None = strawberry.field(default=None)
-    location: int | None = strawberry.field(default=None)
     custom_fields: JSON | None = strawberry.field(default=None)
     images: JSON | None = strawberry.field(default=None)
 

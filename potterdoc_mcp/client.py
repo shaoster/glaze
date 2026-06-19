@@ -158,7 +158,7 @@ class PotterDocClient:
         *,
         name: str | None = None,
         shared: bool | None = None,
-        tags: list[str] | None = None,
+        tags: list[int] | None = None,
     ) -> dict[str, Any]:
         input_payload: dict[str, Any] = {}
         if name is not None:
@@ -166,7 +166,7 @@ class PotterDocClient:
         if shared is not None:
             input_payload["shared"] = shared
         if tags is not None:
-            input_payload["tags"] = tags
+            input_payload["tags"] = [int(t) for t in tags]
         if not input_payload:
             raise _error("No fields provided to update_piece_metadata.")
         mutation = """
@@ -239,6 +239,7 @@ class PotterDocClient:
           uploadImage(pieceId: $pieceId, input: $input) {
             id
             currentState { state }
+            states
           }
         }
         """

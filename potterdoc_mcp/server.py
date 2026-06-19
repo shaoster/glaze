@@ -216,7 +216,7 @@ async def update_piece_metadata(
     piece_id: str,
     name: str | None = None,
     shared: bool | None = None,
-    tags: list[str] | None = None,
+    tags: list[int] | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Update piece metadata — name, sharing flag, or tags.

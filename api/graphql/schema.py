@@ -136,8 +136,13 @@ class Query:
 
         from api.piece.resolvers import resolve_piece_detail
 
+        request = info.context.request
+        user = get_request_user(request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.")
+        request.user = user
         try:
-            data = resolve_piece_detail(str(id), info.context.request)
+            data = resolve_piece_detail(str(id), request)
         except Http404:
             return None
         return PieceDetailType.from_detail(data)
@@ -149,9 +154,11 @@ class Query:
         )
     )
     def workflow_schema(self, info: strawberry.Info) -> JSON:
-        user = get_request_user(info.context.request)
+        request = info.context.request
+        user = get_request_user(request)
         if user is None or not user.is_authenticated:
             raise StrawberryGraphQLError("Authentication required.")
+        request.user = user
         from api.workflow import build_workflow_schema
 
         return build_workflow_schema()
@@ -163,12 +170,21 @@ class Query:
         )
     )
     def globals(self, info: strawberry.Info, global_name: str) -> JSON:
-        user = get_request_user(info.context.request)
+        request = info.context.request
+        user = get_request_user(request)
         if user is None or not user.is_authenticated:
             raise StrawberryGraphQLError("Authentication required.")
+        request.user = user
         from api.global_entries.logic import global_entries_impl
 
-        response = global_entries_impl(info.context.request, global_name)
+        # global_entries_impl dispatches on request.method; GraphQL uses POST,
+        # so we explicitly set GET to activate the list branch.
+        original_method = request.method
+        request.method = "GET"
+        try:
+            response = global_entries_impl(request, global_name)
+        finally:
+            request.method = original_method
         return response.data
 
 

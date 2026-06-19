@@ -81,7 +81,10 @@ class TestCreatePieceMutation:
         csrf_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
         response = csrf_client.post(
             "/api/graphql/",
-            {"query": CREATE_PIECE_MUTATION, "variables": {"input": {"name": "Bearer Mug"}}},
+            {
+                "query": CREATE_PIECE_MUTATION,
+                "variables": {"input": {"name": "Bearer Mug"}},
+            },
             format="json",
         )
         assert response.status_code == 200, response.content

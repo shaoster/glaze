@@ -7,13 +7,13 @@ data access.
 
 from __future__ import annotations
 
+import strawberry
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from rest_framework.exceptions import ValidationError
-
-import strawberry
 from strawberry.exceptions import StrawberryGraphQLError
 
+from api.piece.image_resolvers import resolve_crop_image, resolve_upload_image
 from api.piece.resolvers import (
     resolve_create_piece,
     resolve_delete_past_state,
@@ -22,12 +22,12 @@ from api.piece.resolvers import (
     resolve_update_past_state,
     resolve_update_piece,
 )
-from api.piece.image_resolvers import resolve_crop_image, resolve_upload_image
 
 from .context import get_request_user
 from .types import (
     CreatePieceInput,
     ImageCropInput,
+    PieceDetailType,
     PieceType,
     TransitionPieceInput,
     UpdatePieceInput,
@@ -81,8 +81,6 @@ class Mutation:
             payload["shared"] = input.shared
         if input.tags is not None:
             payload["tags"] = input.tags
-        if input.notes is not None:
-            payload["notes"] = input.notes
         try:
             data = resolve_update_piece(str(id), payload, info.context.request)
         except (Http404, PermissionDenied, ValidationError) as exc:
@@ -110,8 +108,6 @@ class Mutation:
         payload: dict = {}
         if input.notes is not None:
             payload["notes"] = input.notes
-        if input.location is not None:
-            payload["location"] = input.location
         if input.custom_fields is not None:
             payload["custom_fields"] = input.custom_fields
         if input.images is not None:
@@ -134,8 +130,6 @@ class Mutation:
         payload: dict = {}
         if input.notes is not None:
             payload["notes"] = input.notes
-        if input.location is not None:
-            payload["location"] = input.location
         if input.custom_fields is not None:
             payload["custom_fields"] = input.custom_fields
         if input.images is not None:
@@ -154,7 +148,9 @@ class Mutation:
     ) -> PieceType:
         _require_auth(info)
         try:
-            data = resolve_delete_past_state(str(id), str(state_id), info.context.request)
+            data = resolve_delete_past_state(
+                str(id), str(state_id), info.context.request
+            )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
         return PieceType.from_summary(data)
@@ -162,7 +158,7 @@ class Mutation:
     @strawberry.mutation(description="Upload image from URL to piece's current state.")
     def upload_image(
         self, info: strawberry.Info, piece_id: strawberry.ID, input: UploadImageInput
-    ) -> PieceType:
+    ) -> PieceDetailType:
         _require_auth(info)
         try:
             data = resolve_upload_image(
@@ -170,7 +166,7 @@ class Mutation:
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
 
     @strawberry.mutation(description="Update crop bounds for an image.")
     def crop_image(
@@ -179,7 +175,12 @@ class Mutation:
         _require_auth(info)
         try:
             data = resolve_crop_image(
-                str(image_id), crop.x, crop.y, crop.width, crop.height, info.context.request
+                str(image_id),
+                crop.x,
+                crop.y,
+                crop.width,
+                crop.height,
+                info.context.request,
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)

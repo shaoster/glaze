@@ -10,16 +10,16 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
-from .helpers import (
-    piece_detail_queryset,
-    piece_queryset,
-    serialize_piece_detail,
-)
 from ..serializers import (
     PieceCreateSerializer,
     PieceStateCreateSerializer,
     PieceStateUpdateSerializer,
     PieceUpdateSerializer,
+)
+from .helpers import (
+    piece_detail_queryset,
+    piece_queryset,
+    serialize_piece_detail,
 )
 
 
