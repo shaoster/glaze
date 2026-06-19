@@ -22,6 +22,7 @@ from api.piece.helpers import (
 )
 
 from .context import get_request_user
+from .mutations import Mutation
 from .types import PiecePage, PieceType
 
 
@@ -124,5 +125,16 @@ class Query:
     def schema_sdl(self) -> str:
         return str(schema)
 
+    @strawberry.field(description="Fetch a single piece by ID.")
+    def piece(self, info: strawberry.Info, id: strawberry.ID) -> PieceType | None:
+        from api.piece.resolvers import resolve_piece_detail
+        from django.http import Http404
 
-schema = strawberry.Schema(query=Query)
+        try:
+            data = resolve_piece_detail(str(id), info.context.request)
+        except Http404:
+            return None
+        return PieceType.from_summary(data)
+
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)

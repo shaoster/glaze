@@ -9,7 +9,7 @@ re-deriving field logic.
 from __future__ import annotations
 
 import datetime
-from typing import Any
+from typing import Any, NewType
 
 import strawberry
 
@@ -192,3 +192,55 @@ class PiecePage:
         description="Total number of pieces matching the applied filters (before pagination)."
     )
     results: list[PieceType] = strawberry.field(description="The pieces on this page.")
+
+
+JSON = strawberry.scalar(
+    NewType("JSON", object),
+    description="Arbitrary JSON value — object, array, string, number, or boolean.",
+    serialize=lambda v: v,
+    parse_value=lambda v: v,
+)
+
+
+@strawberry.input
+class ImageCropInput:
+    x: float = strawberry.field(description="Left edge as fraction of width (0-1).")
+    y: float = strawberry.field(description="Top edge as fraction of height (0-1).")
+    width: float = strawberry.field(description="Crop width as fraction of image width (0-1).")
+    height: float = strawberry.field(description="Crop height as fraction of image height (0-1).")
+
+
+@strawberry.input
+class CreatePieceInput:
+    name: str = strawberry.field(description="Name for the new piece.")
+    notes: str = strawberry.field(default="", description="Optional notes.")
+
+
+@strawberry.input
+class UpdatePieceInput:
+    name: str | None = strawberry.field(default=None, description="New name.")
+    shared: bool | None = strawberry.field(default=None, description="Shared flag.")
+    tags: list[int] | None = strawberry.field(default=None, description="Tag IDs.")
+    notes: str | None = strawberry.field(default=None, description="Notes text.")
+
+
+@strawberry.input
+class TransitionPieceInput:
+    target_state: str = strawberry.field(description="Target workflow state name.")
+    custom_fields: JSON | None = strawberry.field(
+        default=None, description="Custom fields for the new state."
+    )
+
+
+@strawberry.input
+class UpdateStateInput:
+    notes: str | None = strawberry.field(default=None)
+    location: int | None = strawberry.field(default=None)
+    custom_fields: JSON | None = strawberry.field(default=None)
+    images: JSON | None = strawberry.field(default=None)
+
+
+@strawberry.input
+class UploadImageInput:
+    url: str = strawberry.field(description="HTTPS URL to fetch the image from.")
+    caption: str = strawberry.field(default="", description="Optional caption.")
