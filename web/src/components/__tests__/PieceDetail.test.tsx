@@ -395,19 +395,17 @@ describe("PieceDetail", () => {
 
   it("renders successor state buttons for non-terminal state", async () => {
     await renderPieceDetail();
-    const stateFlow = screen.getByRole("group", { name: "State flow" });
-    expect(within(stateFlow).getByText("Designing")).toBeInTheDocument();
-    expect(
-      within(stateFlow).getByRole("button", { name: "Throwing" }),
-    ).toBeInTheDocument();
-    expect(
-      within(stateFlow).getByRole("button", { name: "Handbuilding" }),
-    ).toBeInTheDocument();
+    // Current state chip shows "Designing"; successor chips are in the carousel
+    expect(screen.getByRole("button", { name: "Designing" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Throwing" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Handbuilding" })).toBeInTheDocument();
   });
 
   it("renders completed before recycled at the end of the successor list", async () => {
+    const glazeFired = makeState({ state: "glaze_fired" });
     const piece = makePiece({
-      current_state: makeState({ state: "glaze_fired" }),
+      current_state: glazeFired,
+      history: [glazeFired],
     });
     await renderPieceDetail(piece);
 
@@ -1147,15 +1145,11 @@ describe("PieceDetail", () => {
 
       await renderPieceDetail(piece, onPieceUpdated);
 
-      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-      const historicalItem = screen.getByText("Designed").closest("li")!;
-      fireEvent.click(historicalItem);
+      // Enter rewind mode by clicking the past "Designing" chip in the carousel
+      fireEvent.click(screen.getByRole("button", { name: "Designing" }));
 
-      // Find the Notes input within the active historical editor
-      // It's in the section card that has "Rewound to: ..."
-      const historicalEditor = screen.getByText(/Editing historical state/i)
-        .parentElement!.parentElement!;
-      const notesInput = within(historicalEditor).getByLabelText("Notes");
+      // The historical Notes input appears in the rewind editor below the carousel
+      const notesInput = screen.getByLabelText("Notes");
       fireEvent.change(notesInput, { target: { value: "new" } });
 
       await waitFor(

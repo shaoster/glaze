@@ -433,7 +433,7 @@ export default function StateCarousel({
                   {!isTerminal && canEdit ? (
                     <>
                       <BranchConnector count={successors.length} />
-                      <Box sx={{ display: "flex", flexDirection: "column", gap: `${ROW_GAP}px`, pl: "4px", minWidth: 0, overflow: "hidden", flex: 1 }}>
+                      <Box role="group" aria-label="State flow" sx={{ display: "flex", flexDirection: "column", gap: `${ROW_GAP}px`, pl: "4px", minWidth: 0, overflow: "hidden", flex: 1 }}>
                         {successors.map((next) => (
                           <Box key={next} sx={{ height: ROW_H, display: "flex", alignItems: "center", minWidth: 0, overflow: "hidden" }}>
                             <StateChip
