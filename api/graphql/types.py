@@ -309,6 +309,10 @@ class UpdateStateInput:
     notes: str | None = strawberry.field(default=None)
     custom_fields: JSON | None = strawberry.field(default=None)
     images: JSON | None = strawberry.field(default=None)
+    created: str | None = strawberry.field(
+        default=None,
+        description="ISO 8601 datetime to backdate this state's creation timestamp.",
+    )
 
 
 @strawberry.input

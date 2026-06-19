@@ -28,7 +28,6 @@ from .types import (
     CreatePieceInput,
     ImageCropInput,
     PieceDetailType,
-    PieceType,
     TransitionPieceInput,
     UpdatePieceInput,
     UpdateStateInput,
@@ -61,18 +60,18 @@ def _map_error(exc: Exception) -> StrawberryGraphQLError:
 @strawberry.type
 class Mutation:
     @strawberry.mutation(description="Create a new piece in the entry state.")
-    def create_piece(self, info: strawberry.Info, input: CreatePieceInput) -> PieceType:
+    def create_piece(self, info: strawberry.Info, input: CreatePieceInput) -> PieceDetailType:
         _require_auth(info)
         try:
             data = resolve_create_piece(input.name, input.notes, info.context.request)
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
 
     @strawberry.mutation(description="Update piece metadata.")
     def update_piece(
         self, info: strawberry.Info, id: strawberry.ID, input: UpdatePieceInput
-    ) -> PieceType:
+    ) -> PieceDetailType:
         _require_auth(info)
         payload: dict = {}
         if input.name is not None:
@@ -85,12 +84,12 @@ class Mutation:
             data = resolve_update_piece(str(id), payload, info.context.request)
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
 
     @strawberry.mutation(description="Transition piece to a new workflow state.")
     def transition_piece(
         self, info: strawberry.Info, id: strawberry.ID, input: TransitionPieceInput
-    ) -> PieceType:
+    ) -> PieceDetailType:
         _require_auth(info)
         try:
             data = resolve_transition_piece(
@@ -98,12 +97,12 @@ class Mutation:
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
 
     @strawberry.mutation(description="Update the current (unsealed) state's fields.")
     def update_current_state(
         self, info: strawberry.Info, id: strawberry.ID, input: UpdateStateInput
-    ) -> PieceType:
+    ) -> PieceDetailType:
         _require_auth(info)
         payload: dict = {}
         if input.notes is not None:
@@ -112,11 +111,13 @@ class Mutation:
             payload["custom_fields"] = input.custom_fields
         if input.images is not None:
             payload["images"] = input.images
+        if input.created is not None:
+            payload["created"] = input.created
         try:
             data = resolve_update_current_state(str(id), payload, info.context.request)
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
 
     @strawberry.mutation(description="Update a past (sealed) state.")
     def update_past_state(
@@ -125,7 +126,7 @@ class Mutation:
         id: strawberry.ID,
         state_id: strawberry.ID,
         input: UpdateStateInput,
-    ) -> PieceType:
+    ) -> PieceDetailType:
         _require_auth(info)
         payload: dict = {}
         if input.notes is not None:
@@ -134,18 +135,20 @@ class Mutation:
             payload["custom_fields"] = input.custom_fields
         if input.images is not None:
             payload["images"] = input.images
+        if input.created is not None:
+            payload["created"] = input.created
         try:
             data = resolve_update_past_state(
                 str(id), str(state_id), payload, info.context.request
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
 
     @strawberry.mutation(description="Delete a past (sealed) state.")
     def delete_past_state(
         self, info: strawberry.Info, id: strawberry.ID, state_id: strawberry.ID
-    ) -> PieceType:
+    ) -> PieceDetailType:
         _require_auth(info)
         try:
             data = resolve_delete_past_state(
@@ -153,7 +156,7 @@ class Mutation:
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
 
     @strawberry.mutation(description="Upload image from URL to piece's current state.")
     def upload_image(
@@ -171,7 +174,7 @@ class Mutation:
     @strawberry.mutation(description="Update crop bounds for an image.")
     def crop_image(
         self, info: strawberry.Info, image_id: strawberry.ID, crop: ImageCropInput
-    ) -> PieceType:
+    ) -> PieceDetailType:
         _require_auth(info)
         try:
             data = resolve_crop_image(
@@ -184,4 +187,4 @@ class Mutation:
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
