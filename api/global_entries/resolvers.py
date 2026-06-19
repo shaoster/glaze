@@ -29,7 +29,10 @@ def resolve_create_global(global_name: str, data: dict, request) -> dict:
     raw.user = request.user
 
     # Wrap with DRF Request so .data, .user, etc. are available.
+    # DRF's Request.user property re-runs authenticators unless _user is
+    # pre-set explicitly; set it to bypass the auth pipeline.
     drf_request = DRFRequest(raw)
+    drf_request._user = request.user  # type: ignore[attr-defined]
     drf_request._full_data = data  # type: ignore[attr-defined]
 
     from ..workflow import (
@@ -67,6 +70,7 @@ def resolve_add_favorite(global_name: str, pk: str, request) -> bool:
     raw = factory.post("/")
     raw.user = request.user
     drf_request = DRFRequest(raw)
+    drf_request._user = request.user  # type: ignore[attr-defined]
 
     response = global_entry_favorite_impl(drf_request, model_cls, fav_model_cls, pk)
     if response.status_code == 404:
@@ -92,6 +96,7 @@ def resolve_remove_favorite(global_name: str, pk: str, request) -> bool:
     raw = factory.delete("/")
     raw.user = request.user
     drf_request = DRFRequest(raw)
+    drf_request._user = request.user  # type: ignore[attr-defined]
 
     response = global_entry_favorite_impl(drf_request, model_cls, fav_model_cls, pk)
     if response.status_code == 404:

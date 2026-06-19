@@ -189,6 +189,10 @@ class Query:
 
         # global_entries_impl dispatches on request.method; GraphQL uses POST,
         # so we explicitly set GET to activate the list branch.
+        # apply_global_filters reads request.query_params (a DRF attribute); raw
+        # Django HttpRequests only have .GET, so alias it here.
+        if not hasattr(request, "query_params"):
+            request.query_params = request.GET  # type: ignore[attr-defined]
         original_method = request.method
         request.method = "GET"
         try:
@@ -223,7 +227,13 @@ class Query:
         request.user = user
         from api.analysis_views import glaze_combination_images as _view
 
-        response = _view(request)
+        # The view is @api_view(["GET"]); GraphQL requests arrive as POST.
+        original_method = request.method
+        request.method = "GET"
+        try:
+            response = _view(request)
+        finally:
+            request.method = original_method
         return response.data
 
 
