@@ -202,12 +202,73 @@ JSON = strawberry.scalar(
 )
 
 
+@strawberry.type
+class PieceDetailType:
+    """Full piece detail including complete state history."""
+
+    id: strawberry.ID = strawberry.field(description="Unique piece identifier (UUID).")
+    name: str = strawberry.field(description="User-given name of the piece.")
+    shared: bool = strawberry.field(
+        description="True if the piece is publicly visible via a share link."
+    )
+    is_editable: bool = strawberry.field(
+        description="True if the piece can have new states added."
+    )
+    can_edit: bool = strawberry.field(
+        description="True if the authenticated user has write permission on this piece."
+    )
+    notes: str | None = strawberry.field(description="Free-text notes on the piece.")
+    created: str | None = strawberry.field(
+        description="ISO 8601 timestamp when the piece was first created."
+    )
+    last_modified: str | None = strawberry.field(
+        description="ISO 8601 timestamp of the most recent change."
+    )
+    photo_count: int = strawberry.field(
+        description="Total number of photos attached to this piece across all states."
+    )
+    current_state: CurrentStateType = strawberry.field(
+        description="The piece's current workflow state."
+    )
+    thumbnail: ThumbnailType | None = strawberry.field(
+        description="Thumbnail image for the piece."
+    )
+    tags: list[TagType] = strawberry.field(description="Tags attached to this piece.")
+    states: JSON = strawberry.field(
+        description="Full state history as a JSON array (PieceStateSerializer output)."
+    )
+
+    @classmethod
+    def from_detail(cls, data: dict[str, Any]) -> "PieceDetailType":
+        """Build from a ``PieceDetailSerializer`` output dict."""
+        current_state = data.get("current_state") or {}
+        return cls(
+            id=strawberry.ID(str(data["id"])),
+            name=data["name"],
+            shared=bool(data.get("shared", False)),
+            is_editable=bool(data.get("is_editable", False)),
+            can_edit=bool(data.get("can_edit", False)),
+            notes=data.get("notes"),
+            created=_to_iso(data.get("created")),
+            last_modified=_to_iso(data.get("last_modified")),
+            photo_count=int(data.get("photo_count") or 0),
+            current_state=CurrentStateType(state=current_state.get("state", "")),
+            thumbnail=ThumbnailType.from_dict(data.get("thumbnail")),
+            tags=[TagType.from_dict(t) for t in (data.get("tags") or [])],
+            states=data.get("states") or [],
+        )
+
+
 @strawberry.input
 class ImageCropInput:
     x: float = strawberry.field(description="Left edge as fraction of width (0-1).")
     y: float = strawberry.field(description="Top edge as fraction of height (0-1).")
-    width: float = strawberry.field(description="Crop width as fraction of image width (0-1).")
-    height: float = strawberry.field(description="Crop height as fraction of image height (0-1).")
+    width: float = strawberry.field(
+        description="Crop width as fraction of image width (0-1)."
+    )
+    height: float = strawberry.field(
+        description="Crop height as fraction of image height (0-1)."
+    )
 
 
 @strawberry.input

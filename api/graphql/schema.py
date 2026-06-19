@@ -23,7 +23,7 @@ from api.piece.helpers import (
 
 from .context import get_request_user
 from .mutations import Mutation
-from .types import PiecePage, PieceType
+from .types import JSON, PieceDetailType, PiecePage, PieceType
 
 
 @strawberry.enum(description="Sort order for a piece list.")
@@ -125,16 +125,51 @@ class Query:
     def schema_sdl(self) -> str:
         return str(schema)
 
-    @strawberry.field(description="Fetch a single piece by ID.")
-    def piece(self, info: strawberry.Info, id: strawberry.ID) -> PieceType | None:
-        from api.piece.resolvers import resolve_piece_detail
+    @strawberry.field(
+        description=(
+            "Fetch a single piece by ID, including the complete state history "
+            "and all detail fields (notes, photo count, tags, thumbnail)."
+        )
+    )
+    def piece(self, info: strawberry.Info, id: strawberry.ID) -> PieceDetailType | None:
         from django.http import Http404
+
+        from api.piece.resolvers import resolve_piece_detail
 
         try:
             data = resolve_piece_detail(str(id), info.context.request)
         except Http404:
             return None
-        return PieceType.from_summary(data)
+        return PieceDetailType.from_detail(data)
+
+    @strawberry.field(
+        description=(
+            "Fetch the full workflow schema: states, transitions, field definitions, "
+            "and global type names."
+        )
+    )
+    def workflow_schema(self, info: strawberry.Info) -> JSON:
+        user = get_request_user(info.context.request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.")
+        from api.workflow import build_workflow_schema
+
+        return build_workflow_schema()
+
+    @strawberry.field(
+        description=(
+            "List entries for a global library type "
+            "(e.g. clay_body, glaze_type, location)."
+        )
+    )
+    def globals(self, info: strawberry.Info, global_name: str) -> JSON:
+        user = get_request_user(info.context.request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.")
+        from api.global_entries.logic import global_entries_impl
+
+        response = global_entries_impl(info.context.request, global_name)
+        return response.data
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

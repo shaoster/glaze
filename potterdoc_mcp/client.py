@@ -61,7 +61,9 @@ class PotterDocClient:
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    async def _graphql(self, query: str, variables: dict[str, Any] | None = None) -> Any:
+    async def _graphql(
+        self, query: str, variables: dict[str, Any] | None = None
+    ) -> Any:
         """Execute a GraphQL query or mutation and return the ``data`` payload."""
         r = await self._http.post(
             "/api/graphql/",
@@ -120,9 +122,14 @@ class PotterDocClient:
             shared
             isEditable
             canEdit
+            notes
+            created
+            lastModified
+            photoCount
             currentState { state }
             tags { id name color isPublic }
             thumbnail { url imageId crop { x y width height } croppedUrl }
+            states
           }
         }
         """
@@ -179,15 +186,19 @@ class PotterDocClient:
     # ------------------------------------------------------------------
 
     async def get_workflow_schema(self) -> dict[str, Any]:
-        r = await self._http.get("/api/workflow/")
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        query = "query { workflowSchema }"
+        data = await self._graphql(query)
+        return data["workflowSchema"]  # type: ignore[no-any-return]
 
     async def list_global_entries(self, global_name: str) -> list[dict[str, Any]]:
         """List all entries for a global library type (e.g. clay_body, glaze_type)."""
-        r = await self._http.get(f"/api/globals/{global_name}/")
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        query = """
+        query ListGlobals($globalName: String!) {
+          globals(globalName: $globalName)
+        }
+        """
+        data = await self._graphql(query, {"globalName": global_name})
+        return data["globals"]  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # State transitions
@@ -255,6 +266,9 @@ class PotterDocClient:
         """
         data = await self._graphql(
             mutation,
-            {"imageId": image_id, "crop": {"x": x, "y": y, "width": width, "height": height}},
+            {
+                "imageId": image_id,
+                "crop": {"x": x, "y": y, "width": width, "height": height},
+            },
         )
         return data["cropImage"]  # type: ignore[no-any-return]
