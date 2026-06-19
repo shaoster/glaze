@@ -195,7 +195,7 @@ type PieceTimelineProps = {
   onTransition?: (nextState: string) => void;
   transitioning?: boolean;
   transitionError?: string | null;
-  isDirty?: boolean;
+  hasSaveError?: boolean;
 };
 
 export default function StateCarousel({
@@ -210,7 +210,7 @@ export default function StateCarousel({
   onTransition,
   transitioning = false,
   transitionError,
-  isDirty = false,
+  hasSaveError = false,
 }: PieceTimelineProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<string | null>(null);
@@ -239,7 +239,8 @@ export default function StateCarousel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Animated scroll whenever rewind state changes after mount.
+  // Animated scroll whenever rewind state or current card changes after mount
+  // (covers: entering/exiting rewind, post-transition new current card).
   useEffect(() => {
     if (!mountedRef.current) return;
     const targetIdx = rewindedStateId
@@ -252,34 +253,22 @@ export default function StateCarousel({
     }
     setActiveIdx(targetIdx);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rewindedStateId]);
+  }, [rewindedStateId, currentIdx]);
 
-  if (historyError) {
-    return (
-      <Box sx={{ py: 2, textAlign: "center" }}>
-        <Typography variant="body2" color="error" sx={{ mb: 1.5 }}>
-          Failed to load timeline.
-        </Typography>
-        <Button size="small" variant="outlined" onClick={refetchHistory}>Retry</Button>
-      </Box>
-    );
-  }
-  if (historyLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-        <CircularProgress size={24} />
-      </Box>
-    );
-  }
-  if (statesHistory.length === 0) return null;
+  // Current state is always available from piece.current_state even while history loads.
+  const fallbackHistory: PieceState[] = statesHistory.length > 0
+    ? statesHistory
+    : [piece.current_state];
+
+  const effectiveHistory = fallbackHistory;
 
   const canEdit          = piece.can_edit;
-  const currentState     = statesHistory[currentIdx];
+  const currentState     = effectiveHistory[effectiveHistory.length - 1];
   const successors       = sortSuccessorsForDisplay(SUCCESSORS[currentState.state] ?? []);
   const isTerminal       = successors.length === 0;
-  const transitionDisabled = !canEdit || isDirty || piece.is_editable || transitioning;
+  const transitionDisabled = !canEdit || hasSaveError || piece.is_editable || transitioning;
   const rewindedState    = rewindedStateId
-    ? statesHistory.find((ps) => ps.id === rewindedStateId) ?? null
+    ? effectiveHistory.find((ps) => ps.id === rewindedStateId) ?? null
     : null;
 
   // ── Carousel helpers ───────────────────────────────────────────────────────
@@ -325,12 +314,14 @@ export default function StateCarousel({
   };
   const stopDrag = () => {
     dragRef.current.active = false;
-    dragRef.current.moved = false;
     setDragging(false);
+    // moved flag is cleared after a tick so the click event that follows
+    // mouseup sees it as still true and gets suppressed.
+    setTimeout(() => { dragRef.current.moved = false; }, 0);
   };
 
   // ── Transition helpers ─────────────────────────────────────────────────────
-  const openDialog  = (next: string) => setPendingTransition(next);
+  const openDialog  = (next: string) => { if (!transitionDisabled) setPendingTransition(next); };
   const closeDialog = () => setPendingTransition(null);
   const confirmTransition = () => {
     if (pendingTransition && onTransition) { onTransition(pendingTransition); }
@@ -347,6 +338,7 @@ export default function StateCarousel({
         onMouseMove={onMouseMove}
         onMouseUp={stopDrag}
         onMouseLeave={stopDrag}
+        onClickCapture={(e) => { if (dragRef.current.moved) { e.stopPropagation(); e.preventDefault(); } }}
         sx={{
           display: "flex",
           overflowX: "auto",
@@ -358,12 +350,13 @@ export default function StateCarousel({
           userSelect: dragging ? "none" : "auto",
         }}
       >
-        {statesHistory.map((ps, i) => {
-          const isCurrent  = i === currentIdx;
+        {effectiveHistory.map((ps, i) => {
+          const effCurrentIdx = effectiveHistory.length - 1;
+          const isCurrent  = i === effCurrentIdx;
           const isActive   = i === activeIdx;
           const isRewinded = ps.id === rewindedStateId;
-          const prev       = i > 0 ? statesHistory[i - 1] : null;
-          const next       = i < currentIdx ? statesHistory[i + 1] : null;
+          const prev       = i > 0 ? effectiveHistory[i - 1] : null;
+          const next       = i < effCurrentIdx ? effectiveHistory[i + 1] : null;
 
           // Height of right zone drives the card height when current.
           const succH = isCurrent && !isTerminal && canEdit
@@ -454,7 +447,7 @@ export default function StateCarousel({
                               description={getStateDescription(next)}
                               variant="future"
                               isTerminal={isTerminalState(next)}
-                              onClick={transitionDisabled ? undefined : () => openDialog(next)}
+                              onClick={() => openDialog(next)}
                               disabled={transitionDisabled}
                             />
                           </Box>
@@ -483,9 +476,26 @@ export default function StateCarousel({
         })}
       </Box>
 
+      {/* History error banner — shown below the carousel so transitions still work */}
+      {historyError && (
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, pt: 0.5 }}>
+          <Typography variant="caption" color="error">Failed to load history.</Typography>
+          <Button size="small" variant="outlined" color="error" onClick={refetchHistory} sx={{ py: 0, minWidth: 0 }}>
+            Retry
+          </Button>
+        </Box>
+      )}
+
+      {/* History loading indicator */}
+      {historyLoading && (
+        <Box sx={{ display: "flex", justifyContent: "center", pt: 0.5 }}>
+          <CircularProgress size={16} />
+        </Box>
+      )}
+
       {/* Pager dots */}
       <Box sx={{ display: "flex", justifyContent: "center", gap: 0.75, pt: 1, pb: 0.25 }}>
-        {statesHistory.map((ps, i) => (
+        {effectiveHistory.map((ps, i) => (
           <Box
             key={ps.id ?? i}
             component="button"
@@ -496,8 +506,8 @@ export default function StateCarousel({
               height: 6,
               borderRadius: 999,
               bgcolor: i === activeIdx
-                ? i === currentIdx ? "primary.main" : "text.secondary"
-                : i === currentIdx ? "primary.main" : "divider",
+                ? i === effectiveHistory.length - 1 ? "primary.main" : "text.secondary"
+                : i === effectiveHistory.length - 1 ? "primary.main" : "divider",
               border: "none",
               padding: 0,
               cursor: "pointer",
@@ -532,11 +542,11 @@ export default function StateCarousel({
           {transitionError}
         </Typography>
       )}
-      {transitionDisabled && !isTerminal && canEdit && (isDirty || piece.is_editable) && (
+      {transitionDisabled && !isTerminal && canEdit && (hasSaveError || piece.is_editable) && (
         <Typography variant="caption" sx={{ color: "text.secondary", mt: 0.5, display: "block", textAlign: "center" }}>
           {piece.is_editable
             ? "Seal edit mode before transitioning to a new state."
-            : "Save your changes before transitioning to a new state."}
+            : "Auto-save failed. Your changes may not be saved."}
         </Typography>
       )}
 
@@ -560,12 +570,15 @@ export default function StateCarousel({
           <DialogTitle sx={{ pb: 1 }}>Edit History</DialogTitle>
           <DialogContent>
             <PieceHistory
-              pastHistory={statesHistory.slice(0, -1)}
+              pastHistory={effectiveHistory.slice(0, -1)}
               piece={piece}
-              history={statesHistory}
+              history={effectiveHistory}
               onPieceUpdated={onPieceUpdated}
               rewindedStateId={rewindedStateId}
-              onRewind={onRewind}
+              onRewind={(id) => {
+                onRewind?.(id);
+                setEditModalOpen(false);
+              }}
             />
           </DialogContent>
         </Dialog>
