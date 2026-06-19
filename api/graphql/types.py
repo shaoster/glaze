@@ -14,9 +14,6 @@ from typing import TYPE_CHECKING, Any, NewType, TypeAlias
 import strawberry
 
 
-
-
-
 def _to_iso(value: Any) -> str | None:
     """Coerce a datetime or already-rendered string to an ISO 8601 string."""
     if value is None:
@@ -319,3 +316,13 @@ class UpdateStateInput:
 class UploadImageInput:
     url: str = strawberry.field(description="HTTPS URL to fetch the image from.")
     caption: str = strawberry.field(default="", description="Optional caption.")
+
+
+@strawberry.input
+class UploadImageFromRefsInput:
+    r2_keys: list[str] = strawberry.field(
+        description="R2 object keys of already-uploaded images."
+    )
+    captions: list[str] = strawberry.field(
+        default_factory=list, description="Optional captions, one per key."
+    )

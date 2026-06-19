@@ -169,13 +169,23 @@ class Query:
             "(e.g. clay_body, glaze_type, location)."
         )
     )
-    def globals(self, info: strawberry.Info, global_name: str) -> JSON:
+    def globals(
+        self, info: strawberry.Info, global_name: str, filters: JSON | None = None
+    ) -> JSON:
         request = info.context.request
         user = get_request_user(request)
         if user is None or not user.is_authenticated:
             raise StrawberryGraphQLError("Authentication required.")
         request.user = user
         from api.global_entries.logic import global_entries_impl
+
+        if filters:
+            from django.http import QueryDict
+
+            qd = QueryDict(mutable=True)
+            for k, v in filters.items():
+                qd[k] = str(v)
+            request.GET = qd
 
         # global_entries_impl dispatches on request.method; GraphQL uses POST,
         # so we explicitly set GET to activate the list branch.
@@ -185,6 +195,35 @@ class Query:
             response = global_entries_impl(request, global_name)
         finally:
             request.method = original_method
+        return response.data
+
+    @strawberry.field(
+        description="Return the JSON Schema + UI hints for a specific workflow state."
+    )
+    def state_schema(self, info: strawberry.Info, state_id: str) -> JSON:
+        user = get_request_user(info.context.request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.")
+        info.context.request.user = user
+        from api.workflow import build_ui_schema
+
+        return build_ui_schema(state_id)
+
+    @strawberry.field(
+        description=(
+            "Images grouped by applied glaze combination, "
+            "for the authenticated user's completed pieces."
+        )
+    )
+    def glaze_combination_images(self, info: strawberry.Info) -> JSON:
+        request = info.context.request
+        user = get_request_user(request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.")
+        request.user = user
+        from api.analysis_views import glaze_combination_images as _view
+
+        response = _view(request)
         return response.data
 
 

@@ -13,7 +13,14 @@ from django.http import Http404
 from rest_framework.exceptions import ValidationError
 from strawberry.exceptions import StrawberryGraphQLError
 
-from api.piece.image_resolvers import resolve_crop_image, resolve_upload_image
+from api.piece.image_resolvers import (
+    resolve_crop_image,
+    resolve_move_image,
+    resolve_upload_image,
+    resolve_upload_image_from_refs,
+    resolve_upload_image_from_refs_to_past_state,
+    resolve_upload_image_to_past_state,
+)
 from api.piece.resolvers import (
     resolve_create_piece,
     resolve_delete_past_state,
@@ -25,12 +32,14 @@ from api.piece.resolvers import (
 
 from .context import get_request_user
 from .types import (
+    JSON,
     CreatePieceInput,
     ImageCropInput,
     PieceDetailType,
     TransitionPieceInput,
     UpdatePieceInput,
     UpdateStateInput,
+    UploadImageFromRefsInput,
     UploadImageInput,
 )
 
@@ -60,7 +69,9 @@ def _map_error(exc: Exception) -> StrawberryGraphQLError:
 @strawberry.type
 class Mutation:
     @strawberry.mutation(description="Create a new piece in the entry state.")
-    def create_piece(self, info: strawberry.Info, input: CreatePieceInput) -> PieceDetailType:
+    def create_piece(
+        self, info: strawberry.Info, input: CreatePieceInput
+    ) -> PieceDetailType:
         _require_auth(info)
         try:
             data = resolve_create_piece(input.name, input.notes, info.context.request)
@@ -188,3 +199,128 @@ class Mutation:
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
         return PieceDetailType.from_detail(data)
+
+    @strawberry.mutation(description="Move an image to a different piece state.")
+    def move_image(
+        self,
+        info: strawberry.Info,
+        image_id: strawberry.ID,
+        target_state_id: strawberry.ID,
+    ) -> PieceDetailType:
+        user = _require_auth(info)
+        info.context.request.user = user
+        try:
+            data = resolve_move_image(
+                str(image_id), str(target_state_id), info.context.request
+            )
+        except (Http404, PermissionDenied, ValidationError) as exc:
+            raise _map_error(exc)
+        return PieceDetailType.from_detail(data)
+
+    @strawberry.mutation(
+        description="Upload an image by URL to a specific (past) piece state."
+    )
+    def upload_image_to_past_state(
+        self,
+        info: strawberry.Info,
+        piece_id: strawberry.ID,
+        state_id: strawberry.ID,
+        input: UploadImageInput,
+    ) -> PieceDetailType:
+        user = _require_auth(info)
+        info.context.request.user = user
+        try:
+            data = resolve_upload_image_to_past_state(
+                str(piece_id),
+                str(state_id),
+                input.url,
+                input.caption,
+                info.context.request,
+            )
+        except (Http404, PermissionDenied, ValidationError) as exc:
+            raise _map_error(exc)
+        return PieceDetailType.from_detail(data)
+
+    @strawberry.mutation(
+        description="Upload images by R2 key to the piece's current state."
+    )
+    def upload_image_from_refs(
+        self,
+        info: strawberry.Info,
+        piece_id: strawberry.ID,
+        input: UploadImageFromRefsInput,
+    ) -> PieceDetailType:
+        user = _require_auth(info)
+        info.context.request.user = user
+        try:
+            data = resolve_upload_image_from_refs(
+                str(piece_id), input.r2_keys, input.captions, info.context.request
+            )
+        except (Http404, PermissionDenied, ValidationError) as exc:
+            raise _map_error(exc)
+        return PieceDetailType.from_detail(data)
+
+    @strawberry.mutation(
+        description="Upload images by R2 key to a specific (past) piece state."
+    )
+    def upload_image_from_refs_to_past_state(
+        self,
+        info: strawberry.Info,
+        piece_id: strawberry.ID,
+        state_id: strawberry.ID,
+        input: UploadImageFromRefsInput,
+    ) -> PieceDetailType:
+        user = _require_auth(info)
+        info.context.request.user = user
+        try:
+            data = resolve_upload_image_from_refs_to_past_state(
+                str(piece_id),
+                str(state_id),
+                input.r2_keys,
+                input.captions,
+                info.context.request,
+            )
+        except (Http404, PermissionDenied, ValidationError) as exc:
+            raise _map_error(exc)
+        return PieceDetailType.from_detail(data)
+
+    @strawberry.mutation(
+        description="Create a private global entry (clay body, glaze type, tag, etc.)."
+    )
+    def create_global(
+        self, info: strawberry.Info, global_name: str, input: JSON
+    ) -> JSON:
+        user = _require_auth(info)
+        info.context.request.user = user
+        from api.global_entries.resolvers import resolve_create_global
+
+        try:
+            return resolve_create_global(global_name, input, info.context.request)
+        except (Http404, PermissionDenied, ValidationError) as exc:
+            raise _map_error(exc)
+
+    @strawberry.mutation(description="Add a global entry to the user's favorites.")
+    def add_favorite(
+        self, info: strawberry.Info, global_name: str, pk: strawberry.ID
+    ) -> bool:
+        user = _require_auth(info)
+        info.context.request.user = user
+        from api.global_entries.resolvers import resolve_add_favorite
+
+        try:
+            return resolve_add_favorite(global_name, str(pk), info.context.request)
+        except (Http404, PermissionDenied, ValidationError) as exc:
+            raise _map_error(exc)
+
+    @strawberry.mutation(description="Remove a global entry from the user's favorites.")
+    def remove_favorite(
+        self, info: strawberry.Info, global_name: str, pk: strawberry.ID
+    ) -> bool:
+        user = _require_auth(info)
+        info.context.request.user = user
+        from api.global_entries.resolvers import resolve_remove_favorite
+
+        try:
+            return resolve_remove_favorite(global_name, str(pk), info.context.request)
+        except (Http404, PermissionDenied, ValidationError) as exc:
+            raise _map_error(exc)
