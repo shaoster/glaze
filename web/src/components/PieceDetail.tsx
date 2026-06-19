@@ -46,7 +46,6 @@ import AppImage from "./AppImage";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
-import PieceHistory from "./PieceHistory";
 import StateCarousel from "./StateCarousel";
 import ProcessSummary from "./ProcessSummary";
 import PiecePhotoGallery, {

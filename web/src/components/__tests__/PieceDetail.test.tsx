@@ -721,7 +721,7 @@ describe("PieceDetail", () => {
     await waitFor(() => expect(onPieceUpdated).toHaveBeenCalledWith(updated));
   });
 
-  it("history panel hidden by default", async () => {
+  it("past state chips visible in carousel for multi-state piece", async () => {
     const piece = makePiece({
       history: [
         makeState({ state: "designed" }),
@@ -730,12 +730,13 @@ describe("PieceDetail", () => {
       current_state: makeState({ state: "wheel_thrown" }),
     });
     await renderPieceDetail(piece);
+    // Past state chip is always visible in the carousel (clickable to enter rewind)
     expect(
-      screen.getByRole("button", { name: /show history/i }),
+      screen.getByRole("button", { name: "Designing" }),
     ).toBeInTheDocument();
   });
 
-  it("history panel toggles on click", async () => {
+  it("past state chips are already visible without toggling", async () => {
     const piece = makePiece({
       history: [
         makeState({
@@ -753,12 +754,13 @@ describe("PieceDetail", () => {
       }),
     });
     await renderPieceDetail(piece);
-    fireEvent.click(screen.getByRole("button", { name: /show history/i }));
-    expect(screen.getByText("Designed")).toBeInTheDocument();
+    // Carousel renders all cards immediately — no toggle required
+    expect(screen.getByRole("button", { name: "Designing" })).toBeInTheDocument();
   });
 
-  it("no history panel when piece has only one state", async () => {
+  it("no past state chips for single-state piece", async () => {
     await renderPieceDetail();
+    // Default piece has one state (designed); no past chips, no show-history button
     expect(
       screen.queryByRole("button", { name: /show history/i }),
     ).not.toBeInTheDocument();
@@ -1115,22 +1117,16 @@ describe("PieceDetail", () => {
 
       await renderPieceDetail(piece);
 
-      fireEvent.click(screen.getByRole("button", { name: /show history/i }));
+      // Click the past "Designing" chip in the carousel to enter rewind mode
+      fireEvent.click(screen.getByRole("button", { name: "Designing" }));
 
-      const historicalItem = screen.getByText("Designed").closest("li")!;
-      fireEvent.click(historicalItem);
+      expect(screen.getByText(/viewing: designing/i)).toBeInTheDocument();
 
-      expect(screen.getByText(/rewound to: designing/i)).toBeInTheDocument();
-
-      // Clear rewind mode via the Chip's delete button
-      const chip = screen.getByRole("button", {
-        name: /rewound to: designing/i,
-      });
-      const clearButton = within(chip).getByTestId("CancelIcon");
-      fireEvent.click(clearButton);
+      // Clear rewind mode via the integrated rewind chip's delete button
+      fireEvent.click(screen.getByTestId("CancelIcon"));
 
       expect(
-        screen.queryByText(/rewound to: designing/i),
+        screen.queryByText(/viewing: designing/i),
       ).not.toBeInTheDocument();
     });
 

@@ -87,7 +87,7 @@ function formatDateLabel(d: Date | null | undefined): string {
 }
 
 // Compact predecessor navigation pill (left zone of current card).
-function PrevPill({ label, onClick }: { label: string; onClick: () => void }) {
+function PrevPill({ onClick }: { label: string; onClick: () => void }) {
   return (
     <Box
       component="button"
@@ -357,11 +357,6 @@ export default function StateCarousel({
           const isRewinded = ps.id === rewindedStateId;
           const prev       = i > 0 ? effectiveHistory[i - 1] : null;
           const next       = i < effCurrentIdx ? effectiveHistory[i + 1] : null;
-
-          // Height of right zone drives the card height when current.
-          const succH = isCurrent && !isTerminal && canEdit
-            ? successors.length * ROW_H + (successors.length - 1) * ROW_GAP
-            : ROW_H;
 
           return (
             <Box
