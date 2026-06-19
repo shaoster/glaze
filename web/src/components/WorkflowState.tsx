@@ -182,7 +182,6 @@ export default function WorkflowState({
           fullWidth
           disabled={readOnly}
           sx={{
-            mb: 1.5,
             "& .MuiInputBase-root": { fontSize: "0.875rem" },
             "& .MuiInputLabel-root": { fontSize: "0.875rem" },
           }}
@@ -194,7 +193,6 @@ export default function WorkflowState({
             display: "grid",
             gap: 2,
             gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            pt: 3, // Increased padding above the custom fields interior
             alignItems: "start",
           }}
         >

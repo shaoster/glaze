@@ -200,6 +200,81 @@ describe("auth token wiring", () => {
     expect(retriedConfig.headers.get("X-Request-ID")).toBe("abc123");
     expect(result).toEqual({ data: "retried" });
   });
+
+  it("passes through non-401 errors without refreshing", async () => {
+    await loadApiModule();
+    const responseUse = mockClient.interceptors.response.use.mock.calls[0]?.[1];
+
+    const error = {
+      isAxiosError: true,
+      response: { status: 500 },
+      config: { url: "pieces/piece-1/" },
+    };
+
+    await expect(responseUse?.(error)).rejects.toMatchObject({
+      response: { status: 500 },
+    });
+    expect(mockClient.post).not.toHaveBeenCalled();
+  });
+
+  it("clears the access token when refresh fails", async () => {
+    await loadApiModule();
+    const { getAccessToken, setAccessToken } = await import("../authTokenStore");
+    setAccessToken("stale-token");
+    const responseUse = mockClient.interceptors.response.use.mock.calls[0]?.[1];
+
+    mockClient.get.mockRejectedValueOnce(new Error("CSRF fetch failed"));
+
+    const error = {
+      isAxiosError: true,
+      response: { status: 401 },
+      config: { url: "pieces/piece-1/" },
+    };
+
+    await expect(responseUse?.(error)).rejects.toBeDefined();
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it("passes the success response through unchanged", async () => {
+    await loadApiModule();
+    const successHandler =
+      mockClient.interceptors.response.use.mock.calls[0]?.[0];
+    const response = { data: "ok", status: 200 };
+
+    expect(successHandler?.(response)).toBe(response);
+  });
+
+  it("rejects immediately when _retry is already set", async () => {
+    await loadApiModule();
+    const responseUse = mockClient.interceptors.response.use.mock.calls[0]?.[1];
+
+    const error = {
+      isAxiosError: true,
+      response: { status: 401 },
+      config: { url: "pieces/piece-1/", _retry: true },
+    };
+
+    await expect(responseUse?.(error)).rejects.toMatchObject({
+      response: { status: 401 },
+    });
+    expect(mockClient.post).not.toHaveBeenCalled();
+  });
+
+  it("rejects immediately for auth endpoints", async () => {
+    await loadApiModule();
+    const responseUse = mockClient.interceptors.response.use.mock.calls[0]?.[1];
+
+    const error = {
+      isAxiosError: true,
+      response: { status: 401 },
+      config: { url: "auth/token/refresh/" },
+    };
+
+    await expect(responseUse?.(error)).rejects.toMatchObject({
+      response: { status: 401 },
+    });
+    expect(mockClient.post).not.toHaveBeenCalled();
+  });
 });
 
 describe("piece endpoints", () => {
@@ -902,5 +977,377 @@ describe("extractErrorMessage", () => {
     expect(extractErrorMessage({}, "Something went wrong")).toBe(
       "Something went wrong",
     );
+  });
+});
+
+describe("fetchAppInit", () => {
+  it("maps the AppInit response and normalizes the user", async () => {
+    const { fetchAppInit } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: {
+        googleOauthClientId: "client-id",
+        mockIdpUrl: null,
+        adminBaseUrl: "https://admin.example.com",
+        user: {
+          id: "u1",
+          email: "user@example.com",
+          first_name: "Alice",
+          last_name: "Smith",
+          is_staff: false,
+        },
+      },
+    });
+
+    const result = await fetchAppInit();
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/me/");
+    expect(result.googleOauthClientId).toBe("client-id");
+    expect(result.mockIdpUrl).toBeNull();
+    expect(result.user?.email).toBe("user@example.com");
+  });
+});
+
+describe("isAuthError", () => {
+  it("returns true for 401 responses", async () => {
+    const { isAuthError } = await loadApiModule();
+    mockIsAxiosError.mockReturnValue(true);
+
+    expect(isAuthError({ isAxiosError: true, response: { status: 401 } })).toBe(
+      true,
+    );
+  });
+
+  it("returns true for 403 responses", async () => {
+    const { isAuthError } = await loadApiModule();
+    mockIsAxiosError.mockReturnValue(true);
+
+    expect(isAuthError({ isAxiosError: true, response: { status: 403 } })).toBe(
+      true,
+    );
+  });
+
+  it("returns false for non-auth errors", async () => {
+    const { isAuthError } = await loadApiModule();
+    mockIsAxiosError.mockReturnValue(false);
+
+    expect(isAuthError(new Error("network"))).toBe(false);
+  });
+});
+
+describe("getImageCropRuns", () => {
+  it("maps an array of crop run wire objects to domain objects", async () => {
+    const { getImageCropRuns } = await loadApiModule();
+    const wireCropRun = {
+      id: "crop-1",
+      crop: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+      created: "2024-01-01T00:00:00Z",
+    };
+    mockClient.get.mockResolvedValue({ data: [wireCropRun] });
+
+    const result = await getImageCropRuns("img-id");
+
+    expect(mockClient.get).toHaveBeenCalledWith("images/img-id/crop-runs/");
+    expect(result).toHaveLength(1);
+    expect(result[0].created).toBeInstanceOf(Date);
+  });
+});
+
+describe("auth endpoint functions", () => {
+  it("downloadUserData navigates to the export URL", async () => {
+    const { downloadUserData } = await loadApiModule();
+    const mockAssign = vi.fn();
+    vi.stubGlobal("window", {
+      location: { assign: mockAssign, origin: "http://localhost" },
+    });
+
+    downloadUserData();
+
+    expect(mockAssign).toHaveBeenCalledWith("/api/auth/export/");
+    vi.unstubAllGlobals();
+  });
+
+  it("deleteAccount revokes the token and deletes the account", async () => {
+    const { deleteAccount } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({});
+    mockClient.delete.mockResolvedValue({});
+
+    await deleteAccount();
+
+    expect(mockClient.post).toHaveBeenCalledWith("auth/token/revoke/", {});
+    expect(mockClient.delete).toHaveBeenCalledWith("auth/account/");
+  });
+
+  it("issueAuthTokens posts to token endpoint and sets the access token", async () => {
+    const { issueAuthTokens } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({
+      data: { accessToken: "new-token" },
+    });
+
+    const result = await issueAuthTokens();
+
+    expect(result.accessToken).toBe("new-token");
+    expect(mockClient.post).toHaveBeenCalledWith("auth/token/", {});
+  });
+
+  it("refreshAuthToken delegates to refreshAccessToken", async () => {
+    const { refreshAuthToken } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({
+      data: { accessToken: "refreshed-token" },
+    });
+
+    const result = await refreshAuthToken();
+
+    expect(result).toBe("refreshed-token");
+  });
+
+  it("revokeAuthToken revokes the session token", async () => {
+    const { revokeAuthToken } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({});
+
+    await revokeAuthToken();
+
+    expect(mockClient.post).toHaveBeenCalledWith("auth/token/revoke/", {});
+  });
+
+  it("getStaffInviteCode fetches the current invite code", async () => {
+    const { getStaffInviteCode } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: { code: "INVITE-123", expires_at: "2025-01-01T00:00:00Z" },
+    });
+
+    const result = await getStaffInviteCode();
+
+    expect(result.code).toBe("INVITE-123");
+    expect(mockClient.get).toHaveBeenCalledWith("staff/invite-code/");
+  });
+
+  it("generateStaffInviteCode posts to generate a new code", async () => {
+    const { generateStaffInviteCode } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({
+      data: { code: "NEW-CODE", expires_at: "2025-01-01T00:00:00Z" },
+    });
+
+    const result = await generateStaffInviteCode();
+
+    expect(result.code).toBe("NEW-CODE");
+    expect(mockClient.post).toHaveBeenCalledWith("staff/invite-code/", {});
+  });
+
+  it("generateInviteBatch posts the count and returns the created count", async () => {
+    const { generateInviteBatch } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({ data: { created: 5 } });
+
+    const result = await generateInviteBatch(5);
+
+    expect(result.created).toBe(5);
+    expect(mockClient.post).toHaveBeenCalledWith("staff/invite-batch/", {
+      count: 5,
+    });
+  });
+
+  it("sendEmailInvite posts the email address", async () => {
+    const { sendEmailInvite } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({});
+
+    await sendEmailInvite("user@example.com");
+
+    expect(mockClient.post).toHaveBeenCalledWith("auth/invite/send/", {
+      email: "user@example.com",
+    });
+  });
+});
+
+describe("piece history and schema endpoints", () => {
+  it("fetchPieceHistory maps wire piece states to domain objects", async () => {
+    const { fetchPieceHistory } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: [
+        {
+          ...wirePieceState,
+          previous_state: null,
+          next_state: null,
+        },
+      ],
+    });
+
+    const result = await fetchPieceHistory("piece-1");
+
+    expect(mockClient.get).toHaveBeenCalledWith("pieces/piece-1/history/");
+    expect(result).toHaveLength(1);
+    expect(result[0].created).toBeInstanceOf(Date);
+  });
+
+  it("fetchWorkflowStateSchema returns the raw schema from the API", async () => {
+    const { fetchWorkflowStateSchema } = await loadApiModule();
+    const schema = {
+      type: "object",
+      properties: { clay_weight_lbs: { type: "number" } },
+    };
+    mockClient.get.mockResolvedValue({ data: schema });
+
+    const result = await fetchWorkflowStateSchema("wheel_thrown");
+
+    expect(mockClient.get).toHaveBeenCalledWith(
+      "workflow/schema/wheel_thrown/",
+    );
+    expect(result).toEqual(schema);
+  });
+
+  it("fetchPieceShowcaseVideo fetches the showcase video status", async () => {
+    const { fetchPieceShowcaseVideo } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: { status: "ready", url: "https://cdn.example.com/video.mp4" },
+    });
+
+    const result = await fetchPieceShowcaseVideo("piece-1");
+
+    expect(mockClient.get).toHaveBeenCalledWith(
+      "pieces/piece-1/showcase-video/",
+    );
+    expect(result).toMatchObject({ status: "ready" });
+  });
+
+  it("requestPieceShowcaseVideo posts the payload and returns status", async () => {
+    const { requestPieceShowcaseVideo } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({
+      data: { status: "processing" },
+    });
+
+    const result = await requestPieceShowcaseVideo("piece-1", {
+      excludedImageKeys: ["key1"],
+      excludedNoteKeys: [],
+      musicTrackId: "track-1",
+    });
+
+    expect(mockClient.post).toHaveBeenCalledWith(
+      "pieces/piece-1/showcase-video/",
+      {
+        excluded_image_keys: ["key1"],
+        excluded_note_keys: [],
+        music_track_id: "track-1",
+      },
+    );
+    expect(result).toMatchObject({ status: "processing" });
+  });
+
+  it("moveImage patches the image piece_state and returns updated piece", async () => {
+    const { moveImage } = await loadApiModule();
+    mockClient.patch.mockResolvedValue({ data: wirePieceDetail });
+
+    const result = await moveImage("img-1", "designed", "wheel_thrown");
+
+    expect(mockClient.patch).toHaveBeenCalledWith(
+      "images/img-1/piece_state/designed/",
+      { piece_state_id: "wheel_thrown" },
+    );
+    expect(result.id).toBe("piece-1");
+  });
+
+  it("updateImageCrop patches the crop and returns updated piece", async () => {
+    const { updateImageCrop } = await loadApiModule();
+    mockClient.patch.mockResolvedValue({ data: wirePieceDetail });
+    const crop = { x: 0.1, y: 0.2, width: 0.8, height: 0.7 };
+
+    const result = await updateImageCrop("img-1", crop);
+
+    expect(mockClient.patch).toHaveBeenCalledWith("images/img-1/crop/", crop);
+    expect(result.id).toBe("piece-1");
+  });
+
+  it("triggerR2ImageConversion posts to the convert-image endpoint", async () => {
+    const { triggerR2ImageConversion } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({
+      data: { task_id: "task-xyz", needs_conversion: true },
+    });
+
+    const result = await triggerR2ImageConversion("images/abc.jpg", "img-id");
+
+    expect(mockClient.post).toHaveBeenCalledWith("uploads/r2/convert-image/", {
+      key: "images/abc.jpg",
+      image_id: "img-id",
+    });
+    expect(result.task_id).toBe("task-xyz");
+    expect(result.needs_conversion).toBe(true);
+  });
+
+  it("getR2ConversionStatus fetches conversion task status by task ID", async () => {
+    const { getR2ConversionStatus } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: { status: "success", result: { url: "https://cdn.example.com/img.jpg", width: 800, height: 600 } },
+    });
+
+    const result = await getR2ConversionStatus("task-abc");
+
+    expect(mockClient.get).toHaveBeenCalledWith(
+      "uploads/r2/convert-image/task-abc/",
+    );
+    expect(result.status).toBe("success");
+  });
+
+  it("listAgentTokens fetches the agent token list", async () => {
+    const { listAgentTokens } = await loadApiModule();
+    mockClient.get.mockResolvedValue({
+      data: [{ id: "tok-1", name: "My Token", created_at: "2024-01-01T00:00:00Z" }],
+    });
+
+    const result = await listAgentTokens();
+
+    expect(mockClient.get).toHaveBeenCalledWith("auth/agent-tokens/");
+    expect(result).toHaveLength(1);
+  });
+
+  it("createAgentToken posts the name and returns the new token", async () => {
+    const { createAgentToken } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({
+      data: { id: "tok-2", name: "CI Token", token: "secret-value", created_at: "2024-01-01T00:00:00Z" },
+    });
+
+    const result = await createAgentToken("CI Token");
+
+    expect(mockClient.post).toHaveBeenCalledWith("auth/agent-tokens/", {
+      name: "CI Token",
+    });
+    expect(result.token).toBe("secret-value");
+  });
+
+  it("revokeAgentToken deletes the token by ID", async () => {
+    const { revokeAgentToken } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.delete.mockResolvedValue({});
+
+    await revokeAgentToken("tok-1");
+
+    expect(mockClient.delete).toHaveBeenCalledWith("auth/agent-tokens/tok-1/");
+  });
+
+  it("createHumanCropRun posts a crop run and maps the result", async () => {
+    const { createHumanCropRun } = await loadApiModule();
+    mockClient.get.mockResolvedValue({ data: undefined });
+    mockClient.post.mockResolvedValue({
+      data: {
+        id: "crop-run-1",
+        crop: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+        created: "2024-01-01T00:00:00Z",
+      },
+    });
+    const payload = {
+      piece_state_image_id: 42,
+      crop: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+    };
+
+    const result = await createHumanCropRun(payload);
+
+    expect(mockClient.post).toHaveBeenCalledWith("crop-runs/", payload);
+    expect(result.created).toBeInstanceOf(Date);
   });
 });

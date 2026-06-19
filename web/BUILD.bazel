@@ -1568,6 +1568,52 @@ vitest_test(
     ],
 )
 
+vitest_test(
+    name = "web_r2_upload_test",
+    srcs = [
+        "src/util/__tests__/r2Upload.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+        ":node_modules/axios",
+    ],
+    expected_coverage = [
+        "web/src/util/r2Upload*",
+    ],
+)
+
+vitest_test(
+    name = "web_use_toggle_global_entry_favorite_test",
+    srcs = [
+        "src/util/__tests__/useToggleGlobalEntryFavorite.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+        ":node_modules/@tanstack/react-query",
+        ":node_modules/@testing-library/react",
+        ":node_modules/react",
+    ],
+    expected_coverage = [
+        "web/src/util/useToggleGlobalEntryFavorite*",
+    ],
+)
+
+vitest_test(
+    name = "web_query_keys_test",
+    srcs = [
+        "src/util/__tests__/queryKeys.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":util_lib",
+    ],
+    expected_coverage = [
+        "web/src/util/queryKeys*",
+    ],
+)
+
 # ── Web test suite ────────────────────────────────────────────────────────────
 # Aggregate target: `bazel test //web:web_test` runs all web tests.
 # Individual targets above run only when their inputs change.
@@ -1624,6 +1670,9 @@ test_suite(
         ":web_tutorial_manager_test",
         ":web_workflow_summary_test",
         ":workflow_test",
+        ":web_r2_upload_test",
+        ":web_use_toggle_global_entry_favorite_test",
+        ":web_query_keys_test",
     ],
 )
 
