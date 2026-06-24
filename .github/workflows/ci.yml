@@ -204,14 +204,15 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
           restore-keys: playwright-${{ runner.os }}-
-      - name: Install web dependencies for browser clickthrough
+      - name: Install web dependencies via bazel-bootstrapped npm
         shell: bash
         working-directory: ${{ steps.worktree.outputs.path }}
         run: |
           source env.sh
-          cd web
-          corepack prepare pnpm@10.34.1 --activate
-          corepack pnpm install --frozen-lockfile
+          # Exercises the bin/npm wrapper end-to-end: on Linux this goes through
+          # `bazel run @nodejs_linux_amd64//:npm` and verifies that node-gyp can
+          # find `node` for native addon builds (e.g. better-sqlite3).
+          cd web && npm install
 
       # Verifies the developer bootstrap end to end: the documented
       # `source env.sh` → `gz_start` flow must bring up the dev stack on a
@@ -282,7 +283,7 @@ jobs:
           echo "::group::piece detail clickthrough"
           (
             cd web
-            corepack pnpm exec playwright install chromium
+            node_modules/.bin/playwright install chromium
             node scripts/dev-smoke-piece-detail-clickthrough.mjs \
               --web-url "$WEB_URL" \
               --piece-id "$FIRST_ID" \
@@ -338,14 +339,14 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
           restore-keys: playwright-${{ runner.os }}-
-      - name: Install web dependencies for browser clickthrough
+      - name: Install web dependencies via bazel-bootstrapped npm
         shell: bash
         working-directory: ${{ steps.worktree.outputs.path }}
         run: |
           source env.sh
-          cd web
-          corepack prepare pnpm@10.34.1 --activate
-          corepack pnpm install --frozen-lockfile
+          # On macOS bin/npm falls through to system npm (no Linux Bazel toolchain);
+          # still exercises the wrapper and validates the overall install path.
+          cd web && npm install
 
       # Mirrors the Linux bootstrap smoke test on macOS so the documented
       # developer workflow stays covered on both supported local platforms.
@@ -411,7 +412,7 @@ jobs:
           echo "::group::piece detail clickthrough"
           (
             cd web
-            corepack pnpm exec playwright install chromium
+            node_modules/.bin/playwright install chromium
             node scripts/dev-smoke-piece-detail-clickthrough.mjs \
               --web-url "$WEB_URL" \
               --piece-id "$FIRST_ID" \
