@@ -3,20 +3,41 @@ set -euo pipefail
 
 : "${GLAZE_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
-# Put the Bazel-managed Node binary on PATH so native addon build scripts
-# (node-gyp, prebuild-install) can find `node` when npm spawns subshells.
-# On a fresh clone the toolchain isn't materialized yet, so fetch it first.
-_ob="$(cd "$GLAZE_ROOT" && bazel info output_base 2>/dev/null || true)"
-if [[ -n "$_ob" ]]; then
-    _nb="$_ob/external/rules_nodejs++node+nodejs_linux_amd64/bin/nodejs/bin"
-    if [[ ! -d "$_nb" ]]; then
-        (cd "$GLAZE_ROOT" && bazel fetch @nodejs_linux_amd64//:npm >/dev/null 2>&1 || true)
+if [[ "$(uname -s)" == "Linux" ]]; then
+    # Bazel manages the Node.js toolchain on Linux; expose it via PATH so
+    # node-gyp and other native addon build scripts can find `node` in subshells.
+    # Glob across external/* so the path works regardless of the Bzlmod canonical
+    # repo name (which changed between Bazel versions, e.g. ++ vs ~~).
+    # On a fresh clone the toolchain isn't materialized yet — fetch it if needed.
+    _ob="$(cd "$GLAZE_ROOT" && bazel info output_base 2>/dev/null || true)"
+    if [[ -n "$_ob" ]]; then
+        _nb=""
+        for _d in "$_ob"/external/*/bin/nodejs/bin; do
+            [[ -d "$_d" ]] && { _nb="$_d"; break; }
+        done
+        if [[ -z "$_nb" ]]; then
+            (cd "$GLAZE_ROOT" && bazel fetch @nodejs_linux_amd64//:npm >/dev/null 2>&1 || true)
+            for _d in "$_ob"/external/*/bin/nodejs/bin; do
+                [[ -d "$_d" ]] && { _nb="$_d"; break; }
+            done
+        fi
+        [[ -n "$_nb" ]] && export PATH="$_nb:$PATH"
+        unset _nb _d
     fi
-    [[ -d "$_nb" ]] && export PATH="$_nb:$PATH"
+    unset _ob
+    if command -v rtk >/dev/null 2>&1; then
+        exec rtk bazel run @nodejs_linux_amd64//:npm -- "$@"
+    fi
+    exec bazel run @nodejs_linux_amd64//:npm -- "$@"
 fi
-unset _ob _nb
 
-if command -v rtk >/dev/null 2>&1; then
-    exec rtk bazel run @nodejs_linux_amd64//:npm -- "$@"
-fi
-exec bazel run @nodejs_linux_amd64//:npm -- "$@"
+# On macOS and other non-Linux platforms, delegate to the system npm.
+# Scan PATH manually to skip this wrapper's own directory.
+for _d in $(printf '%s' "$PATH" | tr ':' '\n'); do
+    [[ "$_d" == "$GLAZE_ROOT/bin" ]] && continue
+    if [[ -x "$_d/npm" ]]; then
+        exec "$_d/npm" "$@"
+    fi
+done
+echo "npm: no npm found outside of $GLAZE_ROOT/bin" >&2
+exit 127
