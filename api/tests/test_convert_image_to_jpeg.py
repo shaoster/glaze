@@ -259,10 +259,11 @@ class TestConvertImageToJpegTask:
 
         When convert_image_to_jpeg redirects a PSI to a new JPEG image but crashes
         before re-enqueueing the crop task, the JPEG image has zero AsyncTask records.
-        _is_crop_task_failed must detect this via source lineage and return True so
-        the frontend renders the raw image instead of spinning indefinitely.
+        _is_crop_task_failed must detect this via the jpeg_conversion lineage and
+        return True regardless of the source's task history, so the frontend renders
+        the raw image instead of spinning indefinitely.
         """
-        from api.models import AsyncTask, Image, Piece, PieceState, PieceStateImage
+        from api.models import Image, Piece, PieceState, PieceStateImage
         from api.utils import captioned_image_to_dict
         from api.workflow import ENTRY_STATE
 
@@ -273,12 +274,8 @@ class TestConvertImageToJpegTask:
             url=f"https://media.example.com/images/{user.id}/orig.jpg",
             r2_key=f"images/{user.id}/orig.jpg",
         )
-        AsyncTask.objects.create(
-            user=user,
-            task_type="generate_cropped_image",
-            status=AsyncTask.Status.FAILURE,
-            input_params={"image_id": str(source_image.id), "crop": crop_def},
-        )
+        # No crop task on the source — verifies the fix does not require a source
+        # failure, since the crash may have happened before any source task ran.
         jpeg_image = Image.objects.create(
             user=user,
             url=f"https://media.example.com/images/{user.id}/jpeg.jpg",
@@ -300,8 +297,8 @@ class TestConvertImageToJpegTask:
 
         result = captioned_image_to_dict(psi)
         assert result["crop_task_failed"] is True, (
-            "crop_task_failed must be True when JPEG image has no crop tasks but "
-            "its source had failed crop tasks for the same crop"
+            "crop_task_failed must be True for a jpeg_conversion derivative with no "
+            "crop task — the source task history is irrelevant"
         )
 
 

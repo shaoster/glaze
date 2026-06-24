@@ -349,21 +349,16 @@ def _is_crop_task_failed(image_id, r2_key: str | None, crop: dict | None) -> boo
     if latest is not None:
         return latest.status == AsyncTask.Status.FAILURE
 
-    # No task for this image. If it is a jpeg_conversion derivative, check whether
-    # the source had failed crop tasks for the same crop. This catches the state
-    # left by a server crash mid-way through convert_image_to_jpeg (#999).
+    # No task for this image. Any jpeg_conversion derivative with a crop set but
+    # no crop task is an unrecoverable broken state — convert_image_to_jpeg
+    # crashed before re-enqueueing (#999). Return True regardless of what happened
+    # to the source: checking source task history would miss cases where the source
+    # had succeeded or simply had no failure record.
     try:
         image = Image.objects.only("derived_from_id", "derived_type").get(id=image_id)
     except Image.DoesNotExist:
         return False
-    if image.derived_type != "jpeg_conversion" or not image.derived_from_id:
-        return False
-    return AsyncTask.objects.filter(
-        task_type="generate_cropped_image",
-        input_params__image_id=str(image.derived_from_id),
-        input_params__crop=crop,
-        status=AsyncTask.Status.FAILURE,
-    ).exists()
+    return image.derived_type == "jpeg_conversion" and bool(image.derived_from_id)
 
 
 def captioned_image_to_dict(link) -> dict:
