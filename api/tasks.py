@@ -402,18 +402,17 @@ def convert_image_to_jpeg(task: AsyncTask) -> dict:
         .values_list("crop", flat=True)
         .distinct()
     )
-    # Redirect any existing PSI rows that reference the HEIC/AVIF/non-JPEG
-    # source to the new JPEG so they immediately serve a browser-renderable URL.
-    # Clear cropped_image so that stale crop derivatives (computed from the old
-    # EXIF-intact source) are not served after normalization (#974).
-    PieceStateImage.objects.filter(image=source_image).update(
-        image=jpeg_image, cropped_image=None
-    )
-    # Re-enqueue a crop task for each affected (jpeg_image, crop) pair so the
-    # correct derivative is materialized from the normalized JPEG pixel data.
-    for crop in crops_to_reenqueue:
-        if isinstance(crop, dict):
-            enqueue_generate_cropped_image(jpeg_image, crop, user=task.user)
+    # Redirect PSIs and enqueue crop tasks atomically so a crash between the two
+    # leaves no gap: either the PSI still points to source (failed crop tasks
+    # detectable via lineage) or both the redirect and AsyncTask rows are committed
+    # together and the thread pool submission deferred to on_commit (#999).
+    with transaction.atomic():
+        PieceStateImage.objects.filter(image=source_image).update(
+            image=jpeg_image, cropped_image=None
+        )
+        for crop in crops_to_reenqueue:
+            if isinstance(crop, dict):
+                enqueue_generate_cropped_image(jpeg_image, crop, user=task.user)
 
     return {
         "status": "success",

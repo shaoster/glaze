@@ -328,10 +328,14 @@ def _is_crop_task_failed(image_id, r2_key: str | None, crop: dict | None) -> boo
 
     Only queries when the image is R2-backed and a crop is set; non-R2 images
     and uncropped links can never have a crop task.
+
+    When no task exists for the current image, walks up the jpeg_conversion lineage
+    to detect the case where convert_image_to_jpeg redirected the PSI to a new JPEG
+    but crashed before re-enqueueing the crop task (#999).
     """
     if not r2_key or not image_id or not crop:
         return False
-    from .models import AsyncTask
+    from .models import AsyncTask, Image
 
     latest = (
         AsyncTask.objects.filter(
@@ -342,7 +346,19 @@ def _is_crop_task_failed(image_id, r2_key: str | None, crop: dict | None) -> boo
         .order_by("-created")
         .first()
     )
-    return latest is not None and latest.status == AsyncTask.Status.FAILURE
+    if latest is not None:
+        return latest.status == AsyncTask.Status.FAILURE
+
+    # No task for this image. Any jpeg_conversion derivative with a crop set but
+    # no crop task is an unrecoverable broken state — convert_image_to_jpeg
+    # crashed before re-enqueueing (#999). Return True regardless of what happened
+    # to the source: checking source task history would miss cases where the source
+    # had succeeded or simply had no failure record.
+    try:
+        image = Image.objects.only("derived_from_id", "derived_type").get(id=image_id)
+    except Image.DoesNotExist:
+        return False
+    return image.derived_type == "jpeg_conversion" and bool(image.derived_from_id)
 
 
 def captioned_image_to_dict(link) -> dict:

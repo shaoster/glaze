@@ -254,6 +254,53 @@ class TestConvertImageToJpegTask:
             input_params__crop=crop_def,
         ).exists(), "generate_cropped_image task must be enqueued for the new JPEG"
 
+    def test_crop_task_failed_when_jpeg_has_no_task_but_source_failed(self, user):
+        """Regression for #999: stuck JPEG PSI must surface crop_task_failed=True.
+
+        When convert_image_to_jpeg redirects a PSI to a new JPEG image but crashes
+        before re-enqueueing the crop task, the JPEG image has zero AsyncTask records.
+        _is_crop_task_failed must detect this via the jpeg_conversion lineage and
+        return True regardless of the source's task history, so the frontend renders
+        the raw image instead of spinning indefinitely.
+        """
+        from api.models import Image, Piece, PieceState, PieceStateImage
+        from api.utils import captioned_image_to_dict
+        from api.workflow import ENTRY_STATE
+
+        crop_def = {"x": 0.1, "y": 0.2, "width": 0.6, "height": 0.5}
+
+        source_image = Image.objects.create(
+            user=user,
+            url=f"https://media.example.com/images/{user.id}/orig.jpg",
+            r2_key=f"images/{user.id}/orig.jpg",
+        )
+        # No crop task on the source — verifies the fix does not require a source
+        # failure, since the crash may have happened before any source task ran.
+        jpeg_image = Image.objects.create(
+            user=user,
+            url=f"https://media.example.com/images/{user.id}/jpeg.jpg",
+            r2_key=f"images/{user.id}/jpeg.jpg",
+            derived_from=source_image,
+            derived_type="jpeg_conversion",
+        )
+        piece = Piece.objects.create(user=user, name="Test", is_editable=True)
+        state = PieceState.objects.create(
+            piece=piece, user=user, state=ENTRY_STATE, order=1
+        )
+        psi = PieceStateImage.objects.create(
+            piece_state=state,
+            image=jpeg_image,
+            crop=crop_def,
+            cropped_image=None,
+            order=0,
+        )
+
+        result = captioned_image_to_dict(psi)
+        assert result["crop_task_failed"] is True, (
+            "crop_task_failed must be True for a jpeg_conversion derivative with no "
+            "crop task — the source task history is irrelevant"
+        )
+
 
 # ---------------------------------------------------------------------------
 # POST /api/uploads/r2/convert-image/
