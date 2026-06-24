@@ -123,7 +123,7 @@ def configure_otel() -> bool:
     )
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.metrics.view import View
+    from opentelemetry.sdk.metrics.view import DropAggregation, View
 
     metric_exporter = OTLPMetricExporter(
         endpoint=os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"),
@@ -146,6 +146,10 @@ def configure_otel() -> bool:
             ),
             # Active-requests gauge is only queried as a scalar sum — no per-label breakdown needed.
             View(instrument_name="http.server.active_requests", attribute_keys=set()),
+            # Drop everything else (psycopg db.client.*, redis, and any future
+            # auto-instrumentation) — views are first-match-wins, so the two
+            # HTTP entries above are preserved.
+            View(instrument_name="*", aggregation=DropAggregation()),
         ],
     )
     metrics.set_meter_provider(meter_provider)
