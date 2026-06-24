@@ -49,6 +49,10 @@
     "**/node_modules/**": true,
     "**/data/**": true,
     "**/dist/**": true,
-    "**bazel-out/**": true
-  }
+    "**bazel-out/**": true,
+    "**/.agent-worktrees/**": true
+  },
+  "git.additionalRepositories": [
+    ".agent-worktrees"
+  ]
 }
