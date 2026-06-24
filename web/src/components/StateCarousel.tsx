@@ -18,6 +18,7 @@ import { useRef, useState, useEffect, useLayoutEffect } from "react";
 import type { PieceDetail as PieceDetailType, PieceState } from "../util/types";
 import {
   formatState,
+  formatPastState,
   getStateDescription,
   isTerminalState,
   SUCCESSORS,
@@ -223,7 +224,7 @@ export default function StateCarousel({
 
   const initialIdx = rewindedStateId
     ? Math.max(0, statesHistory.findIndex((ps) => ps.id === rewindedStateId))
-    : currentIdx;
+    : Math.max(0, currentIdx);
 
   const [activeIdx, setActiveIdx] = useState(initialIdx);
   const [dragging, setDragging]   = useState(false);
@@ -245,7 +246,7 @@ export default function StateCarousel({
     if (!mountedRef.current) return;
     const targetIdx = rewindedStateId
       ? Math.max(0, statesHistory.findIndex((ps) => ps.id === rewindedStateId))
-      : currentIdx;
+      : Math.max(0, currentIdx);
     const rail   = railRef.current;
     const target = cardRefs.current[targetIdx];
     if (rail && target) {
@@ -380,8 +381,8 @@ export default function StateCarousel({
               <Box sx={{ display: "flex", justifyContent: "flex-start", alignItems: "center", minWidth: 0 }}>
                 {prev ? (
                   isCurrent
-                    ? <PrevPill label={formatState(prev.state)} onClick={() => goTo(i - 1)} />
-                    : <PrevFullPill label={formatState(prev.state)} onClick={() => goTo(i - 1)} />
+                    ? <PrevPill label={formatPastState(prev.state)} onClick={() => goTo(i - 1)} />
+                    : <PrevFullPill label={formatPastState(prev.state)} onClick={() => goTo(i - 1)} />
                 ) : (
                   <Typography variant="caption" sx={{ color: TEXT_MUTE, opacity: 0.5, fontSize: 10 }}>
                     start
@@ -393,7 +394,7 @@ export default function StateCarousel({
               <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5, py: 0.5 }}>
                 <StateChip
                   state={ps.state}
-                  label={formatState(ps.state)}
+                  label={isCurrent ? formatState(ps.state) : formatPastState(ps.state)}
                   description={
                     isCurrent
                       ? "Click to return to current state"
@@ -458,7 +459,7 @@ export default function StateCarousel({
               ) : (
                 <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", minWidth: 0 }}>
                   {next ? (
-                    <NextPill label={formatState(next.state)} onClick={() => goTo(i + 1)} />
+                    <NextPill label={i + 1 === effCurrentIdx ? formatState(next.state) : formatPastState(next.state)} onClick={() => goTo(i + 1)} />
                   ) : (
                     <Typography variant="caption" sx={{ color: TEXT_MUTE, opacity: 0.5, fontSize: 10 }}>
                       end
@@ -495,7 +496,7 @@ export default function StateCarousel({
             key={ps.id ?? i}
             component="button"
             onClick={() => goTo(i)}
-            aria-label={`Jump to ${formatState(ps.state)}`}
+            aria-label={`Jump to ${i === effectiveHistory.length - 1 ? formatState(ps.state) : formatPastState(ps.state)}`}
             sx={{
               width: i === activeIdx ? 18 : 6,
               height: 6,
