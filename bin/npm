@@ -3,6 +3,15 @@ set -euo pipefail
 
 : "${GLAZE_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
+# Put the Bazel-managed Node binary on PATH so native addon build scripts
+# (node-gyp, prebuild-install) can find `node` when npm spawns subshells.
+_ob="$(cd "$GLAZE_ROOT" && bazel info output_base 2>/dev/null || true)"
+if [[ -n "$_ob" ]]; then
+    _nb="$_ob/external/rules_nodejs++node+nodejs_linux_amd64/bin/nodejs/bin"
+    [[ -d "$_nb" ]] && export PATH="$_nb:$PATH"
+fi
+unset _ob _nb
+
 if command -v rtk >/dev/null 2>&1; then
     exec rtk bazel run @nodejs_linux_amd64//:npm -- "$@"
 fi
