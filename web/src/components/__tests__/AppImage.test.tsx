@@ -128,6 +128,22 @@ describe("AppImage", () => {
     expect(screen.getByTestId("app-image")).toHaveAttribute("src", CROPPED_URL);
   });
 
+  it("thumbnail context: img has cover sizing by default", () => {
+    render(
+      <AppImage url={ORIGINAL_URL} context="thumbnail" data-testid="app-image" />,
+    );
+    const img = screen.getByTestId("app-image");
+    expect(img).toHaveStyle({ width: "64px", height: "64px", objectFit: "cover" });
+  });
+
+  it("gallery context: img fills container by default", () => {
+    render(
+      <AppImage url={ORIGINAL_URL} context="gallery" data-testid="app-image" />,
+    );
+    const img = screen.getByTestId("app-image");
+    expect(img).toHaveStyle({ width: "100%", height: "100%", objectFit: "cover" });
+  });
+
   it("clears the loading spinner once the image load event fires", () => {
     const onLoad = vi.fn();
     render(

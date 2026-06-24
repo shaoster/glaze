@@ -191,7 +191,15 @@ function AppImageRenderer({
     pointerEvents: "none",
   };
 
+  const contextImageStyle: React.CSSProperties =
+    context === "lightbox"
+      ? { maxWidth: "90vw", maxHeight: "80vh", objectFit: "contain" }
+      : context === "gallery" || context === "detail"
+        ? { width: "100%", height: "100%", objectFit: "cover" }
+        : { width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE, objectFit: "cover" };
+
   const imageStyle: React.CSSProperties = {
+    ...contextImageStyle,
     ...style,
     opacity: isLoading ? 0 : 1,
   };
