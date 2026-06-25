@@ -8,12 +8,14 @@ Bearer-token requests (Authorization: Bearer …) are CSRF-exempt because the
 token itself is the credential and CSRF cannot be exploited without a session
 cookie. Session-authenticated mutation requests (POST without a Bearer header)
 have CSRF enforced manually so that browser callers cannot perform cross-site
-writes. Read-only queries (GET or any request that isn't a mutation) are safe
-regardless of CSRF status, but we check for any POST without a Bearer header
-for simplicity.
+writes. Read-only queries are exempt even without a CSRF token — GraphQL queries
+cannot change state and the same-origin policy prevents cross-site reads.
 """
 
 from __future__ import annotations
+
+import json
+import re
 
 from django.conf import settings
 from django.middleware.csrf import CsrfViewMiddleware
@@ -23,15 +25,33 @@ from strawberry.django.views import GraphQLView
 from .schema import schema
 
 _csrf_middleware = CsrfViewMiddleware(lambda request: None)  # type: ignore[arg-type]
+# Match "mutation" as the first operation keyword in a GraphQL document
+# (ignoring leading whitespace and inline comments).
+_MUTATION_RE = re.compile(r"(?:^|\s)mutation\b", re.IGNORECASE)
+
+
+def _request_is_mutation(request) -> bool:
+    """Return True if the request body appears to contain a GraphQL mutation."""
+    try:
+        body = json.loads(request.body or b"{}")
+        query = body.get("query", "")
+        # Strip line comments before checking; anonymous shorthand mutations
+        # are rare but possible (e.g. ``{ createPiece(...) { id } }``).
+        stripped = re.sub(r"#[^\n]*", "", query)
+        return bool(_MUTATION_RE.search(stripped))
+    except Exception:
+        # Unreadable body — default to enforcing CSRF so we don't accidentally
+        # skip the check for a mutation.
+        return True
 
 
 class _GlazeGraphQLView(GraphQLView):
-    """GraphQL view that enforces CSRF for session-authenticated POST requests."""
+    """GraphQL view that enforces CSRF only for session-authenticated mutations."""
 
     def dispatch(self, request, *args, **kwargs):
         # Bearer-token requests are CSRF-exempt (the token itself proves intent).
         has_bearer = request.META.get("HTTP_AUTHORIZATION", "").startswith("Bearer ")
-        if request.method == "POST" and not has_bearer:
+        if request.method == "POST" and not has_bearer and _request_is_mutation(request):
             reason = _csrf_middleware.process_view(request, None, (), {})  # type: ignore[arg-type]
             if reason is not None:
                 # CSRF check failed — return the 403 response Django produced.
