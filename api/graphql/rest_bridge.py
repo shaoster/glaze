@@ -399,6 +399,10 @@ def _extract_piece_patch_vars(request, kwargs: dict) -> dict:
         vars["tags"] = int_tags
     if "current_location" in data:
         vars["currentLocation"] = data["current_location"]
+    if "showcase_story" in data:
+        vars["showcaseStory"] = data["showcase_story"]
+    if "showcase_fields" in data:
+        vars["showcaseFields"] = data["showcase_fields"]
     return vars
 
 
@@ -458,8 +462,8 @@ def _extract_pieces_list_vars(request) -> dict:
 PIECES_CREATE = RestRoute(
     method="POST",
     graphql_op=_PIECE_DETAIL_FRAGMENT + """
-mutation CreatePiece($name: String!, $notes: String, $currentLocation: String) {
-  createPiece(input: { name: $name, notes: $notes, currentLocation: $currentLocation }) {
+mutation CreatePiece($name: String!, $notes: String, $thumbnail: String, $currentLocation: String) {
+  createPiece(input: { name: $name, notes: $notes, thumbnail: $thumbnail, currentLocation: $currentLocation }) {
     ...PieceDetail
   }
 }
@@ -468,6 +472,7 @@ mutation CreatePiece($name: String!, $notes: String, $currentLocation: String) {
     extract_vars=lambda request, kwargs: {
         "name": request.data.get("name", ""),
         "notes": request.data.get("notes", ""),
+        "thumbnail": request.data.get("thumbnail"),
         "currentLocation": request.data.get("current_location"),
     },
     success_status=201,
@@ -492,8 +497,8 @@ query PieceDetail($id: ID!) {
 PIECE_DETAIL_PATCH = RestRoute(
     method="PATCH",
     graphql_op=_PIECE_DETAIL_FRAGMENT + """
-mutation UpdatePiece($id: ID!, $name: String, $shared: Boolean, $isEditable: Boolean, $thumbnail: JSON, $tags: [Int!], $currentLocation: String) {
-  updatePiece(id: $id, input: { name: $name, shared: $shared, isEditable: $isEditable, thumbnail: $thumbnail, tags: $tags, currentLocation: $currentLocation }) {
+mutation UpdatePiece($id: ID!, $name: String, $shared: Boolean, $isEditable: Boolean, $thumbnail: JSON, $tags: [Int!], $currentLocation: String, $showcaseStory: String, $showcaseFields: JSON) {
+  updatePiece(id: $id, input: { name: $name, shared: $shared, isEditable: $isEditable, thumbnail: $thumbnail, tags: $tags, currentLocation: $currentLocation, showcaseStory: $showcaseStory, showcaseFields: $showcaseFields }) {
     ...PieceDetail
   }
 }

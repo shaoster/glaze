@@ -96,7 +96,11 @@ class Mutation:
         _require_auth(info)
         try:
             data = resolve_create_piece(
-                input.name, input.notes, info.context.request, input.current_location
+                input.name,
+                input.notes,
+                info.context.request,
+                input.current_location,
+                input.thumbnail,
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
@@ -120,6 +124,10 @@ class Mutation:
             payload["thumbnail"] = input.thumbnail
         if input.current_location is not strawberry.UNSET:
             payload["current_location"] = input.current_location
+        if input.showcase_story is not None:
+            payload["showcase_story"] = input.showcase_story
+        if input.showcase_fields is not None:
+            payload["showcase_fields"] = input.showcase_fields
         try:
             data = resolve_update_piece(str(id), payload, info.context.request)
         except (Http404, PermissionDenied, ValidationError) as exc:

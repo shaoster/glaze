@@ -29,11 +29,19 @@ def resolve_piece_detail(piece_id: str, request) -> dict:
     return serialize_piece_detail(piece, request)
 
 
-def resolve_create_piece(name: str, notes: str, request, current_location: str | None = None) -> dict:
+def resolve_create_piece(
+    name: str,
+    notes: str,
+    request,
+    current_location: str | None = None,
+    thumbnail: str | None = None,
+) -> dict:
     """Creates piece in entry state, returns serialized PieceDetail dict."""
     data: dict = {"name": name, "notes": notes}
     if current_location is not None:
         data["current_location"] = current_location
+    if thumbnail is not None:
+        data["thumbnail"] = thumbnail
     serializer = PieceCreateSerializer(
         data=data,
         context={"request": request},

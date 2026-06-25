@@ -313,6 +313,10 @@ class ImageCropInput:
 class CreatePieceInput:
     name: str = strawberry.field(description="Name for the new piece.")
     notes: str = strawberry.field(default="", description="Optional notes.")
+    thumbnail: str | None = strawberry.field(
+        default=None,
+        description="Initial thumbnail URL (e.g. a curated SVG). Null for no thumbnail.",
+    )
     current_location: str | None = strawberry.field(
         default=None,
         description="Initial location name, or null for no location.",
@@ -335,6 +339,14 @@ class UpdatePieceInput:
     current_location: str | None = strawberry.field(
         default=strawberry.UNSET,
         description="Location name to set, empty string or null to clear, or omit to leave unchanged.",
+    )
+    showcase_story: str | None = strawberry.field(
+        default=None,
+        description="Free-text story for the public showcase page. Null to leave unchanged.",
+    )
+    showcase_fields: JSON | None = strawberry.field(
+        default=None,
+        description="Ordered list of field names for the showcase page. Null to leave unchanged.",
     )
 
 
