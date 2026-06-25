@@ -197,8 +197,9 @@ _PIECE_DETAIL_FRAGMENT = """
 fragment PieceDetail on PieceDetailType {
   id name shared isEditable canEdit notes
   created lastModified photoCount currentLocation
-  showcaseVideoUrl ownerAlias
+  showcaseStory showcaseFields showcaseVideoUrl ownerAlias
   currentState { state }
+  currentStateFull
   thumbnail { url imageId width height crop { x y width height } croppedUrl r2Key cropTaskFailed }
   tags { id name color }
   history: states
@@ -226,13 +227,17 @@ def _enrich_piece_detail(body: Any) -> Any:
 
     The GraphQL ``PieceDetailType.currentState`` only carries ``{state}``, but
     REST clients expect the full PieceState dict (notes, custom_fields, images,
-    etc.).  The ``history`` field already contains the full PieceState
-    serializations via the JSON scalar passthrough (snake_case-converted).
+    etc.).  The ``history`` field contains the full PieceState serializations
+    via the JSON scalar passthrough (snake_case-converted).
 
     We reconstruct ``current_state`` from history: the partial ``{state: name}``
     from GraphQL tells us which state name to look for; we take the last history
-    entry with that state name (i.e. the most recently added one, since history
-    is ordered oldest-first by the serializer).
+    entry with that state name.
+
+    When ``exclude_history=true`` is in the request, ``history`` is ``[]`` but
+    ``currentStateFull`` carries the full current state as a dedicated scalar.
+    We use that as a fallback and then strip it from the final response so that
+    the REST contract (``history: []``) is preserved.
     """
     if not isinstance(body, dict):
         return body
@@ -249,6 +254,12 @@ def _enrich_piece_detail(body: Any) -> Any:
             body["current_state"] = history[-1]
     elif history:
         body["current_state"] = history[-1]
+    elif body.get("current_state_full"):
+        # exclude_history=true: history is [] but the full current state is
+        # available via the dedicated currentStateFull scalar.
+        body["current_state"] = body["current_state_full"]
+    # Remove the bridge-internal field; it is not part of the REST contract.
+    body.pop("current_state_full", None)
     return body
 
 
@@ -313,6 +324,16 @@ def _piece_detail_patch_schema() -> dict:
         "operation_id": "pieces_partial_update",
         "request": PieceUpdateSerializer,
         "responses": {200: PieceDetailSerializer},
+    }
+
+
+def _glaze_combination_images_schema() -> dict:
+    from api.serializers import GlazeCombinationImageEntrySerializer
+
+    return {
+        "methods": ["GET"],
+        "operation_id": "analysis_glaze_combination_images_list",
+        "responses": {200: GlazeCombinationImageEntrySerializer(many=True)},
     }
 
 
@@ -385,11 +406,12 @@ def _extract_pieces_list_vars(request) -> dict:
     qp = request.query_params
     vars: dict[str, Any] = {}
 
-    # Limit / offset
+    # Limit / offset — preserve the REST contract default page size of 16.
+    from api.piece.helpers import _DEFAULT_PAGE_SIZE
     try:
-        vars["limit"] = max(1, min(100, int(qp.get("limit", 20))))
+        vars["limit"] = max(1, min(100, int(qp.get("limit", _DEFAULT_PAGE_SIZE))))
     except (ValueError, TypeError):
-        vars["limit"] = 20
+        vars["limit"] = _DEFAULT_PAGE_SIZE
     try:
         vars["offset"] = max(0, int(qp.get("offset", 0)))
     except (ValueError, TypeError):
@@ -812,3 +834,4 @@ PIECES_LIST.extend_schema_kwargs.update(_pieces_list_schema())
 PIECES_CREATE.extend_schema_kwargs.update(_pieces_create_schema())
 PIECE_DETAIL_GET.extend_schema_kwargs.update(_piece_detail_get_schema())
 PIECE_DETAIL_PATCH.extend_schema_kwargs.update(_piece_detail_patch_schema())
+GLAZE_COMBINATION_IMAGES_GET.extend_schema_kwargs.update(_glaze_combination_images_schema())
