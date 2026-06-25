@@ -69,20 +69,28 @@ def resolve_crop_image(
     return serialize_piece_detail(piece, request)
 
 
-def resolve_move_image(image_id: str, target_state_id: str, request) -> dict:
+def resolve_move_image(
+    image_id: str,
+    target_state_id: str,
+    request,
+    source_state_id: str | None = None,
+) -> dict:
     """Move a user-owned image to a different piece state atomically."""
     image = get_object_or_404(Image, pk=image_id, user=request.user)
     serializer = PieceImageMoveSerializer(data={"piece_state_id": target_state_id})
     serializer.is_valid(raise_exception=True)
     validated_target = serializer.validated_data.get("piece_state_id")
 
-    # Find the PieceStateImage link for this image belonging to the user.
-    link = (
+    # Find the PieceStateImage link. When source_state_id is provided (REST bridge
+    # passes the URL path param) we pin to that specific link to avoid ambiguity
+    # when the same Image appears in multiple states.
+    qs = (
         PieceStateImage.objects.select_related("piece_state__piece")
         .filter(image=image, piece_state__piece__user=request.user)
-        .order_by("-id")
-        .first()
     )
+    if source_state_id:
+        qs = qs.filter(piece_state_id=source_state_id)
+    link = qs.order_by("-id").first()
     if link is None:
         raise Http404
 

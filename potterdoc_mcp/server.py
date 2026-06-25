@@ -264,8 +264,9 @@ async def upload_piece_image(
         url: Public HTTPS URL of the image (max 10 MB).
         caption: Optional caption for the image.
 
-    Returns the created PieceStateImage object and background task IDs for
-    async JPEG conversion.
+    Returns the updated piece detail. The uploaded image appears as the last
+    entry in ``result["states"][-1]["images"]``; pass its ``image_id`` to
+    ``crop_piece_image``.
     """
     return await _get_client(ctx).upload_piece_image(
         piece_id=piece_id,

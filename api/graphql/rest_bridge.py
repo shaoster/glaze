@@ -685,8 +685,8 @@ mutation UploadImageFromRefsToPastState($pieceId: ID!, $stateId: ID!, $r2Keys: [
 IMAGE_MOVE = RestRoute(
     method="PATCH",
     graphql_op=_PIECE_DETAIL_FRAGMENT + """
-mutation MoveImage($imageId: ID!, $targetStateId: ID!) {
-  moveImage(imageId: $imageId, targetStateId: $targetStateId) {
+mutation MoveImage($imageId: ID!, $targetStateId: ID!, $sourceStateId: ID) {
+  moveImage(imageId: $imageId, targetStateId: $targetStateId, sourceStateId: $sourceStateId) {
     ...PieceDetail
   }
 }
@@ -694,7 +694,8 @@ mutation MoveImage($imageId: ID!, $targetStateId: ID!) {
     data_key="moveImage",
     extract_vars=lambda request, kwargs: {
         "imageId": str(kwargs["image_id"]),
-        "targetStateId": str(request.data.get("piece_state_id", kwargs.get("piece_state_id", ""))),
+        "targetStateId": str(request.data.get("piece_state_id") or kwargs.get("piece_state_id", "")),
+        "sourceStateId": str(kwargs["piece_state_id"]),
     },
     success_status=200,
     post_process=_enrich_piece_detail,

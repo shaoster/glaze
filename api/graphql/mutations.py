@@ -243,12 +243,16 @@ class Mutation:
         info: strawberry.Info,
         image_id: strawberry.ID,
         target_state_id: strawberry.ID,
+        source_state_id: strawberry.ID | None = None,
     ) -> PieceDetailType:
         user = _require_auth(info)
         info.context.request.user = user
         try:
             data = resolve_move_image(
-                str(image_id), str(target_state_id), info.context.request
+                str(image_id),
+                str(target_state_id),
+                info.context.request,
+                source_state_id=str(source_state_id) if source_state_id else None,
             )
         except (Http404, PermissionDenied, ValidationError) as exc:
             raise _map_error(exc)
