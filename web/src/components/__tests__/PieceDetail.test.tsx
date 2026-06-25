@@ -730,7 +730,7 @@ describe("PieceDetail", () => {
     await renderPieceDetail(piece);
     // Past state chip is always visible in the carousel (clickable to enter rewind)
     expect(
-      screen.getByRole("button", { name: "Designing" }),
+      screen.getByRole("button", { name: "Designed" }),
     ).toBeInTheDocument();
   });
 
@@ -753,7 +753,7 @@ describe("PieceDetail", () => {
     });
     await renderPieceDetail(piece);
     // Carousel renders all cards immediately — no toggle required
-    expect(screen.getByRole("button", { name: "Designing" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Designed" })).toBeInTheDocument();
   });
 
   it("no past state chips for single-state piece", async () => {
@@ -1115,8 +1115,8 @@ describe("PieceDetail", () => {
 
       await renderPieceDetail(piece);
 
-      // Click the past "Designing" chip in the carousel to enter rewind mode
-      fireEvent.click(screen.getByRole("button", { name: "Designing" }));
+      // Click the past "Designed" chip in the carousel to enter rewind mode
+      fireEvent.click(screen.getByRole("button", { name: "Designed" }));
 
       expect(screen.getByText(/viewing: designing/i)).toBeInTheDocument();
 
@@ -1145,8 +1145,8 @@ describe("PieceDetail", () => {
 
       await renderPieceDetail(piece, onPieceUpdated);
 
-      // Enter rewind mode by clicking the past "Designing" chip in the carousel
-      fireEvent.click(screen.getByRole("button", { name: "Designing" }));
+      // Enter rewind mode by clicking the past "Designed" chip in the carousel
+      fireEvent.click(screen.getByRole("button", { name: "Designed" }));
 
       // The historical Notes input appears in the rewind editor below the carousel
       const notesInput = screen.getByLabelText("Notes");
