@@ -667,6 +667,17 @@ js_library(
 )
 
 js_library(
+    name = "state_carousel_src",
+    srcs = ["src/components/StateCarousel.tsx"],
+    deps = [
+        ":node_modules",
+        ":piece_history_src",
+        ":primitive_src",
+        ":util_lib",
+    ],
+)
+
+js_library(
     name = "piece_history_src",
     srcs = ["src/components/PieceHistory.tsx"],
     deps = [
@@ -747,7 +758,7 @@ js_library(
         ":primitive_src",
         ":process_summary_src",
         ":routing_src",
-        ":state_transition_src",
+        ":state_carousel_src",
         ":tag_manager_src",
         ":util_lib",
         ":workflow_state_src",

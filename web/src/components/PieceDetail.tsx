@@ -15,7 +15,6 @@ import {
   Alert,
   alpha,
   Box,
-  Chip,
   Collapse,
   Divider,
   Button,
@@ -25,7 +24,6 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import HistoryIcon from "@mui/icons-material/History";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useBlocker, useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
@@ -48,8 +46,7 @@ import AppImage from "./AppImage";
 import NavigationBlocker from "./NavigationBlocker";
 import WorkflowState from "./WorkflowState";
 import TagManager from "./TagManager";
-import StateTransition from "./StateTransition";
-import PieceHistory from "./PieceHistory";
+import StateCarousel from "./StateCarousel";
 import ProcessSummary from "./ProcessSummary";
 import PiecePhotoGallery, {
   PiecePhotoGalleryButton,
@@ -281,7 +278,7 @@ function PieceDetailContent({
           }}
         >
           {/* Left column (desktop) / bottom (mobile): title + tags + states */}
-          <Box sx={{ pt: { xs: 1.75, md: 0 }, pb: 0.5, gridArea: "info" }}>
+          <Box sx={{ pt: { xs: 1.75, md: 0 }, pb: 0.5, gridArea: "info", minWidth: 0 }}>
             <Typography
               variant="caption"
               sx={{
@@ -308,24 +305,24 @@ function PieceDetailContent({
                 onCloseTagDialog={tagsRouting.onCloseTagDialog}
               />
             ) : null}
-            {canEdit && (
-              <Box sx={{ mt: 2, mb: 1.5 }}>
-                <StateTransition
-                  currentStateName={currentState.state}
-                  disabled={hasSaveError || piece.is_editable}
-                  disabledHint={
-                    piece.is_editable
-                      ? "Seal edit mode before transitioning to a new state."
-                      : hasSaveError
-                        ? "Auto-save failed. Your changes may not be saved."
-                        : undefined
-                  }
-                  transitioning={transitioning}
-                  transitionError={transitionError}
-                  onTransition={handleTransition}
-                />
-              </Box>
-            )}
+            <Box sx={{ mt: 2, mb: 1.5 }}>
+              <StateCarousel
+                statesHistory={statesHistory}
+                piece={piece}
+                onPieceUpdated={onPieceUpdated}
+                rewindedStateId={rewindedStateId}
+                onRewind={(id) =>
+                  id ? historyRouting.onRewind(id) : historyRouting.onClearRewind()
+                }
+                historyLoading={historyLoading}
+                historyError={historyError}
+                refetchHistory={refetchHistory}
+                onTransition={handleTransition}
+                transitioning={transitioning}
+                transitionError={transitionError}
+                hasSaveError={hasSaveError}
+              />
+            </Box>
             {canEdit && isTerminal && (
               <Box sx={{ mb: 1.5 }}>
                 <ShareControls piece={piece} onPieceUpdated={onPieceUpdated} />
@@ -349,7 +346,6 @@ function PieceDetailContent({
               </Box>
             )}
             <Box sx={{ mb: 1.5 }}>
-              <SectionCard>
                 <RoutedGlobalEntryField
                   pieceId={piece.id}
                   fieldName="current_location"
@@ -367,7 +363,6 @@ function PieceDetailContent({
                     {locationError}
                   </Typography>
                 )}
-              </SectionCard>
             </Box>
           </Box>
 
@@ -451,21 +446,6 @@ function PieceDetailContent({
 
         {rewindedState ? (
           <SectionCard>
-            <Box sx={{ mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
-              <Chip
-                icon={<HistoryIcon fontSize="small" />}
-                label={`Rewound to: ${formatState(rewindedState.state)}`}
-                color="primary"
-                variant="outlined"
-                size="small"
-                onDelete={historyRouting.onClearRewind}
-              />
-              <Typography variant="caption" color="text.secondary">
-                {piece.is_editable
-                  ? "Editing historical state — later states greyed out in timeline"
-                  : "Viewing historical state — read-only"}
-              </Typography>
-            </Box>
             <WorkflowState
               key={rewindedState.id}
               initialPieceState={rewindedState}
@@ -540,42 +520,6 @@ function PieceDetailContent({
           </SectionCard>
         </Box>
 
-        <SectionCard
-          title="Timeline"
-          subtitle={
-            historyError
-              ? "Error loading history"
-              : historyLoading
-              ? "Loading history..."
-              : `${pastHistory.length} completed state${pastHistory.length === 1 ? "" : "s"}`
-          }
-        >
-          {historyError ? (
-            <Box sx={{ py: 2, textAlign: "center" }}>
-              <Typography variant="body2" color="error" sx={{ mb: 1.5 }}>
-                Failed to load timeline.
-              </Typography>
-              <Button size="small" variant="outlined" onClick={refetchHistory}>
-                Retry
-              </Button>
-            </Box>
-          ) : historyLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : (
-            <PieceHistory
-              pastHistory={pastHistory}
-              piece={piece}
-              history={statesHistory}
-              onPieceUpdated={onPieceUpdated}
-              rewindedStateId={rewindedStateId}
-              onRewind={(id) =>
-                id ? historyRouting.onRewind(id) : historyRouting.onClearRewind()
-              }
-            />
-          )}
-        </SectionCard>
       </Box>
 
       {canEdit && (

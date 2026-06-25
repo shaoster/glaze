@@ -13,7 +13,10 @@ export interface StateChipProps {
   description?: string;
   variant: StateChipVariant;
   isTerminal: boolean;
+  /** Past chip highlighted as the rewind target; current chip displaced by a rewind. */
   muted?: boolean;
+  /** This chip is the actively selected rewind target (only meaningful on past chips). */
+  rewindSelected?: boolean;
   disabled?: boolean;
   onClick?: () => void;
   onHoverStart?: () => void;
@@ -37,14 +40,20 @@ export default function StateChip({
   variant,
   isTerminal,
   muted = false,
+  rewindSelected = false,
   disabled = false,
   onClick,
   onHoverStart,
   onHoverEnd,
 }: StateChipProps) {
-  const interactive = variant === "future" && !!onClick;
+  const interactive = !!onClick;
+
+  // rewindSelected past chips use the actual state color, not grey.
   const baseColor =
-    variant === "past" ? PAST_STATE_COLOR : getStateColor(state, isTerminal);
+    variant === "past" && !rewindSelected
+      ? PAST_STATE_COLOR
+      : getStateColor(state, isTerminal);
+
   const outlineColor = muted
     ? `color-mix(in oklab, ${PAST_STATE_COLOR} 55%, transparent)`
     : baseColor;
@@ -56,7 +65,9 @@ export default function StateChip({
         : `color-mix(in oklab, ${baseColor} 18%, transparent)`;
     }
     if (variant === "past") {
-      return `color-mix(in oklab, ${PAST_STATE_COLOR} 10%, transparent)`;
+      return rewindSelected
+        ? `color-mix(in oklab, ${baseColor} 16%, transparent)`
+        : `color-mix(in oklab, ${PAST_STATE_COLOR} 10%, transparent)`;
     }
     return "transparent";
   })();
@@ -68,13 +79,17 @@ export default function StateChip({
         : baseColor;
     }
     if (variant === "past") {
-      return `color-mix(in oklab, ${PAST_STATE_COLOR} 18%, white)`;
+      return rewindSelected
+        ? baseColor
+        : `color-mix(in oklab, ${PAST_STATE_COLOR} 18%, white)`;
     }
     return "transparent";
   })();
 
+  const actualStateColor = getStateColor(state, isTerminal);
+
   const chipSx: SxProps<Theme> = {
-    borderRadius: "6px",
+    borderRadius: 999,
     border: "1px solid",
     borderColor: outlineColor,
     display: "inline-flex",
@@ -88,16 +103,54 @@ export default function StateChip({
     textTransform: "none",
     whiteSpace: "nowrap",
     width: "fit-content",
+    position: "relative",
     color: muted
       ? `color-mix(in oklab, ${PAST_STATE_COLOR} 80%, black)`
       : baseColor,
     backgroundColor,
     borderStyle: variant === "future" ? "dashed" : "solid",
     fontSize: variant === "current" ? "0.85rem" : "0.8125rem",
-    boxShadow: "none",
     opacity: disabled ? 0.6 : 1,
     transition:
       "background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 180ms ease, box-shadow 180ms ease",
+
+    // Rewind-selected past chip: pulsing glow to show "you are here (in the past)".
+    ...(rewindSelected
+      ? {
+          "@keyframes rewindGlow": {
+            "0%, 100%": {
+              boxShadow: `0 0 0 1.5px ${baseColor}, 0 0 8px color-mix(in oklab, ${baseColor} 30%, transparent)`,
+            },
+            "50%": {
+              boxShadow: `0 0 0 2px ${baseColor}, 0 0 20px color-mix(in oklab, ${baseColor} 60%, transparent)`,
+            },
+          },
+          animation: "rewindGlow 2s ease-in-out infinite",
+        }
+      : { boxShadow: "none" }),
+
+    // Muted current chip: small live-dot badge at top-right to mark the real current state.
+    ...(variant === "current" && muted
+      ? {
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            top: -3,
+            right: -3,
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            backgroundColor: actualStateColor,
+            boxShadow: `0 0 5px ${actualStateColor}`,
+            "@keyframes liveDot": {
+              "0%, 100%": { opacity: 0.45, transform: "scale(0.8)" },
+              "50%": { opacity: 1, transform: "scale(1.15)" },
+            },
+            animation: "liveDot 2.2s ease-in-out infinite",
+          },
+        }
+      : {}),
+
     ...(interactive
       ? {
           "&:hover": {
@@ -130,7 +183,7 @@ export default function StateChip({
           overflow: "hidden",
           flexShrink: 0,
           transition: "background-color 120ms ease, border-color 120ms ease",
-          ...(interactive
+          ...(interactive && variant === "future"
             ? {
                 backgroundColor: "transparent",
                 "&::after": {
