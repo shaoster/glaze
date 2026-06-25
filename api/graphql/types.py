@@ -245,6 +245,13 @@ class PieceDetailType:
         default=None,
         description="Display alias of the piece owner, or null if not set.",
     )
+    showcase_story: str = strawberry.field(
+        default="",
+        description="Free-text story field displayed on the public showcase page.",
+    )
+    showcase_fields: JSON = strawberry.field(
+        description="Ordered list of field names shown on the public showcase page.",
+    )
     current_state: CurrentStateType = strawberry.field(
         description="The piece's current workflow state."
     )
@@ -254,6 +261,13 @@ class PieceDetailType:
     tags: list[TagType] = strawberry.field(description="Tags attached to this piece.")
     states: JSON = strawberry.field(
         description="Full state history as a JSON array (PieceStateSerializer output)."
+    )
+    current_state_full: JSON = strawberry.field(
+        description=(
+            "Full current state as a JSON object (PieceStateSerializer output). "
+            "Present even when states is empty (exclude_history=true). "
+            "Consumed by the REST bridge to reconstruct current_state; not exposed to clients."
+        )
     )
 
     @classmethod
@@ -273,7 +287,10 @@ class PieceDetailType:
             current_location=data.get("current_location"),
             showcase_video_url=data.get("showcase_video_url"),
             owner_alias=data.get("owner_alias"),
+            showcase_story=data.get("showcase_story") or "",
+            showcase_fields=list(data.get("showcase_fields") or []),
             current_state=CurrentStateType(state=current_state.get("state", "")),
+            current_state_full=current_state,
             thumbnail=ThumbnailType.from_dict(data.get("thumbnail")),
             tags=[TagType.from_dict(t) for t in (data.get("tags") or [])],
             states=data.get("history") or [],
