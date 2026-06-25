@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from django.db import transaction
 from django.db.models import Max
 from django.http import Http404
@@ -89,7 +91,7 @@ def resolve_move_image(
         .filter(image=image, piece_state__piece__user=request.user)
     )
     if source_state_id:
-        qs = qs.filter(piece_state_id=source_state_id)
+        qs = qs.filter(piece_state_id=uuid.UUID(source_state_id))
     link = qs.order_by("-id").first()
     if link is None:
         raise Http404
