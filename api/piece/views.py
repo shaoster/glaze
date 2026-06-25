@@ -1,4 +1,5 @@
 from django.db.models import Prefetch
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
@@ -49,6 +50,28 @@ from .helpers import (
 from .helpers import (
     state_ref_prefetches as _state_ref_prefetches,
 )
+from .resolvers import (
+    resolve_delete_past_state,
+    resolve_piece_detail,
+    resolve_update_current_state,
+    resolve_update_past_state,
+    resolve_update_piece,
+)
+
+
+def _map_exc(exc):
+    """Map resolver exceptions to HTTP responses, re-raising unknown exceptions."""
+    from django.core.exceptions import PermissionDenied
+    from rest_framework.exceptions import ValidationError
+
+    if isinstance(exc, Http404):
+        msg = str(exc) if str(exc) else "Not found."
+        return Response({"detail": msg}, status=404)
+    if isinstance(exc, PermissionDenied):
+        return Response({"detail": str(exc) or "Permission denied."}, status=403)
+    if isinstance(exc, ValidationError):
+        return Response(exc.detail, status=400)
+    raise exc
 
 
 @extend_schema(
@@ -158,23 +181,20 @@ def pieces(request: Request) -> Response:
 def piece_detail(request: Request, piece_id: str) -> Response:
     """Read, update, or delete a single piece owned by the current user."""
     if request.method == "GET":
-        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-        return Response(_serialize_piece_detail(piece, request))
+        try:
+            return Response(resolve_piece_detail(piece_id, request))
+        except Exception as exc:
+            return _map_exc(exc)
 
     if not request.user.is_authenticated:
         return Response(
             {"detail": "Authentication credentials were not provided."},
             status=status.HTTP_403_FORBIDDEN,
         )
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    if request.method == "PATCH":
-        serializer = PieceUpdateSerializer(
-            data=request.data, context={"request": request, "piece": piece}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.update(piece, serializer.validated_data)
-        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    return Response(_serialize_piece_detail(piece, request))
+    try:
+        return Response(resolve_update_piece(piece_id, dict(request.data), request))
+    except Exception as exc:
+        return _map_exc(exc)
 
 
 @extend_schema(
@@ -233,17 +253,12 @@ def piece_current_state_detail(request: Request, piece_id: str) -> Response:
 @traced
 def piece_current_state(request: Request, piece_id: str) -> Response:
     """Read or update the current workflow state for a piece."""
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    current = piece.current_state
-    if current is None:
+    try:
         return Response(
-            {"detail": "Piece has no states."}, status=status.HTTP_404_NOT_FOUND
+            resolve_update_current_state(piece_id, dict(request.data), request)
         )
-    serializer = PieceStateUpdateSerializer(current, data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.update(current, serializer.validated_data)
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    return Response(_serialize_piece_detail(piece, request))
+    except Exception as exc:
+        return _map_exc(exc)
 
 
 @extend_schema(
@@ -266,36 +281,17 @@ def piece_past_state(request: Request, piece_id: str, state_id: str) -> Response
     Returns 403 if the piece is not currently in editable mode.
     DELETE also returns 403 if the targeted state is 'designed'.
     """
-    piece = get_object_or_404(_piece_queryset(request), pk=piece_id)
-    if not piece.is_editable:
-        return Response(
-            {"detail": "Piece is not in editable mode."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-    ps = get_object_or_404(piece.states, pk=state_id)
     if request.method == "DELETE":
-        if ps.state == "designed":
-            return Response(
-                {"detail": "Cannot delete the 'designed' state."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        if piece.thumbnail:
-            state_image_urls = {img["url"] for img in ps.images}
-            if piece.thumbnail.url in state_image_urls:
-                return Response(
-                    {
-                        "detail": "Cannot delete a state that contains the current piece thumbnail."
-                    },
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-        ps.delete()
-        piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-        return Response(_serialize_piece_detail(piece, request))
-    serializer = PieceStateUpdateSerializer(ps, data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.update(ps, serializer.validated_data)
-    piece = get_object_or_404(_piece_detail_queryset(request), pk=piece_id)
-    return Response(_serialize_piece_detail(piece, request))
+        try:
+            return Response(resolve_delete_past_state(piece_id, state_id, request))
+        except Exception as exc:
+            return _map_exc(exc)
+    try:
+        return Response(
+            resolve_update_past_state(piece_id, state_id, dict(request.data), request)
+        )
+    except Exception as exc:
+        return _map_exc(exc)
 
 
 @extend_schema(

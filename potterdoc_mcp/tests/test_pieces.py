@@ -3,70 +3,47 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-import httpx
 import pytest
 from mcp.shared.exceptions import McpError
 
 from potterdoc_mcp.client import PotterDocClient
 
 
-def _mock_response(status_code: int, json_body: object) -> MagicMock:
-    resp = MagicMock(spec=httpx.Response)
-    resp.status_code = status_code
-    resp.is_success = 200 <= status_code < 300
-    resp.json.return_value = json_body
-    resp.text = ""
-    resp.reason_phrase = ""
-    return resp
-
-
 def test_list_pieces_no_filters(client: PotterDocClient) -> None:
     expected = {"count": 1, "results": [{"id": "abc", "name": "Vase"}]}
     with patch.object(
-        client._http,
-        "post",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(200, {"data": {"pieces": expected}}),
-    ) as mock_post:
+        return_value={"pieces": expected},
+    ) as mock_gql:
         result = asyncio.run(client.list_pieces())
 
     assert result == expected
-    call_kwargs = mock_post.call_args
-    body = call_kwargs.kwargs["json"]
-    assert "pieces(" in body["query"]
-    assert body["variables"]["limit"] == 20
-    assert body["variables"]["offset"] == 0
-    assert "filter" not in body["variables"]
+    call_args = mock_gql.call_args
+    query, variables = call_args.args
+    assert "pieces(" in query
+    assert variables["limit"] == 20
+    assert variables["offset"] == 0
+    assert "filter" not in variables
 
 
 def test_list_pieces_with_search(client: PotterDocClient) -> None:
     expected = {"count": 0, "results": []}
     with patch.object(
-        client._http,
-        "post",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(200, {"data": {"pieces": expected}}),
-    ) as mock_post:
+        return_value={"pieces": expected},
+    ) as mock_gql:
         result = asyncio.run(client.list_pieces(search="bowl", limit=5))
 
     assert result == expected
-    body = mock_post.call_args.kwargs["json"]
-    assert body["variables"]["filter"]["search"] == "bowl"
-    assert body["variables"]["limit"] == 5
-
-
-def test_list_pieces_api_error_raises_mcp_error(client: PotterDocClient) -> None:
-    with patch.object(
-        client._http,
-        "post",
-        new_callable=AsyncMock,
-        return_value=_mock_response(401, {"detail": "unauthorized"}),
-    ):
-        with pytest.raises(McpError) as exc_info:
-            asyncio.run(client.list_pieces())
-    assert "401" in str(exc_info.value)
+    _, variables = mock_gql.call_args.args
+    assert variables["filter"]["search"] == "bowl"
+    assert variables["limit"] == 5
 
 
 def test_list_pieces_graphql_error_raises_mcp_error(client: PotterDocClient) -> None:
@@ -74,53 +51,83 @@ def test_list_pieces_graphql_error_raises_mcp_error(client: PotterDocClient) -> 
         client._http,
         "post",
         new_callable=AsyncMock,
-        return_value=_mock_response(
-            200, {"errors": [{"message": "some graphql error"}]}
-        ),
-    ):
+    ) as mock_post:
+        from unittest.mock import MagicMock
+
+        import httpx
+
+        resp = MagicMock(spec=httpx.Response)
+        resp.status_code = 401
+        resp.is_success = False
+        resp.json.return_value = {"detail": "unauthorized"}
+        resp.text = ""
+        resp.reason_phrase = ""
+        mock_post.return_value = resp
+        with pytest.raises(McpError) as exc_info:
+            asyncio.run(client.list_pieces())
+    assert "401" in str(exc_info.value)
+
+
+def test_list_pieces_gql_error_in_body_raises_mcp_error(
+    client: PotterDocClient,
+) -> None:
+    with patch.object(
+        client._http,
+        "post",
+        new_callable=AsyncMock,
+    ) as mock_post:
+        from unittest.mock import MagicMock
+
+        import httpx
+
+        resp = MagicMock(spec=httpx.Response)
+        resp.status_code = 200
+        resp.is_success = True
+        resp.json.return_value = {"errors": [{"message": "some graphql error"}]}
+        resp.text = ""
+        resp.reason_phrase = ""
+        mock_post.return_value = resp
         with pytest.raises(McpError) as exc_info:
             asyncio.run(client.list_pieces())
     assert "GraphQL" in str(exc_info.value)
 
 
 def test_get_piece(client: PotterDocClient) -> None:
-    piece = {"id": "abc", "name": "Bowl"}
+    piece = {"id": "abc", "name": "Bowl", "states": []}
     with patch.object(
-        client._http,
-        "get",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(200, piece),
-    ) as mock_get:
+        return_value={"piece": piece},
+    ):
         result = asyncio.run(client.get_piece("abc"))
 
     assert result == piece
-    mock_get.assert_called_once_with("/api/pieces/abc/")
 
 
 def test_get_piece_not_found(client: PotterDocClient) -> None:
     with patch.object(
-        client._http,
-        "get",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(404, {"detail": "Not found."}),
+        return_value={"piece": None},
     ):
         with pytest.raises(McpError) as exc_info:
             asyncio.run(client.get_piece("nonexistent"))
-    assert "404" in str(exc_info.value)
+    assert "not found" in str(exc_info.value).lower()
 
 
 def test_create_piece(client: PotterDocClient) -> None:
-    piece = {"id": "xyz", "name": "Mug", "notes": "handles"}
+    piece = {"id": "xyz", "name": "Mug", "currentState": {"state": "designed"}}
     with patch.object(
-        client._http,
-        "post",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(201, piece),
-    ) as mock_post:
+        return_value={"createPiece": piece},
+    ) as mock_gql:
         result = asyncio.run(client.create_piece(name="Mug", notes="handles"))
 
     assert result == piece
-    body = mock_post.call_args.kwargs["json"]
-    assert body["name"] == "Mug"
-    assert body["notes"] == "handles"
-    mock_post.assert_called_once_with("/api/pieces/", json=body)
+    _, variables = mock_gql.call_args.args
+    assert variables["input"]["name"] == "Mug"
+    assert variables["input"]["notes"] == "handles"

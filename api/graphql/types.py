@@ -9,7 +9,7 @@ re-deriving field logic.
 from __future__ import annotations
 
 import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, NewType, TypeAlias
 
 import strawberry
 
@@ -192,3 +192,196 @@ class PiecePage:
         description="Total number of pieces matching the applied filters (before pagination)."
     )
     results: list[PieceType] = strawberry.field(description="The pieces on this page.")
+
+
+if TYPE_CHECKING:
+    # Under type-checking JSON is Any so that dict/list values are assignable
+    # to JSON-typed fields without casts.  At runtime the full Strawberry
+    # scalar registration runs instead.
+    JSON: TypeAlias = Any
+else:
+    JSON = strawberry.scalar(
+        NewType("JSON", object),
+        description="Arbitrary JSON value — object, array, string, number, or boolean.",
+        serialize=lambda v: v,
+        parse_value=lambda v: v,
+    )
+
+
+@strawberry.type
+class PieceDetailType:
+    """Full piece detail including complete state history."""
+
+    id: strawberry.ID = strawberry.field(description="Unique piece identifier (UUID).")
+    name: str = strawberry.field(description="User-given name of the piece.")
+    shared: bool = strawberry.field(
+        description="True if the piece is publicly visible via a share link."
+    )
+    is_editable: bool = strawberry.field(
+        description="True if the piece can have new states added."
+    )
+    can_edit: bool = strawberry.field(
+        description="True if the authenticated user has write permission on this piece."
+    )
+    notes: str | None = strawberry.field(description="Free-text notes on the piece.")
+    created: str | None = strawberry.field(
+        description="ISO 8601 timestamp when the piece was first created."
+    )
+    last_modified: str | None = strawberry.field(
+        description="ISO 8601 timestamp of the most recent change."
+    )
+    photo_count: int = strawberry.field(
+        description="Total number of photos attached to this piece across all states."
+    )
+    current_location: str | None = strawberry.field(
+        default=None,
+        description="Human-readable label of the kiln or shelf where the piece currently resides, if any.",
+    )
+    showcase_video_url: str | None = strawberry.field(
+        default=None,
+        description="URL of the showcase video artifact, if generated. Null for private or editable pieces.",
+    )
+    owner_alias: str | None = strawberry.field(
+        default=None,
+        description="Display alias of the piece owner, or null if not set.",
+    )
+    showcase_story: str = strawberry.field(
+        default="",
+        description="Free-text story field displayed on the public showcase page.",
+    )
+    showcase_fields: JSON = strawberry.field(
+        description="Ordered list of field names shown on the public showcase page.",
+    )
+    current_state: CurrentStateType = strawberry.field(
+        description="The piece's current workflow state."
+    )
+    thumbnail: ThumbnailType | None = strawberry.field(
+        description="Thumbnail image for the piece."
+    )
+    tags: list[TagType] = strawberry.field(description="Tags attached to this piece.")
+    states: JSON = strawberry.field(
+        description="Full state history as a JSON array (PieceStateSerializer output)."
+    )
+    current_state_full: JSON = strawberry.field(
+        description=(
+            "Full current state as a JSON object (PieceStateSerializer output). "
+            "Present even when states is empty (exclude_history=true). "
+            "Consumed by the REST bridge to reconstruct current_state; not exposed to clients."
+        )
+    )
+
+    @classmethod
+    def from_detail(cls, data: dict[str, Any]) -> "PieceDetailType":
+        """Build from a ``PieceDetailSerializer`` output dict."""
+        current_state = data.get("current_state") or {}
+        return cls(
+            id=strawberry.ID(str(data["id"])),
+            name=data["name"],
+            shared=bool(data.get("shared", False)),
+            is_editable=bool(data.get("is_editable", False)),
+            can_edit=bool(data.get("can_edit", False)),
+            notes=data.get("notes"),
+            created=_to_iso(data.get("created")),
+            last_modified=_to_iso(data.get("last_modified")),
+            photo_count=int(data.get("photo_count") or 0),
+            current_location=data.get("current_location"),
+            showcase_video_url=data.get("showcase_video_url"),
+            owner_alias=data.get("owner_alias"),
+            showcase_story=data.get("showcase_story") or "",
+            showcase_fields=list(data.get("showcase_fields") or []),
+            current_state=CurrentStateType(state=current_state.get("state", "")),
+            current_state_full=current_state,
+            thumbnail=ThumbnailType.from_dict(data.get("thumbnail")),
+            tags=[TagType.from_dict(t) for t in (data.get("tags") or [])],
+            states=data.get("history") or [],
+        )
+
+
+@strawberry.input
+class ImageCropInput:
+    x: float | None = strawberry.field(default=None, description="Left edge as fraction of width (0-1).")
+    y: float | None = strawberry.field(default=None, description="Top edge as fraction of height (0-1).")
+    width: float | None = strawberry.field(
+        default=None, description="Crop width as fraction of image width (0-1)."
+    )
+    height: float | None = strawberry.field(
+        default=None, description="Crop height as fraction of image height (0-1)."
+    )
+
+
+@strawberry.input
+class CreatePieceInput:
+    name: str = strawberry.field(description="Name for the new piece.")
+    notes: str = strawberry.field(default="", description="Optional notes.")
+    thumbnail: str | None = strawberry.field(
+        default=None,
+        description="Initial thumbnail URL (e.g. a curated SVG). Null for no thumbnail.",
+    )
+    current_location: str | None = strawberry.field(
+        default=None,
+        description="Initial location name, or null for no location.",
+    )
+
+
+@strawberry.input
+class UpdatePieceInput:
+    name: str | None = strawberry.field(default=None, description="New name.")
+    shared: bool | None = strawberry.field(default=None, description="Shared flag.")
+    is_editable: bool | None = strawberry.field(default=None, description="Editable mode flag.")
+    tags: list[int] | None = strawberry.field(
+        default=None,
+        description="Tag IDs (integers). Replaces the full tag list.",
+    )
+    thumbnail: JSON | None = strawberry.field(
+        default=None,
+        description="Thumbnail object with 'url' and optional 'crop'. Null to leave unchanged.",
+    )
+    current_location: str | None = strawberry.field(
+        default=strawberry.UNSET,
+        description="Location name to set, empty string or null to clear, or omit to leave unchanged.",
+    )
+    showcase_story: str | None = strawberry.field(
+        default=None,
+        description="Free-text story for the public showcase page. Null to leave unchanged.",
+    )
+    showcase_fields: JSON | None = strawberry.field(
+        default=None,
+        description="Ordered list of field names for the showcase page. Null to leave unchanged.",
+    )
+
+
+@strawberry.input
+class TransitionPieceInput:
+    target_state: str = strawberry.field(description="Target workflow state name.")
+    notes: str | None = strawberry.field(default=None, description="Notes for the new state.")
+    images: JSON | None = strawberry.field(default=None, description="Initial images for the new state.")
+    custom_fields: JSON | None = strawberry.field(
+        default=None, description="Custom fields for the new state."
+    )
+
+
+@strawberry.input
+class UpdateStateInput:
+    notes: str | None = strawberry.field(default=None)
+    custom_fields: JSON | None = strawberry.field(default=None)
+    images: JSON | None = strawberry.field(default=None)
+    created: str | None = strawberry.field(
+        default=None,
+        description="ISO 8601 datetime to backdate this state's creation timestamp.",
+    )
+
+
+@strawberry.input
+class UploadImageInput:
+    url: str = strawberry.field(description="HTTPS URL to fetch the image from.")
+    caption: str = strawberry.field(default="", description="Optional caption.")
+
+
+@strawberry.input
+class UploadImageFromRefsInput:
+    r2_keys: list[str] = strawberry.field(
+        description="R2 object keys of already-uploaded images."
+    )
+    captions: list[str] = strawberry.field(
+        default_factory=list, description="Optional captions, one per key."
+    )

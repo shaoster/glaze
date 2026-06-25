@@ -22,7 +22,8 @@ from api.piece.helpers import (
 )
 
 from .context import get_request_user
-from .types import PiecePage, PieceType
+from .mutations import Mutation
+from .types import JSON, PieceDetailType, PiecePage, PieceType
 
 
 @strawberry.enum(description="Sort order for a piece list.")
@@ -67,7 +68,7 @@ def _resolve_pieces(
     request = info.context.request
     user = get_request_user(request)
     if user is None or not user.is_authenticated:
-        raise StrawberryGraphQLError("Authentication credentials were not provided.")
+        raise StrawberryGraphQLError("Authentication credentials were not provided.", extensions={"http_status": 403})
 
     qs = piece_queryset_for_user(user.pk)
 
@@ -124,5 +125,119 @@ class Query:
     def schema_sdl(self) -> str:
         return str(schema)
 
+    @strawberry.field(
+        description=(
+            "Fetch a single piece by ID, including the complete state history "
+            "and all detail fields (notes, photo count, tags, thumbnail)."
+        )
+    )
+    def piece(self, info: strawberry.Info, id: strawberry.ID) -> PieceDetailType | None:
+        from django.http import Http404
 
-schema = strawberry.Schema(query=Query)
+        from api.piece.resolvers import resolve_piece_detail
+
+        request = info.context.request
+        user = get_request_user(request)
+        # Allow anonymous access — resolve_piece_detail uses piece_detail_queryset
+        # which filters to owned + shared pieces, mirroring the REST AllowAny view.
+        if user is not None:
+            request.user = user
+        try:
+            data = resolve_piece_detail(str(id), request)
+        except Http404:
+            return None
+        return PieceDetailType.from_detail(data)
+
+    @strawberry.field(
+        description=(
+            "Fetch the full workflow schema: states, transitions, field definitions, "
+            "and global type names."
+        )
+    )
+    def workflow_schema(self, info: strawberry.Info) -> JSON:
+        request = info.context.request
+        user = get_request_user(request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
+        request.user = user
+        from api.workflow import build_workflow_schema
+
+        return build_workflow_schema()
+
+    @strawberry.field(
+        description=(
+            "List entries for a global library type "
+            "(e.g. clay_body, glaze_type, location)."
+        )
+    )
+    def globals(
+        self, info: strawberry.Info, global_name: str, filters: JSON | None = None
+    ) -> JSON:
+        request = info.context.request
+        user = get_request_user(request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
+        request.user = user
+        from api.global_entries.logic import global_entries_impl
+
+        if filters:
+            from django.http import QueryDict
+
+            qd = QueryDict(mutable=True)
+            for k, v in filters.items():
+                # apply_global_filters reads m2m_id filters as comma-separated strings.
+                qd[k] = ",".join(str(i) for i in v) if isinstance(v, list) else str(v)
+            request.GET = qd
+
+        # global_entries_impl dispatches on request.method; GraphQL uses POST,
+        # so we explicitly set GET to activate the list branch.
+        # apply_global_filters reads request.query_params (a DRF attribute); raw
+        # Django HttpRequests only have .GET, so alias it here. Always reassign so
+        # filters set above are visible (avoids stale ref if request already had
+        # query_params pointing to an earlier GET dict).
+        request.query_params = request.GET
+        original_method = request.method
+        request.method = "GET"
+        try:
+            response = global_entries_impl(request, global_name)
+        finally:
+            request.method = original_method
+        return response.data
+
+    @strawberry.field(
+        description="Return the JSON Schema + UI hints for a specific workflow state."
+    )
+    def state_schema(self, info: strawberry.Info, state_id: str) -> JSON:
+        user = get_request_user(info.context.request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
+        info.context.request.user = user
+        from api.workflow import build_ui_schema
+
+        return build_ui_schema(state_id)
+
+    @strawberry.field(
+        description=(
+            "Images grouped by applied glaze combination, "
+            "for the authenticated user's completed pieces."
+        )
+    )
+    def glaze_combination_images(self, info: strawberry.Info) -> JSON:
+        request = info.context.request
+        user = get_request_user(request)
+        if user is None or not user.is_authenticated:
+            raise StrawberryGraphQLError("Authentication required.", extensions={"http_status": 403})
+        request.user = user
+        from api.analysis_views import glaze_combination_images as _view
+
+        # The view is @api_view(["GET"]); GraphQL requests arrive as POST.
+        original_method = request.method
+        request.method = "GET"
+        try:
+            response = _view(request)
+        finally:
+            request.method = original_method
+        return response.data
+
+
+schema = strawberry.Schema(query=Query, mutation=Mutation)

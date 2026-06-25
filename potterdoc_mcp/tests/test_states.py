@@ -12,57 +12,54 @@ from mcp.shared.exceptions import McpError
 from potterdoc_mcp.client import PotterDocClient
 
 
-def _mock_response(status_code: int, json_body: object) -> MagicMock:
-    resp = MagicMock(spec=httpx.Response)
-    resp.status_code = status_code
-    resp.is_success = 200 <= status_code < 300
-    resp.json.return_value = json_body
-    resp.text = ""
-    resp.reason_phrase = ""
-    return resp
-
-
 def test_transition_piece_no_custom_fields(client: PotterDocClient) -> None:
-    state = {"id": "s1", "state_name": "thrown"}
+    state = {"id": "abc", "currentState": {"state": "thrown"}}
     with patch.object(
-        client._http,
-        "post",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(201, state),
-    ) as mock_post:
+        return_value={"transitionPiece": state},
+    ) as mock_gql:
         result = asyncio.run(client.transition_piece("abc", "thrown"))
 
     assert result == state
-    body = mock_post.call_args.kwargs["json"]
-    assert body == {"state": "thrown"}
-    mock_post.assert_called_once_with("/api/pieces/abc/states/", json=body)
+    _, variables = mock_gql.call_args.args
+    assert variables["id"] == "abc"
+    assert variables["input"]["targetState"] == "thrown"
+    assert "customFields" not in variables["input"]
 
 
 def test_transition_piece_with_custom_fields(client: PotterDocClient) -> None:
-    state = {"id": "s2", "state_name": "glazed"}
+    state = {"id": "abc", "currentState": {"state": "glazed"}}
     fields = {"glaze_type": 3, "notes": "celadon"}
     with patch.object(
-        client._http,
-        "post",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(201, state),
-    ) as mock_post:
+        return_value={"transitionPiece": state},
+    ) as mock_gql:
         result = asyncio.run(
             client.transition_piece("abc", "glazed", custom_fields=fields)
         )
 
     assert result == state
-    body = mock_post.call_args.kwargs["json"]
-    assert body == {"state": "glazed", "custom_fields": fields}
+    _, variables = mock_gql.call_args.args
+    assert variables["input"]["customFields"] == fields
 
 
 def test_transition_piece_invalid_transition(client: PotterDocClient) -> None:
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = 200
+    resp.is_success = True
+    resp.json.return_value = {"errors": [{"message": "Invalid transition."}]}
+    resp.text = ""
+    resp.reason_phrase = ""
     with patch.object(
         client._http,
         "post",
         new_callable=AsyncMock,
-        return_value=_mock_response(400, {"state": ["Invalid transition."]}),
+        return_value=resp,
     ):
         with pytest.raises(McpError) as exc_info:
             asyncio.run(client.transition_piece("abc", "fired"))
-    assert "400" in str(exc_info.value)
+    assert "GraphQL" in str(exc_info.value)

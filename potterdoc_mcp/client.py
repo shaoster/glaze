@@ -61,6 +61,20 @@ class PotterDocClient:
     async def aclose(self) -> None:
         await self._http.aclose()
 
+    async def _graphql(
+        self, query: str, variables: dict[str, Any] | None = None
+    ) -> Any:
+        """Execute a GraphQL query or mutation and return the ``data`` payload."""
+        r = await self._http.post(
+            "/api/graphql/",
+            json={"query": query, "variables": variables or {}},
+        )
+        _raise_for_status(r)
+        body = r.json()
+        if "errors" in body:
+            raise _error(f"GraphQL error: {body['errors']}")
+        return body["data"]
+
     # ------------------------------------------------------------------
     # Pieces
     # ------------------------------------------------------------------
@@ -96,24 +110,47 @@ class PotterDocClient:
             filter_input["tagIds"] = tag_ids
         if filter_input:
             variables["filter"] = filter_input
-        r = await self._http.post(
-            "/api/graphql/", json={"query": query, "variables": variables}
-        )
-        _raise_for_status(r)
-        body = r.json()
-        if "errors" in body:
-            raise _error(f"GraphQL error: {body['errors']}")
-        return body["data"]["pieces"]  # type: ignore[no-any-return]
+        data = await self._graphql(query, variables)
+        return data["pieces"]  # type: ignore[no-any-return]
 
     async def get_piece(self, piece_id: str) -> dict[str, Any]:
-        r = await self._http.get(f"/api/pieces/{piece_id}/")
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        query = """
+        query GetPiece($id: ID!) {
+          piece(id: $id) {
+            id
+            name
+            shared
+            isEditable
+            canEdit
+            notes
+            created
+            lastModified
+            photoCount
+            currentState { state }
+            tags { id name color isPublic }
+            thumbnail { url imageId crop { x y width height } croppedUrl }
+            states
+          }
+        }
+        """
+        data = await self._graphql(query, {"id": piece_id})
+        result = data.get("piece")
+        if result is None:
+            raise _error(f"Piece {piece_id!r} not found.")
+        return result  # type: ignore[no-any-return]
 
     async def create_piece(self, name: str, notes: str = "") -> dict[str, Any]:
-        r = await self._http.post("/api/pieces/", json={"name": name, "notes": notes})
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        mutation = """
+        mutation CreatePiece($input: CreatePieceInput!) {
+          createPiece(input: $input) {
+            id
+            name
+            currentState { state }
+          }
+        }
+        """
+        data = await self._graphql(mutation, {"input": {"name": name, "notes": notes}})
+        return data["createPiece"]  # type: ignore[no-any-return]
 
     async def update_piece_metadata(
         self,
@@ -121,35 +158,47 @@ class PotterDocClient:
         *,
         name: str | None = None,
         shared: bool | None = None,
-        tags: list[str] | None = None,
+        tags: list[int] | None = None,
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {}
+        input_payload: dict[str, Any] = {}
         if name is not None:
-            payload["name"] = name
+            input_payload["name"] = name
         if shared is not None:
-            payload["shared"] = shared
+            input_payload["shared"] = shared
         if tags is not None:
-            payload["tags"] = tags
-        if not payload:
+            input_payload["tags"] = [int(t) for t in tags]
+        if not input_payload:
             raise _error("No fields provided to update_piece_metadata.")
-        r = await self._http.patch(f"/api/pieces/{piece_id}/", json=payload)
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        mutation = """
+        mutation UpdatePiece($id: ID!, $input: UpdatePieceInput!) {
+          updatePiece(id: $id, input: $input) {
+            id
+            name
+            shared
+          }
+        }
+        """
+        data = await self._graphql(mutation, {"id": piece_id, "input": input_payload})
+        return data["updatePiece"]  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Workflow
     # ------------------------------------------------------------------
 
     async def get_workflow_schema(self) -> dict[str, Any]:
-        r = await self._http.get("/api/workflow/")
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        query = "query { workflowSchema }"
+        data = await self._graphql(query)
+        return data["workflowSchema"]  # type: ignore[no-any-return]
 
     async def list_global_entries(self, global_name: str) -> list[dict[str, Any]]:
         """List all entries for a global library type (e.g. clay_body, glaze_type)."""
-        r = await self._http.get(f"/api/globals/{global_name}/")
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        query = """
+        query ListGlobals($globalName: String!) {
+          globals(globalName: $globalName)
+        }
+        """
+        data = await self._graphql(query, {"globalName": global_name})
+        return data["globals"]  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # State transitions
@@ -161,12 +210,19 @@ class PotterDocClient:
         target_state: str,
         custom_fields: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {"state": target_state}
+        mutation = """
+        mutation TransitionPiece($id: ID!, $input: TransitionPieceInput!) {
+          transitionPiece(id: $id, input: $input) {
+            id
+            currentState { state }
+          }
+        }
+        """
+        input_payload: dict[str, Any] = {"targetState": target_state}
         if custom_fields:
-            payload["custom_fields"] = custom_fields
-        r = await self._http.post(f"/api/pieces/{piece_id}/states/", json=payload)
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+            input_payload["customFields"] = custom_fields
+        data = await self._graphql(mutation, {"id": piece_id, "input": input_payload})
+        return data["transitionPiece"]  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Images
@@ -178,12 +234,20 @@ class PotterDocClient:
         url: str,
         caption: str = "",
     ) -> dict[str, Any]:
-        payload: dict[str, Any] = {"caption": caption, "url": url}
-        r = await self._http.post(
-            f"/api/pieces/{piece_id}/state/upload-image/", json=payload
+        mutation = """
+        mutation UploadImage($pieceId: ID!, $input: UploadImageInput!) {
+          uploadImage(pieceId: $pieceId, input: $input) {
+            id
+            currentState { state }
+            states
+          }
+        }
+        """
+        data = await self._graphql(
+            mutation,
+            {"pieceId": piece_id, "input": {"url": url, "caption": caption}},
         )
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        return data["uploadImage"]  # type: ignore[no-any-return]
 
     async def crop_piece_image(
         self,
@@ -193,9 +257,19 @@ class PotterDocClient:
         width: float,
         height: float,
     ) -> dict[str, Any]:
-        r = await self._http.patch(
-            f"/api/images/{image_id}/crop/",
-            json={"x": x, "y": y, "width": width, "height": height},
+        mutation = """
+        mutation CropImage($imageId: ID!, $crop: ImageCropInput!) {
+          cropImage(imageId: $imageId, crop: $crop) {
+            id
+            thumbnail { url croppedUrl crop { x y width height } }
+          }
+        }
+        """
+        data = await self._graphql(
+            mutation,
+            {
+                "imageId": image_id,
+                "crop": {"x": x, "y": y, "width": width, "height": height},
+            },
         )
-        _raise_for_status(r)
-        return r.json()  # type: ignore[no-any-return]
+        return data["cropImage"]  # type: ignore[no-any-return]

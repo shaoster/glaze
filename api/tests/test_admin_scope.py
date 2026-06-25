@@ -1,10 +1,7 @@
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from django.contrib.auth.models import User
 from django.test import Client
-
-from api.models import Image
 
 
 @pytest.mark.django_db

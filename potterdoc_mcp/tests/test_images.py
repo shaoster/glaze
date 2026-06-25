@@ -12,24 +12,18 @@ from mcp.shared.exceptions import McpError
 from potterdoc_mcp.client import PotterDocClient
 
 
-def _mock_response(status_code: int, json_body: object) -> MagicMock:
-    resp = MagicMock(spec=httpx.Response)
-    resp.status_code = status_code
-    resp.is_success = 200 <= status_code < 300
-    resp.json.return_value = json_body
-    resp.text = ""
-    resp.reason_phrase = ""
-    return resp
-
-
 def test_upload_piece_image_url(client: PotterDocClient) -> None:
-    upload_result = {"piece_state_image": {"id": "img1"}}
+    upload_result = {
+        "id": "abc",
+        "currentState": {"state": "designed"},
+        "states": [{"images": [{"image_id": "img1"}]}],
+    }
     with patch.object(
-        client._http,
-        "post",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(201, upload_result),
-    ) as mock_post:
+        return_value={"uploadImage": upload_result},
+    ) as mock_gql:
         result = asyncio.run(
             client.upload_piece_image(
                 "abc", url="https://example.com/photo.jpg", caption="front view"
@@ -37,38 +31,47 @@ def test_upload_piece_image_url(client: PotterDocClient) -> None:
         )
 
     assert result == upload_result
-    body = mock_post.call_args.kwargs["json"]
-    assert body == {"caption": "front view", "url": "https://example.com/photo.jpg"}
-    mock_post.assert_called_once_with("/api/pieces/abc/state/upload-image/", json=body)
+    query, variables = mock_gql.call_args.args
+    assert "uploadImage" in query
+    assert "states" in query
+    assert variables["pieceId"] == "abc"
+    assert variables["input"]["url"] == "https://example.com/photo.jpg"
+    assert variables["input"]["caption"] == "front view"
 
 
 def test_crop_piece_image(client: PotterDocClient) -> None:
-    image = {"id": "img1", "crop": {"x": 0.1, "y": 0.0, "width": 0.8, "height": 1.0}}
+    piece = {"id": "abc", "thumbnail": {"url": "u", "croppedUrl": "cu"}}
     with patch.object(
-        client._http,
-        "patch",
+        client,
+        "_graphql",
         new_callable=AsyncMock,
-        return_value=_mock_response(200, image),
-    ) as mock_patch:
+        return_value={"cropImage": piece},
+    ) as mock_gql:
         result = asyncio.run(
             client.crop_piece_image("img1", x=0.1, y=0.0, width=0.8, height=1.0)
         )
 
-    assert result == image
-    body = mock_patch.call_args.kwargs["json"]
-    assert body == {"x": 0.1, "y": 0.0, "width": 0.8, "height": 1.0}
-    mock_patch.assert_called_once_with("/api/images/img1/crop/", json=body)
+    assert result == piece
+    _, variables = mock_gql.call_args.args
+    assert variables["imageId"] == "img1"
+    assert variables["crop"] == {"x": 0.1, "y": 0.0, "width": 0.8, "height": 1.0}
 
 
 def test_crop_piece_image_error(client: PotterDocClient) -> None:
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = 200
+    resp.is_success = True
+    resp.json.return_value = {"errors": [{"message": "Not found."}]}
+    resp.text = ""
+    resp.reason_phrase = ""
     with patch.object(
         client._http,
-        "patch",
+        "post",
         new_callable=AsyncMock,
-        return_value=_mock_response(404, {"detail": "Not found."}),
+        return_value=resp,
     ):
         with pytest.raises(McpError) as exc_info:
             asyncio.run(
                 client.crop_piece_image("bad-id", x=0.0, y=0.0, width=1.0, height=1.0)
             )
-    assert "404" in str(exc_info.value)
+    assert "GraphQL" in str(exc_info.value)
