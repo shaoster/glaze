@@ -163,13 +163,15 @@ def make_rest_view(route: RestRoute):
     if route.extend_schema_kwargs:
         _view = extend_schema(**route.extend_schema_kwargs)(_view)
     else:
-        # No explicit schema provided: supply a generic request/response type so
-        # drf-spectacular can generate an operation without "unable to guess
-        # serializer" errors. The view still appears in the schema so that
-        # downstream consumers (e.g. the LLM schema filter) can discover it.
+        # No explicit schema provided: supply a generic annotation so drf-spectacular
+        # can generate an operation without "unable to guess serializer" errors.
+        # The view still appears in the schema so downstream consumers (e.g. the
+        # LLM schema filter) can discover it.
         _view = extend_schema(
-            request=OpenApiTypes.OBJECT,
-            responses={route.success_status: OpenApiTypes.OBJECT},
+            # GET/DELETE carry no request body; only mutation verbs do.
+            request=OpenApiTypes.OBJECT if route.method in ("POST", "PUT", "PATCH") else None,
+            # 204 No Content carries no response body.
+            responses={route.success_status: None if route.success_status == 204 else OpenApiTypes.OBJECT},
         )(_view)
 
     return _view
@@ -206,8 +208,10 @@ def make_multi_route_view(*routes: RestRoute):
         for r in routes:
             _view = extend_schema(
                 methods=[r.method],
-                request=OpenApiTypes.OBJECT,
-                responses={r.success_status: OpenApiTypes.OBJECT},
+                # GET/DELETE carry no request body; only mutation verbs do.
+                request=OpenApiTypes.OBJECT if r.method in ("POST", "PUT", "PATCH") else None,
+                # 204 No Content carries no response body.
+                responses={r.success_status: None if r.success_status == 204 else OpenApiTypes.OBJECT},
             )(_view)
 
     return _view
