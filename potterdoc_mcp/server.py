@@ -184,6 +184,7 @@ async def transition_piece(
     piece_id: str,
     target_state: str,
     custom_fields: dict[str, Any] | None = None,
+    notes: str | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Transition a pottery piece to a new workflow state.
@@ -196,6 +197,8 @@ async def transition_piece(
         target_state: The workflow state ID to transition to (e.g. "wheel_thrown", "bisque_fired").
         custom_fields: Dict of field name → value for any fields required by the
             target state schema. Pass null/omit if the state has no required fields.
+        notes: Optional free-text notes to record for this new state (e.g. firing
+            temperature, observations). Can also be set later via update_current_state.
 
     Returns the newly created PieceState record.
     """
@@ -203,6 +206,7 @@ async def transition_piece(
         piece_id=piece_id,
         target_state=target_state,
         custom_fields=custom_fields,
+        notes=notes,
     )
 
 
@@ -240,6 +244,33 @@ async def update_piece_metadata(
         shared=shared,
         tags=tags,
     )
+
+
+# ------------------------------------------------------------------
+# State update tool
+# ------------------------------------------------------------------
+
+
+@mcp.tool()
+async def update_current_state(
+    piece_id: str,
+    notes: str,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Update the notes on a piece's current workflow state.
+
+    Use this to add or edit free-text notes on a piece that is already past
+    the design step. Notes are stored per state, so this updates only the
+    current (most recent) state.
+
+    Args:
+        piece_id: The piece UUID.
+        notes: Free-text notes to set on the current state (e.g. firing
+            temperature, glaze observations, any relevant details).
+
+    Returns the updated piece detail.
+    """
+    return await _get_client(ctx).update_current_state(piece_id=piece_id, notes=notes)
 
 
 # ------------------------------------------------------------------
