@@ -158,9 +158,19 @@ def make_rest_view(route: RestRoute):
     def _view(request, **kwargs):
         return _execute_route(route, request, kwargs)
 
+    from drf_spectacular.utils import extend_schema
+    from drf_spectacular.types import OpenApiTypes
     if route.extend_schema_kwargs:
-        from drf_spectacular.utils import extend_schema
         _view = extend_schema(**route.extend_schema_kwargs)(_view)
+    else:
+        # No explicit schema provided: supply a generic request/response type so
+        # drf-spectacular can generate an operation without "unable to guess
+        # serializer" errors. The view still appears in the schema so that
+        # downstream consumers (e.g. the LLM schema filter) can discover it.
+        _view = extend_schema(
+            request=OpenApiTypes.OBJECT,
+            responses={route.success_status: OpenApiTypes.OBJECT},
+        )(_view)
 
     return _view
 
@@ -185,6 +195,20 @@ def make_multi_route_view(*routes: RestRoute):
         if r.extend_schema_kwargs:
             from drf_spectacular.utils import extend_schema
             _view = extend_schema(**r.extend_schema_kwargs)(_view)
+
+    # If no route contributed schema kwargs, supply a generic per-method annotation
+    # so drf-spectacular can generate operations without "unable to guess serializer"
+    # errors. Views still appear in the schema so downstream consumers (e.g. the
+    # LLM schema filter) can discover them.
+    if not any(r.extend_schema_kwargs for r in routes):
+        from drf_spectacular.utils import extend_schema
+        from drf_spectacular.types import OpenApiTypes
+        for r in routes:
+            _view = extend_schema(
+                methods=[r.method],
+                request=OpenApiTypes.OBJECT,
+                responses={r.success_status: OpenApiTypes.OBJECT},
+            )(_view)
 
     return _view
 

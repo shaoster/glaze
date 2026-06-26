@@ -175,9 +175,9 @@ urlpatterns = [
     ),
 ]
 
-# Generate one route per global declared in workflow.yml.  The view factory
-# derives the correct extend_schema annotation from the the global name, so the
-# schema is mechanically guaranteed.
+# Generate one route per global declared in workflow.yml.  These views carry no
+# extend_schema_kwargs, so make_multi_route_view() excludes them from the OpenAPI
+# schema via @extend_schema(exclude=True).
 #
 # Favoritable globals additionally get a favorite-toggle route,
 # derived from _FAVORITES_REGISTRY — non-favoritable types simply have no route,

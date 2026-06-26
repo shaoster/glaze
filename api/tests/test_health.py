@@ -122,3 +122,19 @@ class TestHealthReady:
         assert illegal == [], (
             f"Expected all component names to be legal identifiers, got illegal: {illegal}"
         )
+
+    def test_openapi_schema_has_zero_generation_errors(self):
+        """Regression test for #1001: bridge views without extend_schema_kwargs
+        were generating 102 'unable to guess serializer' errors during schema generation.
+        """
+        from drf_spectacular.drainage import GENERATOR_STATS, reset_generator_stats
+        from drf_spectacular.generators import SchemaGenerator
+
+        reset_generator_stats()
+        SchemaGenerator().get_schema(request=None, public=True)
+
+        total_errors = sum(GENERATOR_STATS._error_cache.values())
+        assert total_errors == 0, (
+            f"Expected 0 schema generation errors, got {total_errors}:\n"
+            + "\n".join(GENERATOR_STATS._error_cache.keys())
+        )
