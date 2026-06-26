@@ -209,6 +209,7 @@ class PotterDocClient:
         piece_id: str,
         target_state: str,
         custom_fields: dict[str, Any] | None = None,
+        notes: str | None = None,
     ) -> dict[str, Any]:
         mutation = """
         mutation TransitionPiece($id: ID!, $input: TransitionPieceInput!) {
@@ -221,8 +222,33 @@ class PotterDocClient:
         input_payload: dict[str, Any] = {"targetState": target_state}
         if custom_fields:
             input_payload["customFields"] = custom_fields
+        if notes is not None:
+            input_payload["notes"] = notes
         data = await self._graphql(mutation, {"id": piece_id, "input": input_payload})
         return data["transitionPiece"]  # type: ignore[no-any-return]
+
+    async def update_current_state(
+        self,
+        piece_id: str,
+        *,
+        notes: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if notes is not None:
+            payload["notes"] = notes
+        if not payload:
+            raise _error("No fields provided to update_current_state.")
+        mutation = """
+        mutation UpdateCurrentState($id: ID!, $input: UpdateStateInput!) {
+          updateCurrentState(id: $id, input: $input) {
+            id
+            name
+            currentState { state }
+          }
+        }
+        """
+        data = await self._graphql(mutation, {"id": piece_id, "input": payload})
+        return data["updateCurrentState"]  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Images
