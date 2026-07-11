@@ -44,6 +44,8 @@ Chart-only pushes (`chart/**` with no corresponding CI run) have no Docker image
 
 The Helm release includes an hourly database backup CronJob that creates a Postgres dump, verifies it contains nonzero rows, and uploads to Dropbox. Old backups are pruned to a 30-day retention window.
 
+The Helm release also includes a daily GC CronJob (`chart/glaze/templates/cronjob-gc-derived-images.yaml`, schedule `0 3 * * *` UTC by default via `Values.gcDerivedImages.schedule`) that runs `manage.py gc_derived_images` to delete `Image` rows (and their R2 objects) that are no longer referenced by any global model field — e.g. derived crops left behind after a source image is replaced or a piece is deleted. Disable it by setting `gcDerivedImages.enabled: false`.
+
 #### Required secrets / variables
 
 All scoped to the `glaze-droplet` environment in **Settings → Environments**.

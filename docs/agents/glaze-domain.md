@@ -344,6 +344,8 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - **`api/static/admin/js/r2_image_widget.js`** — wires upload buttons to the presigned-upload flow: requests a presigned PUT URL from `/api/uploads/r2/presigned-url/` (session + CSRF), uploads the file straight to R2, and writes the resulting public URL into the input.
 - **Dynamic registration** — `PublicLibraryAdmin` is registered for every model returned by `get_public_global_models()`. Adding `public: true` to a new global in `workflow.yml` is sufficient.
 
+**GraphQL is the authoritative write layer:** `POST /graphql/` (Strawberry schema at [`api/graphql/schema.py`](../../api/graphql/schema.py), mutations in [`api/graphql/mutations.py`](../../api/graphql/mutations.py)) is where piece/state/image/global mutation logic actually lives — `create_piece`, `update_piece`, `transition_piece`, `update_current_state`, `update_past_state`, `delete_past_state`, `upload_image`, `crop_image`, `move_image`, `create_global`, `add_favorite`/`remove_favorite`, etc. The REST endpoints listed below are generated compatibility wrappers: [`api/graphql/rest_bridge.py`](../../api/graphql/rest_bridge.py) defines each one as a `RestRoute` (HTTP method, GraphQL operation string, request→variables mapping, response reshaping) and `make_rest_view(route)` turns it into a DRF view that calls `schema.execute_sync()` and maps GraphQL errors to HTTP status codes. When adding a new mutation, write it in `mutations.py` first and add a `RestRoute` in `rest_bridge.py` only if a REST-shaped URL is still needed (e.g. for the OpenAPI-generated frontend types or the MCP/agent REST surface) — do not add mutation logic directly to a DRF view. Session-authenticated GraphQL mutations enforce CSRF manually in [`api/graphql/views.py`](../../api/graphql/views.py); Bearer-token (agent) requests are CSRF-exempt since the token is the credential. `GraphiQL` is served at `/graphql/` only when `DEBUG=True`.
+
 **API endpoints:**
 
 - `GET /api/auth/csrf/` → set CSRF cookie
@@ -374,6 +376,9 @@ Name uniqueness for public globals is enforced with two conditional DB constrain
 - `POST /api/globals/<global_name>/<pk>/favorite/` → add the entry to the requesting user's favorites (currently only `glaze_combination` supports favorites; other types return 405).
 - `DELETE /api/globals/<global_name>/<pk>/favorite/` → remove the entry from the requesting user's favorites.
 - `POST /api/uploads/r2/presigned-url/` → accepts `{content_type, resource_type?}` (`resource_type` defaults to `image`; `video`/`audio` are staff-only), returns `{upload_url, key, public_url, expires_in}`; the object key is fully server-generated (`images/{user.id}/{uuid}.{ext}`); 503 if R2 is not configured
+- `GET /api/auth/agent-tokens/`, `POST /api/auth/agent-tokens/`, `DELETE /api/auth/agent-tokens/<id>/` → manage `AgentToken` rows (see below); session-authenticated only, `AgentTokenAuthentication` is explicitly excluded so a token cannot mint or revoke other tokens
+
+**Agent tokens (external LLM/MCP clients):** `AgentToken` (`api/models.py`) is a long-lived per-user API token for non-browser clients (the [`potterdoc_mcp`](../../potterdoc_mcp/README.md) MCP server, ChatGPT custom actions). The plaintext token (`pdagent_<random>`) is shown exactly once at creation; only its SHA-256 hash is stored. `AgentTokenAuthentication` ([`api/auth/agent_auth.py`](../../api/auth/agent_auth.py)) reads `Authorization: Bearer pdagent_<token>`, looks up the hash, and updates `last_used_at`; it grants standard user permissions only (no staff/admin actions). The frontend manages tokens through `DeveloperTokensDialog.tsx` (Settings → API Tokens). [`api/llm_schema.py`](../../api/llm_schema.py) generates a trimmed OpenAPI schema (bearer auth, `piece` and `tag` globals only, multipart/crop endpoints excluded) for LLM tool-calling clients that can't handle the full schema.
 
 **Google OAuth backend:**
 
@@ -631,7 +636,7 @@ These extend the generic GitHub interactions guide with Glaze-specific protected
 
 ## Rewind (Edit-Mode History Navigation)
 
-When a piece has `is_editable=true`, users can "rewind" to a past state by clicking it in the Timeline section. This is a **frontend-only** display concept — the backend `current_state` is never altered.
+When a piece has `is_editable=true`, users can "rewind" to a past state by clicking it in `StateCarousel.tsx` (the horizontal state-history strip that replaced the old `Timeline`/`StateTransition` components). This is a **frontend-only** display concept — the backend `current_state` is never altered.
 
 **How it works:**
 - `PieceDetailContent` holds `rewindedStateId: string | null` in local state.

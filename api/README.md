@@ -6,7 +6,8 @@ This directory contains the Django backend for PotterDoc.
 
 PotterDoc now runs as a user-scoped application with session authentication.
 
-- Auth is session/cookie-based (Django + DRF `SessionAuthentication`).
+- Auth is session/cookie-based (Django + DRF `SessionAuthentication`) for the web client.
+- External agents (MCP servers, ChatGPT custom actions) authenticate with a long-lived `AgentToken` instead: `Authorization: Bearer pdagent_<token>`, handled by `AgentTokenAuthentication` (`api/auth/agent_auth.py`). Tokens are created/listed/revoked via `GET|POST /api/auth/agent-tokens/` and `DELETE /api/auth/agent-tokens/<id>/` — session-authenticated only, so a token cannot manage other tokens. The web UI's Settings dialog for this is `DeveloperTokensDialog.tsx` (see [web/README.md](../web/README.md)). Agent tokens grant standard user permissions only, never staff/admin.
 - The web client fetches a CSRF cookie from `GET /api/auth/csrf/` before login/logout/register writes.
 - Auth endpoints:
   - `POST /api/auth/login/` (email + password)
@@ -56,6 +57,12 @@ The backend also exposes `POST /api/telemetry/traces/`, which accepts browser
 OTLP/HTTP trace batches and proxies them to the local collector. The frontend
 uses this path for same-origin trace export so the browser never needs direct
 Grafana credentials.
+
+## GraphQL (`api/graphql/`) — the authoritative write layer
+
+`POST /graphql/` is a Strawberry GraphQL endpoint (`api/graphql/schema.py`) and is where mutation logic (creating/transitioning pieces, editing state fields, uploading/cropping/moving images, managing globals and favorites) actually lives — see `api/graphql/mutations.py`. The REST endpoints under `/api/pieces/*` and `/api/globals/*` are generated compatibility wrappers: `api/graphql/rest_bridge.py` declares each REST route as a `RestRoute` (method, GraphQL operation string, request→variables mapping) and `make_rest_view()` turns it into a DRF view that calls `schema.execute_sync()` internally. When adding a new write, implement it as a mutation first; only add a `RestRoute` if a REST-shaped URL is still needed (OpenAPI-generated frontend types, or the LLM-facing schema in `api/llm_schema.py`).
+
+CSRF is enforced manually in `api/graphql/views.py` for session-authenticated mutation requests (Bearer-token requests are exempt, since the token is the credential); read-only queries are exempt entirely. GraphiQL is served at `/graphql/` only when `DEBUG=True`.
 
 ## Declarative Configuration
 
