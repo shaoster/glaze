@@ -371,6 +371,7 @@ Per-subsystem documentation:
 - [Declarative Preferences (`user_preferences.schema.yml`)](user_preferences.schema.yml) - Schema for user settings.
 - [Declarative Tutorials (`tutorials.schema.yml`)](tutorials.schema.yml) - Schema for tutorial tips and attachment rules.
 - [Tools (`tools/`)](tools/README.md) - Standalone utilities, Modal crop offloading, and Glaze import tool.
+- [MCP Server (`potterdoc_mcp/`)](potterdoc_mcp/README.md) - Model Context Protocol server exposing the API to LLM clients (Claude Desktop, ChatGPT) via agent tokens.
 - [Pages (`pages/`)](pages/README.md) - Static published pages.
 - [CI / CD Infrastructure (`docs/`)](docs/ci-cd.md) - GitHub Actions workflows, deployment pipelines, and environment variables.
 - [Agent Development Guide (`docs/agents/`)](docs/agents/dev.md) - Shell bootstrap, worktree navigation, and agent workflow context.
