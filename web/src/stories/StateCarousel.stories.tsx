@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { http, HttpResponse } from "msw";
 import StateCarousel from "../components/StateCarousel";
 import { fn } from "@storybook/test";
-import type { PieceDetail, PieceState } from "../util/types";
+import type { PieceDetail, PieceState, StateEnum } from "../util/types";
+import { STATES, SUCCESSORS, isTerminalState } from "../util/workflow";
 
 /**
  * StateCarousel renders a piece's full state history as a horizontal snap-scroll
@@ -52,21 +54,52 @@ function makeState(overrides: Partial<PieceState> & Pick<PieceState, "id" | "sta
   };
 }
 
-const midFlowHistory: PieceState[] = [
-  makeState({ id: "s1", state: "designed", created: new Date("2026-05-01T10:00:00Z"), previous_state: null, next_state: "wheel_thrown" }),
-  makeState({ id: "s2", state: "wheel_thrown", created: new Date("2026-05-02T14:00:00Z"), previous_state: "designed", next_state: "trimmed" }),
-  makeState({ id: "s3", state: "trimmed", created: new Date("2026-05-05T09:00:00Z"), previous_state: "wheel_thrown", next_state: "bisque_fired" }),
-  makeState({ id: "s4", state: "bisque_fired", created: new Date("2026-05-10T09:00:00Z"), previous_state: "trimmed", next_state: "glazed" }),
-  makeState({ id: "s5", state: "glazed", created: new Date(), previous_state: "bisque_fired", next_state: null }),
-];
+// Walks SUCCESSORS from the initial workflow state, always preferring a
+// non-terminal, non-"recycled" successor, so the sample history stays a
+// valid path through whatever workflow.yml currently defines rather than a
+// hardcoded chain that could drift out of sync with real transitions.
+function walkHappyPath(steps: number): StateEnum[] {
+  const path: StateEnum[] = [STATES[0] as StateEnum];
+  while (path.length < steps) {
+    const successors = SUCCESSORS[path[path.length - 1]] ?? [];
+    const next = successors.find((s) => s !== "recycled" && !isTerminalState(s));
+    if (!next) break;
+    path.push(next as StateEnum);
+  }
+  return path;
+}
 
-const terminalHistory: PieceState[] = [
-  ...midFlowHistory.slice(0, 4),
-  makeState({ id: "s5", state: "glazed", created: new Date("2026-05-12T09:00:00Z"), previous_state: "bisque_fired", next_state: "submitted_to_glaze_fire" }),
-  makeState({ id: "s6", state: "submitted_to_glaze_fire", created: new Date("2026-05-13T09:00:00Z"), previous_state: "glazed", next_state: "glaze_fired" }),
-  makeState({ id: "s7", state: "glaze_fired", created: new Date("2026-05-20T09:00:00Z"), previous_state: "submitted_to_glaze_fire", next_state: "completed" }),
-  makeState({ id: "s8", state: "completed", created: new Date(), previous_state: "glaze_fired", next_state: null }),
-];
+// Extends a happy-path state sequence to its first terminal state (e.g.
+// "completed"), again derived from SUCCESSORS rather than hardcoded.
+function walkToTerminal(path: StateEnum[]): StateEnum[] {
+  const extended = [...path];
+  while (!isTerminalState(extended[extended.length - 1])) {
+    const successors = SUCCESSORS[extended[extended.length - 1]] ?? [];
+    const next = successors.find((s) => s !== "recycled") ?? successors[0];
+    if (!next) break;
+    extended.push(next as StateEnum);
+  }
+  return extended;
+}
+
+function statesToHistory(path: StateEnum[]): PieceState[] {
+  let created = new Date("2026-05-01T10:00:00Z");
+  return path.map((state, i) => {
+    const entry = makeState({
+      id: `s${i + 1}`,
+      state,
+      created: new Date(created),
+      previous_state: i > 0 ? path[i - 1] : null,
+      next_state: i < path.length - 1 ? path[i + 1] : null,
+    });
+    created = new Date(created.getTime() + 4 * 24 * 60 * 60 * 1000);
+    return entry;
+  });
+}
+
+const midFlowPath = walkHappyPath(5);
+const midFlowHistory: PieceState[] = statesToHistory(midFlowPath);
+const terminalHistory: PieceState[] = statesToHistory(walkToTerminal(midFlowPath));
 
 function makePiece(history: PieceState[], overrides: Partial<PieceDetail> = {}): PieceDetail {
   const current = history[history.length - 1];
@@ -117,10 +150,25 @@ export const Rewinded: Story = {
   },
 };
 
+const editablePiece = makePiece(midFlowHistory, { is_editable: true });
+
 export const EditableWithHistoryModal: Story = {
   args: {
     ...Default.args,
-    piece: makePiece(midFlowHistory, { is_editable: true }),
+    piece: editablePiece,
+  },
+  parameters: {
+    // The "Edit history" modal (PieceHistory) can edit a date, delete a
+    // state, or insert a missing one — each hits a real pieces/:id/states/...
+    // endpoint, so all three must be mocked or those controls fail against
+    // an unhandled request instead of demonstrating editable history.
+    msw: {
+      handlers: [
+        http.patch("/api/pieces/p1/states/:stateId/", () => HttpResponse.json(editablePiece)),
+        http.delete("/api/pieces/p1/states/:stateId/", () => HttpResponse.json(editablePiece)),
+        http.post("/api/pieces/p1/states/", () => HttpResponse.json(editablePiece)),
+      ],
+    },
   },
 };
 

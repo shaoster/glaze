@@ -74,6 +74,8 @@ function DeveloperTokensDialogWithState(
   );
 }
 
+const csrfHandler = http.get("/api/auth/csrf/", () => HttpResponse.json({}));
+
 const mockTokens: AgentToken[] = [
   {
     id: "tok-1",
@@ -94,7 +96,9 @@ export const WithTokens: Story = {
   parameters: {
     msw: {
       handlers: [
+        csrfHandler,
         http.get("/api/auth/agent-tokens/", () => HttpResponse.json(mockTokens)),
+        http.delete("/api/auth/agent-tokens/:id/", () => new HttpResponse(null, { status: 204 })),
       ],
     },
   },
@@ -105,6 +109,7 @@ export const Empty: Story = {
   parameters: {
     msw: {
       handlers: [
+        csrfHandler,
         http.get("/api/auth/agent-tokens/", () => HttpResponse.json([])),
       ],
     },
@@ -116,6 +121,7 @@ export const Loading: Story = {
   parameters: {
     msw: {
       handlers: [
+        csrfHandler,
         http.get("/api/auth/agent-tokens/", async () => {
           await delay("infinite");
           return HttpResponse.json([]);
@@ -130,6 +136,7 @@ export const TokenJustCreated: Story = {
   parameters: {
     msw: {
       handlers: [
+        csrfHandler,
         http.get("/api/auth/agent-tokens/", () => HttpResponse.json(mockTokens)),
         http.post("/api/auth/agent-tokens/", () =>
           HttpResponse.json({
@@ -150,6 +157,7 @@ export const CreateFailed: Story = {
   parameters: {
     msw: {
       handlers: [
+        csrfHandler,
         http.get("/api/auth/agent-tokens/", () => HttpResponse.json(mockTokens)),
         http.post("/api/auth/agent-tokens/", () => HttpResponse.json({}, { status: 500 })),
       ],

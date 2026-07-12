@@ -9,7 +9,7 @@ import {
   PreferencesDialogProvider,
 } from "../components/CurrentUserContext";
 import { SMALL_TUTORIAL_INLAY_PLACEMENTS } from "../components/SmallTutorialInlayConfig";
-import type { AuthUser } from "../util/api";
+import type { AuthUser, UserPreferences } from "../util/api";
 
 /**
  * SmallTutorialInlay is an anchored, always-visible popover tip attached to a
@@ -48,7 +48,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const mockUser: AuthUser = {
+const initialUser: AuthUser = {
   id: 1,
   is_staff: false,
   openid_subject: "sub-1",
@@ -60,12 +60,20 @@ function SmallTutorialInlayHarness(
   args: React.ComponentProps<typeof SmallTutorialInlay>,
 ) {
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null);
+  // Mirrors App.tsx's real saveUserPreferences wrapper: persist the merged
+  // preferences back onto the in-memory user so dismissing the tip (which
+  // sets preferences[tutorialKey] = false) actually hides it, the same way
+  // it would once TutorialManager re-renders with the updated currentUser.
+  const [user, setUser] = useState(initialUser);
 
   return (
-    <CurrentUserProvider currentUser={mockUser}>
+    <CurrentUserProvider currentUser={user}>
       <PreferencesDialogProvider
         openPreferencesDialog={fn()}
-        saveUserPreferences={async (p) => p}
+        saveUserPreferences={async (p: UserPreferences) => {
+          setUser((prev) => ({ ...prev, preferences: p }));
+          return p;
+        }}
       >
         <Box sx={{ display: "flex", justifyContent: "center", pt: 6, pb: 10 }}>
           <Box ref={setAnchorEl}>
