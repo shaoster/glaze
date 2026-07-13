@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
@@ -8,7 +9,7 @@ import {
   CurrentUserProvider,
   PreferencesDialogProvider,
 } from "../components/CurrentUserContext";
-import type { AuthUser } from "../util/api";
+import type { AuthUser, UserPreferences } from "../util/api";
 
 /**
  * TutorialManager is the app-wide orchestrator for `tutorials.yml`. It takes
@@ -76,46 +77,40 @@ function MockPage() {
   );
 }
 
-export const BothTutorialsActive: Story = {
-  render: () => (
-    <CurrentUserProvider currentUser={makeUser()}>
+// Mirrors App.tsx's real saveUserPreferences wrapper: persist the merged
+// preferences back onto the in-memory user so dismissing a tip (which sets
+// preferences[tutorialKey] = false) actually hides it, instead of the tip
+// staying visible after a "successful" mutation that never updates context.
+function TutorialManagerHarness({ initialUser }: { initialUser: AuthUser | null }) {
+  const [user, setUser] = useState(initialUser);
+  return (
+    <CurrentUserProvider currentUser={user}>
       <PreferencesDialogProvider
         openPreferencesDialog={fn()}
-        saveUserPreferences={async (p) => p}
+        saveUserPreferences={async (p: UserPreferences) => {
+          setUser((prev) => (prev ? { ...prev, preferences: p } : prev));
+          return p;
+        }}
       >
         <MockPage />
         <TutorialManager />
       </PreferencesDialogProvider>
     </CurrentUserProvider>
-  ),
+  );
+}
+
+export const BothTutorialsActive: Story = {
+  render: () => <TutorialManagerHarness initialUser={makeUser()} />,
 };
 
 export const OneTutorialDismissed: Story = {
   render: () => (
-    <CurrentUserProvider
-      currentUser={makeUser({ summary_customize_popover: false })}
-    >
-      <PreferencesDialogProvider
-        openPreferencesDialog={fn()}
-        saveUserPreferences={async (p) => p}
-      >
-        <MockPage />
-        <TutorialManager />
-      </PreferencesDialogProvider>
-    </CurrentUserProvider>
+    <TutorialManagerHarness
+      initialUser={makeUser({ summary_customize_popover: false })}
+    />
   ),
 };
 
 export const NoSignedInUser: Story = {
-  render: () => (
-    <CurrentUserProvider currentUser={null}>
-      <PreferencesDialogProvider
-        openPreferencesDialog={fn()}
-        saveUserPreferences={async (p) => p}
-      >
-        <MockPage />
-        <TutorialManager />
-      </PreferencesDialogProvider>
-    </CurrentUserProvider>
-  ),
+  render: () => <TutorialManagerHarness initialUser={null} />,
 };

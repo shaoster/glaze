@@ -89,10 +89,18 @@ export const OpenFromUrlBrowseTab: Story = {
 export const OpenFromUrlCreateTab: Story = {
   args: {
     ...Closed.args,
+    canCreate: true,
   },
   decorators: withMemoryRouter("/pieces/p1/state/fields/location/new"),
   parameters: {
-    msw: { handlers: mockHandlers },
+    msw: {
+      handlers: [
+        ...mockHandlers,
+        http.post("/api/globals/location/", () =>
+          HttpResponse.json({ id: "l3", name: "New Location", is_public: false }),
+        ),
+      ],
+    },
   },
 };
 

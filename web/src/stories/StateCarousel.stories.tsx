@@ -54,30 +54,42 @@ function makeState(overrides: Partial<PieceState> & Pick<PieceState, "id" | "sta
   };
 }
 
-// Walks SUCCESSORS from the initial workflow state, always preferring a
-// non-terminal, non-"recycled" successor, so the sample history stays a
-// valid path through whatever workflow.yml currently defines rather than a
-// hardcoded chain that could drift out of sync with real transitions.
+// Walks SUCCESSORS from the initial workflow state, always preferring an
+// unvisited, non-terminal, non-"recycled" successor, so the sample history
+// stays a valid path through whatever workflow.yml currently defines rather
+// than a hardcoded chain that could drift out of sync with real transitions.
+// Some states (e.g. "carved" and "slip_applied") are mutually reachable, so
+// the visited set is required to guarantee forward progress and termination
+// rather than bouncing between the same two states forever.
 function walkHappyPath(steps: number): StateEnum[] {
   const path: StateEnum[] = [STATES[0] as StateEnum];
+  const visited = new Set<StateEnum>(path);
   while (path.length < steps) {
-    const successors = SUCCESSORS[path[path.length - 1]] ?? [];
-    const next = successors.find((s) => s !== "recycled" && !isTerminalState(s));
+    const successors = (SUCCESSORS[path[path.length - 1]] ?? []) as StateEnum[];
+    const next = successors.find(
+      (s) => s !== "recycled" && !isTerminalState(s) && !visited.has(s),
+    );
     if (!next) break;
-    path.push(next as StateEnum);
+    path.push(next);
+    visited.add(next);
   }
   return path;
 }
 
 // Extends a happy-path state sequence to its first terminal state (e.g.
-// "completed"), again derived from SUCCESSORS rather than hardcoded.
+// "completed"), again derived from SUCCESSORS rather than hardcoded, using
+// the same visited-set approach to guarantee termination.
 function walkToTerminal(path: StateEnum[]): StateEnum[] {
   const extended = [...path];
+  const visited = new Set<StateEnum>(extended);
   while (!isTerminalState(extended[extended.length - 1])) {
-    const successors = SUCCESSORS[extended[extended.length - 1]] ?? [];
-    const next = successors.find((s) => s !== "recycled") ?? successors[0];
+    const successors = (SUCCESSORS[extended[extended.length - 1]] ?? []) as StateEnum[];
+    const next =
+      successors.find((s) => s !== "recycled" && !visited.has(s)) ??
+      successors.find((s) => !visited.has(s));
     if (!next) break;
-    extended.push(next as StateEnum);
+    extended.push(next);
+    visited.add(next);
   }
   return extended;
 }
