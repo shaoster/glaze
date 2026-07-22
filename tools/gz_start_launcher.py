@@ -246,8 +246,12 @@ def ensure_local_web_node_modules(roots: Roots) -> None:
     if worktree_nm.exists():
         return
 
-    print("web: installing local node_modules via npm install...")
-    subprocess.run(["npm", "install"], cwd=str(roots.workspace / "web"), check=True)
+    print("web: installing local node_modules via npm install --ignore-scripts...")
+    subprocess.run(
+        ["npm", "install", "--ignore-scripts"],
+        cwd=str(roots.workspace / "web"),
+        check=True,
+    )
 
 
 def sync_generated_types(roots: Roots, env: dict[str, str]) -> None:

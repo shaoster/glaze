@@ -450,7 +450,29 @@ def test_ensure_local_web_node_modules_replaces_shared_symlink(
 
     assert not local_nm.is_symlink()
     assert local_nm.exists()
-    assert install_calls == [(["npm", "install"], str(local_web))]
+    assert install_calls == [(["npm", "install", "--ignore-scripts"], str(local_web))]
+
+
+def test_ensure_local_web_node_modules_skips_dependency_scripts(
+    monkeypatch, tmp_path: Path
+) -> None:
+    shared = tmp_path / "shared"
+    workspace = tmp_path / "worktree"
+    local_web = workspace / "web"
+    local_web.mkdir(parents=True)
+
+    roots = launcher.Roots(workspace=workspace, shared=shared)
+    install_calls: list[list[str]] = []
+
+    def fake_run(args, cwd, check):
+        install_calls.append(args)
+        return object()
+
+    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+
+    launcher.ensure_local_web_node_modules(roots)
+
+    assert install_calls == [["npm", "install", "--ignore-scripts"]]
 
 
 # ---------------------------------------------------------------------------
