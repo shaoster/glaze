@@ -37,7 +37,7 @@ export function useAutosave({
     if (!dirty) return;
     const timer = window.setTimeout(() => mutate(), delayMs);
     return () => window.clearTimeout(timer);
-  }, [dirty, delayMs, mutate]);
+  }, [dirty, delayMs, mutate, save]);
 
   const displayStatus: AutosaveStatus =
     dirty && status === "idle"
