@@ -1612,6 +1612,23 @@ vitest_test(
 )
 
 vitest_test(
+    name = "web_autosave_test",
+    srcs = [
+        "src/components/__tests__/useAutosave.test.ts",
+    ],
+    tags = ["ibazel_notify_changes"],
+    deps = [
+        ":autosave_src",
+        ":node_modules/@tanstack/react-query",
+        ":node_modules/@testing-library/react",
+        ":node_modules/react",
+    ],
+    expected_coverage = [
+        "web/src/components/useAutosave*",
+    ],
+)
+
+vitest_test(
     name = "web_query_keys_test",
     srcs = [
         "src/util/__tests__/queryKeys.test.ts",
@@ -1684,6 +1701,7 @@ test_suite(
         ":web_r2_upload_test",
         ":web_use_toggle_global_entry_favorite_test",
         ":web_query_keys_test",
+        ":web_autosave_test",
     ],
 )
 
