@@ -138,14 +138,31 @@ export default function WorkflowState({
 
   const saveWorkflowState = useCallback(async () => {
     const saveFn = saveStateFn ?? ((p) => updateCurrentState(pieceId, p));
+    const sentNotes = currentPayload.notes;
+    const sentCustomFieldInputs = customFieldInputs;
+    const sentGlobalRefPks = globalRefPks;
     const result = await saveFn(currentPayload);
     const savedState = saveStateFn
       ? (result.history.find((ps) => ps.id === initialPieceState.id) ??
         result.current_state)
       : result.current_state;
-    dispatch({ type: "replace_base_state", pieceState: savedState });
+    dispatch({
+      type: "replace_base_state",
+      pieceState: savedState,
+      sentNotes,
+      sentCustomFieldInputs,
+      sentGlobalRefPks,
+    });
     onSaved(result);
-  }, [pieceId, initialPieceState.id, onSaved, saveStateFn, currentPayload]);
+  }, [
+    pieceId,
+    initialPieceState.id,
+    onSaved,
+    saveStateFn,
+    currentPayload,
+    customFieldInputs,
+    globalRefPks,
+  ]);
 
   const autosave = useAutosave({
     dirty: !readOnly && isDirty && !disableAutosave,

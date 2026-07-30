@@ -28,7 +28,13 @@ export type DraftState = {
 };
 
 export type DraftAction =
-  | { type: "replace_base_state"; pieceState: PieceState }
+  | {
+      type: "replace_base_state";
+      pieceState: PieceState;
+      sentNotes?: string;
+      sentCustomFieldInputs?: CustomFieldInputMap;
+      sentGlobalRefPks?: GlobalRefPkMap;
+    }
   | { type: "set_notes"; notes: string }
   | { type: "set_custom_field"; name: string; value: string }
   | { type: "set_global_ref_pks"; globalRefPks: GlobalRefPkMap };
@@ -168,8 +174,29 @@ export function draftReducer(
   action: DraftAction,
 ): DraftState {
   switch (action.type) {
-    case "replace_base_state":
-      return buildDraftState(action.pieceState);
+    case "replace_base_state": {
+      const rebuilt = buildDraftState(action.pieceState);
+      // If a newer edit has arrived since this save was dispatched (the
+      // live value no longer matches what was actually sent), keep it
+      // instead of clobbering it with this now-stale response.
+      const notes =
+        action.sentNotes !== undefined && state.notes !== action.sentNotes
+          ? state.notes
+          : rebuilt.notes;
+      const customFieldInputs =
+        action.sentCustomFieldInputs !== undefined &&
+        JSON.stringify(state.customFieldInputs) !==
+          JSON.stringify(action.sentCustomFieldInputs)
+          ? state.customFieldInputs
+          : rebuilt.customFieldInputs;
+      const globalRefPks =
+        action.sentGlobalRefPks !== undefined &&
+        JSON.stringify(state.globalRefPks) !==
+          JSON.stringify(action.sentGlobalRefPks)
+          ? state.globalRefPks
+          : rebuilt.globalRefPks;
+      return { ...rebuilt, notes, customFieldInputs, globalRefPks };
+    }
     case "set_notes":
       return { ...state, notes: action.notes };
     case "set_custom_field":
