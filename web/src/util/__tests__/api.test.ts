@@ -1293,6 +1293,21 @@ describe("piece history and schema endpoints", () => {
     expect(result.status).toBe("success");
   });
 
+  it("confirmR2Upload posts the key to the confirm-upload endpoint", async () => {
+    const { confirmR2Upload } = await loadApiModule();
+    mockClient.post.mockResolvedValue({
+      data: { key: "images/abc.jpg", size: 1024 },
+    });
+
+    const result = await confirmR2Upload("images/abc.jpg");
+
+    expect(mockClient.post).toHaveBeenCalledWith(
+      "uploads/r2/confirm-upload/",
+      { key: "images/abc.jpg" },
+    );
+    expect(result.size).toBe(1024);
+  });
+
   it("listAgentTokens fetches the agent token list", async () => {
     const { listAgentTokens } = await loadApiModule();
     mockClient.get.mockResolvedValue({

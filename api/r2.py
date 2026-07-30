@@ -29,9 +29,11 @@ _REQUIRED_ENV_VARS = (
 # Default presigned-PUT expiry, in seconds.
 PRESIGNED_PUT_EXPIRES_SECONDS = 600
 
-# Maximum file size accepted by the presigned-POST endpoint (50 MiB).
-# This is enforced server-side via R2's content-length-range condition so
-# clients cannot bypass it by sending a malformed Content-Length header.
+# Maximum file size accepted by the presigned-PUT upload flow (50 MiB).
+# R2 presigned PUT URLs have no content-length-range condition (unlike S3
+# presigned POST), so this is enforced after the fact: the confirm-upload
+# endpoint HEADs the object once the client's PUT completes and deletes it
+# if it exceeds this cap.
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 
@@ -93,30 +95,17 @@ def generate_presigned_put(
     )
 
 
-def generate_presigned_post(
-    key: str,
-    content_type: str,
-    *,
-    max_bytes: int = MAX_UPLOAD_BYTES,
-    expires: int = PRESIGNED_PUT_EXPIRES_SECONDS,
-) -> dict:
-    """Return a presigned POST payload for *key* with a server-enforced size cap.
+def get_object_content_length(key: str) -> int:
+    """Return the size in bytes of an already-uploaded object.
 
-    Returns a dict with ``url`` and ``fields`` suitable for a multipart POST.
-    The ``content-length-range`` condition is embedded in the policy so R2
-    rejects uploads larger than *max_bytes* without involving our server.
+    Used to enforce ``MAX_UPLOAD_BYTES`` after a browser PUT completes: R2's
+    presigned PUT URLs (unlike S3 presigned POST policies) have no
+    ``content-length-range`` condition, so the cap can only be checked after
+    the fact via a HEAD request.
     """
     client = get_r2_client()
-    return client.generate_presigned_post(
-        Bucket=get_bucket_name(),
-        Key=key,
-        Fields={"Content-Type": content_type},
-        Conditions=[
-            {"Content-Type": content_type},
-            ["content-length-range", 1, max_bytes],
-        ],
-        ExpiresIn=expires,
-    )
+    response = client.head_object(Bucket=get_bucket_name(), Key=key)
+    return response["ContentLength"]
 
 
 def public_url_for_key(key: str) -> str:

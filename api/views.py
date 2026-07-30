@@ -62,6 +62,7 @@ from .piece.views import (
 from .task_views import report_task_progress, submit_task, task_detail
 from .telemetry_views import browser_traces
 from .uploads.views import (
+    r2_confirm_upload,
     r2_convert_image,
     r2_convert_image_status,
     r2_presigned_upload_url,
@@ -109,6 +110,7 @@ __all__ = [
     "piece_showcase_video",
     "piece_states",
     "pieces",
+    "r2_confirm_upload",
     "r2_convert_image",
     "r2_convert_image_status",
     "r2_presigned_upload_url",
