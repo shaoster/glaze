@@ -158,6 +158,11 @@ urlpatterns = [
         name="r2-presigned-upload-url",
     ),
     path(
+        "uploads/r2/confirm-upload/",
+        views.r2_confirm_upload,
+        name="r2-confirm-upload",
+    ),
+    path(
         "uploads/r2/convert-image/",
         views.r2_convert_image,
         name="r2-convert-image",

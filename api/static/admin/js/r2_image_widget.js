@@ -76,6 +76,22 @@
   var CONVERT_POLL_INTERVAL = 2000;
   var CONVERT_POLL_TIMEOUT = 120000;
 
+  function confirmUpload(key) {
+    return fetch('/api/uploads/r2/confirm-upload/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify({ key: key }),
+    }).then(function (r) {
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (body) {
+          throw new Error(body.detail || ('Upload confirmation failed with status ' + r.status));
+        });
+      }
+      return r.json();
+    });
+  }
+
   function triggerConversion(key) {
     return fetch('/api/uploads/r2/convert-image/', {
       method: 'POST',
@@ -108,17 +124,17 @@
 
     fetchPresignedUrl(mimeType)
       .then(function (presign) {
-        // Multipart POST so R2 enforces the server-signed content-length-range.
-        var form = new FormData();
-        Object.entries(presign.fields || {}).forEach(function (entry) {
-          form.append(entry[0], entry[1]);
-        });
-        form.append('file', file);
         return fetch(presign.upload_url, {
-          method: 'POST',
-          body: form,
+          method: 'PUT',
+          headers: { 'Content-Type': mimeType },
+          body: file,
         }).then(function (r) {
           if (!r.ok) { throw new Error('Upload failed with status ' + r.status); }
+          // R2 presigned PUT URLs can't enforce a size cap at signature
+          // time, so the server checks it here and deletes the object if
+          // oversized.
+          return confirmUpload(presign.key);
+        }).then(function () {
           // For non-browser-renderable formats (HEIC/HEIF/AVIF), trigger
           // server-side JPEG conversion and wait for the JPEG URL.
           if (NON_BROWSER_TYPES.indexOf(mimeType) !== -1) {

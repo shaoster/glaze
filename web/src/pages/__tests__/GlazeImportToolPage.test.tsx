@@ -13,7 +13,7 @@ import { importManualSquareCropRecords } from "../../util/api";
 import { uploadImageToR2 } from "../../util/r2Upload";
 
 vi.mock("axios", () => ({
-  default: { post: vi.fn().mockResolvedValue({}) },
+  default: { post: vi.fn().mockResolvedValue({}), put: vi.fn().mockResolvedValue({}) },
 }));
 
 vi.mock("../../util/api", () => ({
@@ -30,11 +30,14 @@ vi.mock("../../util/api", () => ({
   }),
   fetchR2PresignedUrl: vi.fn().mockResolvedValue({
     upload_url: "https://r2.example.com/upload",
-    fields: {},
     key: "images/test/crop.webp",
     public_url: "https://media.example.com/images/test/crop.webp",
     expires_in: 3600,
     max_bytes: 10485760,
+  }),
+  confirmR2Upload: vi.fn().mockResolvedValue({
+    key: "images/test/crop.webp",
+    size: 1024,
   }),
   importManualSquareCropRecords: vi.fn(),
 }));

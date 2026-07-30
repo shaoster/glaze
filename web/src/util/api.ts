@@ -198,7 +198,6 @@ client.interceptors.response.use(
 
 export type R2PresignedUpload = {
   upload_url: string;
-  fields: Record<string, string>;
   key: string;
   public_url: string;
   expires_in: number;
@@ -891,6 +890,22 @@ export async function fetchR2PresignedUrl(
       content_type: contentType,
       resource_type: resourceType,
     },
+  );
+  return data;
+}
+
+/**
+ * Confirm a completed presigned-PUT upload. R2's presigned PUT URLs cannot
+ * enforce a size cap at signature time, so the server checks it here and
+ * deletes the object if it's oversized — this must be called right after
+ * the PUT resolves, before the uploaded URL is used anywhere else.
+ */
+export async function confirmR2Upload(
+  key: string,
+): Promise<{ key: string; size: number }> {
+  const { data } = await client.post<{ key: string; size: number }>(
+    "uploads/r2/confirm-upload/",
+    { key },
   );
   return data;
 }

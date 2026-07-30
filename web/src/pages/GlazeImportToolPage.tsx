@@ -19,6 +19,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import MergeIcon from "@mui/icons-material/MergeType";
 import axios from "axios";
 import {
+  confirmR2Upload,
   extractErrorMessage,
   fetchR2PresignedUrl,
   importManualSquareCropRecords,
@@ -405,10 +406,10 @@ export default function GlazeImportToolPage({
           ),
         );
         const presigned = await fetchR2PresignedUrl("image/webp");
-        const form = new FormData();
-        Object.entries(presigned.fields).forEach(([k, v]) => form.append(k, v));
-        form.append("file", cropFile);
-        await axios.post(presigned.upload_url, form);
+        await axios.put(presigned.upload_url, cropFile, {
+          headers: { "Content-Type": "image/webp" },
+        });
+        await confirmR2Upload(presigned.key);
         r2Keys[record.id] = presigned.key;
       }
       const result = await importManualSquareCropRecords(

@@ -23,11 +23,8 @@ def r2_env(monkeypatch):
 @pytest.fixture
 def presign_mock():
     with mock.patch(
-        "api.r2.generate_presigned_post",
-        return_value={
-            "url": "https://test-account.r2.cloudflarestorage.com/test-bucket",
-            "fields": {"key": "images/1/x.jpg", "Content-Type": "image/jpeg"},
-        },
+        "api.r2.generate_presigned_put",
+        return_value="https://test-account.r2.cloudflarestorage.com/test-bucket",
     ) as presign:
         yield presign
 
@@ -62,7 +59,7 @@ class TestR2PresignedUploadUrl:
         assert body["upload_url"] == (
             "https://test-account.r2.cloudflarestorage.com/test-bucket"
         )
-        assert isinstance(body["fields"], dict)
+        assert "fields" not in body
         assert body["public_url"] == f"https://media.example.com/{body['key']}"
         assert body["expires_in"] == 600
         assert body["max_bytes"] > 0
@@ -148,6 +145,73 @@ class TestR2PresignedUploadUrl:
         )
         assert response.status_code == 400
         presign_mock.assert_not_called()
+
+
+CONFIRM_ENDPOINT = "/api/uploads/r2/confirm-upload/"
+
+
+@pytest.mark.django_db
+class TestR2ConfirmUpload:
+    def test_returns_401_when_not_authenticated(self, client, r2_env):
+        client.force_authenticate(user=None)
+        response = client.post(
+            CONFIRM_ENDPOINT, {"key": "images/1/x.jpg"}, format="json"
+        )
+        assert response.status_code == 401
+
+    def test_returns_503_when_not_configured(self, client, monkeypatch):
+        for key in R2_ENV:
+            monkeypatch.delenv(key, raising=False)
+        response = client.post(
+            CONFIRM_ENDPOINT, {"key": "images/1/x.jpg"}, format="json"
+        )
+        assert response.status_code == 503
+
+    def test_rejects_malformed_key(self, client, user, r2_env):
+        response = client.post(
+            CONFIRM_ENDPOINT, {"key": "not-a-valid-prefix/x.jpg"}, format="json"
+        )
+        assert response.status_code == 400
+
+    def test_rejects_key_belonging_to_another_user(
+        self, client, user, other_user, r2_env
+    ):
+        response = client.post(
+            CONFIRM_ENDPOINT,
+            {"key": f"images/{other_user.id}/x.jpg"},
+            format="json",
+        )
+        assert response.status_code == 403
+
+    def test_confirms_upload_under_size_cap(self, client, user, r2_env):
+        key = f"images/{user.id}/x.jpg"
+        with (
+            mock.patch(
+                "api.r2.get_object_content_length", return_value=1024
+            ) as head_mock,
+            mock.patch("api.r2.delete_object") as delete_mock,
+        ):
+            response = client.post(CONFIRM_ENDPOINT, {"key": key}, format="json")
+
+        assert response.status_code == 200
+        head_mock.assert_called_once_with(key)
+        delete_mock.assert_not_called()
+
+    def test_deletes_and_rejects_upload_over_size_cap(self, client, user, r2_env):
+        from api import r2
+
+        key = f"images/{user.id}/x.jpg"
+        with (
+            mock.patch(
+                "api.r2.get_object_content_length",
+                return_value=r2.MAX_UPLOAD_BYTES + 1,
+            ),
+            mock.patch("api.r2.delete_object") as delete_mock,
+        ):
+            response = client.post(CONFIRM_ENDPOINT, {"key": key}, format="json")
+
+        assert response.status_code == 413
+        delete_mock.assert_called_once_with(key)
 
 
 class TestR2Helpers:

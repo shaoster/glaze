@@ -12,6 +12,7 @@
  */
 import axios from "axios";
 import {
+  confirmR2Upload,
   fetchR2PresignedUrl,
   getR2ConversionStatus,
   triggerR2ImageConversion,
@@ -191,12 +192,14 @@ export async function uploadImageToR2(
 
   const presigned = await fetchR2PresignedUrl(prepared.contentType);
 
-  // Use multipart POST so R2 enforces the server-signed content-length-range
-  // condition. The 'file' field must come last per the S3 presigned POST spec.
-  const form = new FormData();
-  Object.entries(presigned.fields).forEach(([k, v]) => form.append(k, v));
-  form.append("file", prepared.blob);
-  await axios.post(presigned.upload_url, form);
+  await axios.put(presigned.upload_url, prepared.blob, {
+    headers: { "Content-Type": prepared.contentType },
+  });
+
+  // R2 presigned PUT URLs can't enforce a size cap at signature time, so the
+  // server checks it here (and deletes the object if oversized) right after
+  // the PUT completes.
+  await confirmR2Upload(presigned.key);
 
   // Already a JPEG — return immediately, no server conversion needed.
   if (prepared.isJpeg) {

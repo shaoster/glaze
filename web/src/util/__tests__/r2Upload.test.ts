@@ -5,26 +5,28 @@ vi.mock("../api", () => ({
   fetchR2PresignedUrl: vi.fn(),
   getR2ConversionStatus: vi.fn(),
   triggerR2ImageConversion: vi.fn(),
+  confirmR2Upload: vi.fn(),
 }));
 
 import axios from "axios";
 import {
+  confirmR2Upload,
   fetchR2PresignedUrl,
   getR2ConversionStatus,
   triggerR2ImageConversion,
 } from "../api";
 import { MAX_UPLOAD_LONG_EDGE, uploadImageToR2 } from "../r2Upload";
 
-const mockAxiosPost = vi.mocked(axios.post);
+const mockAxiosPut = vi.mocked(axios.put);
 const mockFetchPresigned = vi.mocked(fetchR2PresignedUrl);
 const mockGetConversionStatus = vi.mocked(getR2ConversionStatus);
 const mockTriggerConversion = vi.mocked(triggerR2ImageConversion);
+const mockConfirmUpload = vi.mocked(confirmR2Upload);
 
 const PRESIGNED = {
   upload_url: "https://r2.example.com/upload",
   public_url: "https://cdn.example.com/image.jpg",
   key: "images/abc.jpg",
-  fields: { key: "images/abc.jpg", policy: "base64policy" },
 };
 
 function makeJpegFile(name = "photo.jpg", size = 100): File {
@@ -37,8 +39,9 @@ function makeFile(name: string, type: string): File {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockAxiosPost.mockResolvedValue({});
+  mockAxiosPut.mockResolvedValue({});
   mockFetchPresigned.mockResolvedValue(PRESIGNED);
+  mockConfirmUpload.mockResolvedValue({ key: PRESIGNED.key, size: 1024 });
 });
 
 describe("MAX_UPLOAD_LONG_EDGE", () => {
@@ -48,7 +51,7 @@ describe("MAX_UPLOAD_LONG_EDGE", () => {
 });
 
 describe("uploadImageToR2 — browser-decodable JPEG within size cap", () => {
-  it("uploads via presigned POST and returns the public URL without conversion", async () => {
+  it("uploads via presigned PUT, confirms, and returns the public URL without conversion", async () => {
     const bitmap = {
       width: 800,
       height: 600,
@@ -81,11 +84,53 @@ describe("uploadImageToR2 — browser-decodable JPEG within size cap", () => {
     const result = await uploadImageToR2(file);
 
     expect(mockFetchPresigned).toHaveBeenCalledWith("image/jpeg");
-    expect(mockAxiosPost).toHaveBeenCalledWith(
+    expect(mockAxiosPut).toHaveBeenCalledWith(
       PRESIGNED.upload_url,
-      expect.any(FormData),
+      expect.any(Blob),
+      { headers: { "Content-Type": "image/jpeg" } },
     );
+    expect(mockConfirmUpload).toHaveBeenCalledWith(PRESIGNED.key);
     expect(result.url).toBe(PRESIGNED.public_url);
+    vi.unstubAllGlobals();
+  });
+
+  it("propagates a rejection when the confirm step reports the upload exceeded the size cap", async () => {
+    const bitmap = {
+      width: 800,
+      height: 600,
+      close: vi.fn(),
+    } as unknown as ImageBitmap;
+    vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue(bitmap));
+
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn().mockReturnValue({
+        fillStyle: "",
+        fillRect: vi.fn(),
+        drawImage: vi.fn(),
+      }),
+      toBlob: vi.fn(
+        (cb: (b: Blob | null) => void) =>
+          cb(new Blob(["img"], { type: "image/jpeg" })),
+      ),
+    };
+    vi.stubGlobal(
+      "document",
+      Object.assign({}, globalThis.document, {
+        createElement: () => canvas,
+        cookie: "",
+      }),
+    );
+
+    mockConfirmUpload.mockRejectedValue(
+      new Error("Upload exceeds the maximum allowed size."),
+    );
+
+    const file = makeJpegFile();
+    await expect(uploadImageToR2(file)).rejects.toThrow(
+      "Upload exceeds the maximum allowed size.",
+    );
     vi.unstubAllGlobals();
   });
 });

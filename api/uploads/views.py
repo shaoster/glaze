@@ -77,10 +77,6 @@ _STAFF_ONLY_RESOURCE_TYPES = {"video", "audio"}
             "type": "object",
             "properties": {
                 "upload_url": {"type": "string"},
-                "fields": {
-                    "type": "object",
-                    "additionalProperties": {"type": "string"},
-                },
                 "key": {"type": "string"},
                 "public_url": {"type": "string"},
                 "expires_in": {"type": "integer"},
@@ -88,7 +84,6 @@ _STAFF_ONLY_RESOURCE_TYPES = {"video", "audio"}
             },
             "required": [
                 "upload_url",
-                "fields",
                 "key",
                 "public_url",
                 "expires_in",
@@ -104,7 +99,13 @@ _STAFF_ONLY_RESOURCE_TYPES = {"video", "audio"}
 @permission_classes([IsAuthenticated])
 @traced
 def r2_presigned_upload_url(request: Request) -> Response:
-    """Issue a presigned R2 PUT URL with a server-generated object key."""
+    """Issue a presigned R2 PUT URL with a server-generated object key.
+
+    The client must call ``r2_confirm_upload`` immediately after the PUT
+    completes — R2's presigned PUT URLs cannot enforce ``MAX_UPLOAD_BYTES``
+    at signature time (unlike S3 presigned POST policies), so the size cap
+    is checked and enforced there instead.
+    """
     if not r2.is_r2_configured():
         return Response(
             {"detail": "Object storage is not configured on the server."},
@@ -147,21 +148,102 @@ def r2_presigned_upload_url(request: Request) -> Response:
     # never reach the key, so collisions/overwrites/traversal are impossible.
     key = f"{resource_config.prefix}/{request.user.id}/{uuid.uuid4()}.{extension}"
 
-    presigned = r2.generate_presigned_post(
+    upload_url = r2.generate_presigned_put(
         key,
         content_type,
         expires=r2.PRESIGNED_PUT_EXPIRES_SECONDS,
     )
     return Response(
         {
-            "upload_url": presigned["url"],
-            "fields": presigned["fields"],
+            "upload_url": upload_url,
             "key": key,
             "public_url": r2.public_url_for_key(key),
             "expires_in": r2.PRESIGNED_PUT_EXPIRES_SECONDS,
             "max_bytes": r2.MAX_UPLOAD_BYTES,
         }
     )
+
+
+# Object-key prefixes that a browser upload may target, matching
+# ``_RESOURCE_TYPES``' ``prefix`` values.
+_UPLOAD_KEY_PREFIXES = {config.prefix for config in _RESOURCE_TYPES.values()}
+
+
+@extend_schema(
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "description": "R2 key returned by the presigned-url endpoint",
+                },
+            },
+            "required": ["key"],
+        }
+    },
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "key": {"type": "string"},
+                "size": {"type": "integer"},
+            },
+            "required": ["key", "size"],
+        },
+        400: {"type": "object"},
+        403: {"type": "object"},
+        413: {"type": "object"},
+        503: {"type": "object"},
+    },
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@traced
+def r2_confirm_upload(request: Request) -> Response:
+    """Verify a completed browser PUT upload against the size cap.
+
+    R2 presigned PUT URLs cannot embed a content-length-range condition, so
+    the cap enforced by ``MAX_UPLOAD_BYTES`` is checked here instead: HEAD
+    the object the client just uploaded, and delete it if it is oversized.
+    """
+    if not r2.is_r2_configured():
+        return Response(
+            {"detail": "Object storage is not configured on the server."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    key = request.data.get("key")
+    if not isinstance(key, str) or not key.strip():
+        return Response(
+            {"detail": "key is required."}, status=status.HTTP_400_BAD_REQUEST
+        )
+    key = key.strip()
+
+    prefix = key.split("/", 1)[0]
+    if prefix not in _UPLOAD_KEY_PREFIXES:
+        return Response(
+            {"detail": "key does not match a known upload prefix."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # [SECURITY] Only allow confirming keys that belong to this user.
+    user_prefix = f"{prefix}/{request.user.id}/"
+    if not key.startswith(user_prefix):
+        return Response(
+            {"detail": "Key does not belong to your account."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    size = r2.get_object_content_length(key)
+    if size > r2.MAX_UPLOAD_BYTES:
+        r2.delete_object(key)
+        return Response(
+            {"detail": f"Upload exceeds the maximum allowed size of {r2.MAX_UPLOAD_BYTES} bytes."},
+            status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        )
+
+    return Response({"key": key, "size": size})
 
 
 _JPEG_EXTENSIONS = {"jpg", "jpeg"}
@@ -307,4 +389,9 @@ def r2_convert_image_status(request: Request, task_id: str) -> Response:
     )
 
 
-__all__ = ["r2_presigned_upload_url", "r2_convert_image", "r2_convert_image_status"]
+__all__ = [
+    "r2_presigned_upload_url",
+    "r2_confirm_upload",
+    "r2_convert_image",
+    "r2_convert_image_status",
+]
