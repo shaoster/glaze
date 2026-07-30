@@ -805,6 +805,90 @@ describe("WorkflowState", () => {
     }
   });
 
+  it("preserves a custom field edited while a previous autosave is still resolving", async () => {
+    vi.useFakeTimers();
+    try {
+      let resolveFirstSave!: (value: PieceDetail) => void;
+      const firstSavePromise = new Promise<PieceDetail>((resolve) => {
+        resolveFirstSave = resolve;
+      });
+      vi.mocked(api.updateCurrentState)
+        .mockReturnValueOnce(firstSavePromise)
+        .mockResolvedValueOnce(
+          makePieceDetail({
+            current_state: makeState({
+              state: "trimmed",
+              custom_fields: { trimmed_weight_lbs: 975 },
+            }),
+          }),
+        );
+
+      render(
+        <WorkflowState
+          {...defaultProps}
+          autosaveDelayMs={1000}
+          initialPieceState={makeState({
+            state: "trimmed",
+            custom_fields: { trimmed_weight_lbs: 900 },
+          })}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Trimmed Weight Lbs"), {
+        target: { value: "950" },
+      });
+
+      // The first debounce fires; the request for 950 is now in flight.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(api.updateCurrentState).toHaveBeenCalledWith(
+        "test-piece-id",
+        expect.objectContaining({
+          custom_fields: { trimmed_weight_lbs: 950 },
+        }),
+      );
+
+      // The user keeps editing the field while that save is still pending —
+      // this reschedules a fresh 1000ms debounce window that hasn't elapsed
+      // yet. Notes is untouched throughout.
+      fireEvent.change(screen.getByLabelText("Trimmed Weight Lbs"), {
+        target: { value: "975" },
+      });
+
+      // The first (now-stale) request resolves, echoing back exactly what
+      // was sent (950), before the rescheduled debounce window elapses.
+      await act(async () => {
+        resolveFirstSave(
+          makePieceDetail({
+            current_state: makeState({
+              state: "trimmed",
+              custom_fields: { trimmed_weight_lbs: 950 },
+            }),
+          }),
+        );
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      // The newer field edit must not be clobbered by the stale response.
+      expect(screen.getByLabelText("Trimmed Weight Lbs")).toHaveValue(975);
+
+      // ...and the rescheduled debounce must still fire with the latest
+      // field value once its window elapses, not the stale reverted one.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(api.updateCurrentState).toHaveBeenCalledWith(
+        "test-piece-id",
+        expect.objectContaining({
+          custom_fields: { trimmed_weight_lbs: 975 },
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows error message on save failure", async () => {
     vi.mocked(api.updateCurrentState).mockRejectedValue(
       new Error("Network error"),
