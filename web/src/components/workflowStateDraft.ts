@@ -28,7 +28,7 @@ export type DraftState = {
 };
 
 export type DraftAction =
-  | { type: "replace_base_state"; pieceState: PieceState }
+  | { type: "replace_base_state"; pieceState: PieceState; sentNotes?: string }
   | { type: "set_notes"; notes: string }
   | { type: "set_custom_field"; name: string; value: string }
   | { type: "set_global_ref_pks"; globalRefPks: GlobalRefPkMap };
@@ -168,8 +168,16 @@ export function draftReducer(
   action: DraftAction,
 ): DraftState {
   switch (action.type) {
-    case "replace_base_state":
-      return buildDraftState(action.pieceState);
+    case "replace_base_state": {
+      const rebuilt = buildDraftState(action.pieceState);
+      // If a newer edit has arrived since this save was dispatched (the
+      // live notes no longer match what was actually sent), keep it
+      // instead of clobbering it with this now-stale response.
+      if (action.sentNotes !== undefined && state.notes !== action.sentNotes) {
+        return { ...rebuilt, notes: state.notes };
+      }
+      return rebuilt;
+    }
     case "set_notes":
       return { ...state, notes: action.notes };
     case "set_custom_field":
