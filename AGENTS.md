@@ -50,6 +50,17 @@ command fails. State any deviation explicitly.
 
 ## Agent Resources
 
+### Subagent roles
+
+- `orchestrator`: coordinates isolated PM and Dev contexts through a compact handoff.
+- `pm`: subsumes the `spec`, `dream`, and `pm` skills for product discovery,
+  issue definition, and initiative planning.
+- `dev`: subsumes the `fix` and `do` skills for implementation, regression
+  fixes, testing, and delivery.
+
+Role definitions live in [`.claude/agents/`](.claude/agents).
+The Codex bridge skill lives at [`.agents/skills/orchestrator/SKILL.md`](.agents/skills/orchestrator/SKILL.md).
+
 Ten user-invocable skills:
 `/do` (implement an issue), `/fix` (write failing regression test then fix a bug), `/spec` (draft and file a new issue), `/report` (gather evidence, reproduce locally, and file a bug issue), `/dream` (create a milestone and sub-issues), `/audit` (test performance audit), `/cover` (analyze test coverage), `/deps` (audit Bazel dependency graphs), `/docs` (assess and update human-facing READMEs), and `/stories` (populate Storybook stories).
 
